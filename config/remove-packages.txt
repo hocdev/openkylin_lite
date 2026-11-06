@@ -3,3 +3,29 @@
 # Add confirmed unwanted applications here. No package is removed by default.
 # Each package must also have a version, reason and owned desktop launcher
 # in config/reviewed-apps.json. Chinese text is not a removal criterion.
+wps-office
+kylin-ai-python-env
+kylin-universal-matting-model
+kylin-speech-asr-model-onnx
+kylin-sam-model-onnx
+kylin-gte-base-model
+kylin-cn-clip-model
+kylin-speech-tts-model-onnx
+kylin-ai-runtime
+kylin-portrait-matting-model
+kylin-speech-tts-model
+kylin-bot
+kylin-aiassistant
+kylin-paddle-ocr-model
+kylin-ai-vector-engine
+kylin-speech-asr-model
+kylin-ai-document-service
+kylin-ai-knowledge-base-service
+kylin-ai-abstract-models
+kylin-ai-subsystem-modelconfig
+kylin-ai-document-qa-service
+kylin-ai-parser-extension
+kylin-sam-model
+kylin-ai-subsystem-plugin
+kylin-ai-subsystem
+kylin-ai-engine-plugins

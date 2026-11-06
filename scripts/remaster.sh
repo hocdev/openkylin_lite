@@ -31,7 +31,11 @@ fi
 df -h . "$work" | tee reports/disk-before.txt
 free_bytes=$(df -B1 --output=avail "$work" | tail -1)
 (( free_bytes > 10 * 1024**3 )) || { echo 'Need at least 10 GiB free to inspect.'; exit 1; }
-curl --fail --location --retry 5 --connect-timeout 30 --max-time 3600 "$url" -o "$work/source.iso"
+if command -v aria2c >/dev/null; then
+  aria2c --max-connection-per-server=8 --split=8 --min-split-size=4M --max-tries=5 --timeout=60 --file-allocation=none --summary-interval=60 --console-log-level=warn --dir="$work" --out=source.iso "$url"
+else
+  curl --fail --location --retry 5 --connect-timeout 30 --max-time 3600 "$url" -o "$work/source.iso"
+fi
 [[ $(stat -c %s "$work/source.iso") == 7647188992 ]] || { echo 'Unexpected ISO size'; exit 1; }
 sha256sum "$work/source.iso" | tee reports/source-sha256.txt
 if [[ -n ${SOURCE_SHA256:-} ]]; then
@@ -74,6 +78,16 @@ for size,name,description in sorted(rows,reverse=True):
     print(f'{size}\t{name}\t{description}')
 PY
 unsquashfs -ll "$sq" 'usr/share/applications/*' > reports/desktop-files.txt
+cp "$work/status" reports/dpkg-status.txt
+if [[ -f "$work/iso/$(dirname "$relative")/filesystem.manifest-remove" ]]; then
+  cp "$work/iso/$(dirname "$relative")/filesystem.manifest-remove" reports/filesystem.manifest-remove
+fi
+if [[ $MODE == inspect ]]; then
+  mkdir "$work/lower"
+  mount -t squashfs -o loop,ro "$sq" "$work/lower"
+  python3 scripts/collect_review.py "$work/lower"
+  umount "$work/lower"
+fi
 {
   echo '### openKylin ISO inspection'
   echo 'Source: 7,647,188,992 bytes (7.12 GiB).'

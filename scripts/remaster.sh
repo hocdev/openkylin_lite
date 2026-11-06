@@ -309,26 +309,40 @@ snapshot="$work/ostree-tree"
 ostree --repo="$ostree_repo" checkout --force-copy "$expected_commit" "$snapshot"
 [[ -d "$snapshot/usr/etc" && ! -e "$snapshot/etc" && ! -L "$snapshot/etc" ]]
 mv "$snapshot/usr/etc" "$snapshot/etc"
-# A fresh OSTree checkout can omit mutable system accounts while dpkg metadata
-# (notably statoverrides) still refers to them. Merge missing account/group
-# records from the verified live root, preserving every entry already in the
-# snapshot. Only passwd/group databases are synchronized; no shadow data or
-# credentials are copied.
+# The install tree can omit the mutable account files that offline dpkg
+# needs for statoverrides. Seed missing system entries from the Live root.
+temporary_databases=()
 for database in passwd group; do
-  [[ -f "$root/etc/$database" && -f "$snapshot/etc/$database" ]] || {
-    echo "Missing account database: $database"; exit 1;
+  live_database="$root/etc/$database"
+  snapshot_database="$snapshot/etc/$database"
+  [[ -f "$live_database" ]] || {
+    echo "Missing Live account database: /etc/$database"; exit 1;
   }
-  accounts_tmp=$(mktemp -d)
-  cp "$snapshot/etc/$database" "$accounts_tmp/snapshot"
-  awk -F: 'NR==FNR { present[$1]=1; next } !present[$1]' \
-    "$accounts_tmp/snapshot" "$root/etc/$database" > "$accounts_tmp/missing"
-  cat "$accounts_tmp/missing" >> "$snapshot/etc/$database"
-  rm -rf -- "$accounts_tmp"
+  if [[ ! -e "$snapshot_database" && ! -L "$snapshot_database" ]]; then
+    install -m 0644 /dev/null "$snapshot_database"
+    temporary_databases+=("$snapshot_database")
+    echo "Seeding temporary OSTree account database: /etc/$database"
+  fi
+  [[ -f "$snapshot_database" && ! -L "$snapshot_database" ]] || {
+    echo "Invalid OSTree account database: /etc/$database"; exit 1;
+  }
+  awk -F: -v OFS=: -v database="$database" '
+    FILENAME == ARGV[1] { present[$1] = 1; next }
+    $3 ~ /^[0-9]+$/ && ($3 < 1000 || $3 == 65534) && !present[$1]++ {
+      $2 = "x"
+      if (database == "group") $4 = ""
+      print
+    }
+  ' "$snapshot_database" "$live_database" > "$work/missing-accounts"
+  cat "$work/missing-accounts" >> "$snapshot_database"
 done
 chroot "$snapshot" getent passwd root >/dev/null
 chroot "$snapshot" getent group root >/dev/null
 cp "$snapshot/var/lib/dpkg/status" "$work/ostree-status-before"
 purge_packages "$snapshot" "$work/ostree-status-before" reports/ostree
+for snapshot_database in "${temporary_databases[@]}"; do
+  rm -f -- "$snapshot_database"
+done
 mv "$snapshot/etc" "$snapshot/usr/etc"
 
 # Create a parentless commit so the original package payload is not retained

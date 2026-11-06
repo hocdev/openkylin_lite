@@ -11,12 +11,14 @@ repo=$PWD
 mkdir -p reports output
 work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/openkylin.XXXXXX")
 cleanup() {
+  mountpoint -q "$work/ostree-tree/proc" && umount "$work/ostree-tree/proc"
+  mountpoint -q "$work/ostree-tree/dev" && umount "$work/ostree-tree/dev"
   mountpoint -q "$work/root/proc" && umount "$work/root/proc"
   mountpoint -q "$work/root/dev" && umount "$work/root/dev"
   mountpoint -q "$work/root" && umount "$work/root"
   mountpoint -q "$work/lower" && umount "$work/lower"
   mountpoint -q "$work/iso" && umount "$work/iso"
-  if ! mountpoint -q "$work/iso" && ! mountpoint -q "$work/root" && ! mountpoint -q "$work/lower"; then
+  if ! mountpoint -q "$work/ostree-tree/proc" && ! mountpoint -q "$work/ostree-tree/dev" && ! mountpoint -q "$work/iso" && ! mountpoint -q "$work/root" && ! mountpoint -q "$work/lower"; then
     rm -rf -- "$work"
   fi
   return 0
@@ -112,23 +114,25 @@ mkdir "$root" "$work/lower" "$work/upper" "$work/overlay-work"
 mount -t squashfs -o loop,ro "$sq" "$work/lower"
 mount -t overlay overlay -o "lowerdir=$work/lower,upperdir=$work/upper,workdir=$work/overlay-work" "$root"
 disk_stage overlay-mounted
-python3 scripts/collect_review.py "$root"
-python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > reports/reviewed-apps.txt
+purge_packages() (
+local root=$1 baseline=$2 report_dir=$3
+mkdir -p "$report_dir"
+python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > "$report_dir/reviewed-apps.txt"
 mount --bind /dev "$root/dev"
 mount -t proc proc "$root/proc"
 chroot "$root" apt-get check
-chroot "$root" dpkg --audit > reports/dpkg-audit-before.txt
-[[ ! -s reports/dpkg-audit-before.txt ]] || { echo 'Original package database is unhealthy'; exit 1; }
-chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > reports/manifest-before.txt
+chroot "$root" dpkg --audit > "$report_dir/dpkg-audit-before.txt"
+[[ ! -s "$report_dir/dpkg-audit-before.txt" ]] || { echo 'Original package database is unhealthy'; exit 1; }
+chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-before.txt"
 for p in "${packages[@]}"; do
   chroot "$root" dpkg-query -W '-f=${Status}\n' "$p" | grep -qx 'install ok installed'
 done
 # Do not autoremove: only the explicit package set is allowed to disappear.
-chroot "$root" apt-get -o APT::Get::AutomaticRemove=false -s purge "${packages[@]}" > reports/purge-plan.txt
-awk '/^(Remv|Purg) / {print $2}' reports/purge-plan.txt | sort -u > "$work/planned"
+chroot "$root" apt-get -o APT::Get::AutomaticRemove=false -s purge "${packages[@]}" > "$report_dir/purge-plan.txt"
+awk '/^(Remv|Purg) / {print $2}' "$report_dir/purge-plan.txt" | sort -u > "$work/planned"
 printf '%s\n' "${packages[@]}" | sort -u > "$work/allowed"
-comm -23 "$work/planned" "$work/allowed" > reports/unexpected-removals.txt
-[[ ! -s reports/unexpected-removals.txt ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
+comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
+[[ ! -s "$report_dir/unexpected-removals.txt" ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
 while read -r p; do
   case "$p" in
     linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
@@ -148,13 +152,13 @@ if [[ -e "$work/policy-rc.d.original" || -L "$work/policy-rc.d.original" ]]; the
   mv "$work/policy-rc.d.original" "$root/usr/sbin/policy-rc.d"
 fi
 chroot "$root" apt-get check
-chroot "$root" dpkg --audit > reports/dpkg-audit.txt
-[[ ! -s reports/dpkg-audit.txt ]] || { echo 'dpkg audit failed'; exit 1; }
+chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
+[[ ! -s "$report_dir/dpkg-audit.txt" ]] || { echo 'dpkg audit failed'; exit 1; }
 chroot "$root" apt-get clean
 find "$root/var/cache/apt/archives" -type f -name '*.deb' -delete
 find "$root/var/lib/apt/lists" -type f -delete
-chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > reports/manifest-after.txt
-python3 - "$work/lower/var/lib/dpkg/status" "$root/var/lib/dpkg/status" "$work/allowed" > reports/package-diff.txt <<'PY'
+chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-after.txt"
+python3 - "$baseline" "$root/var/lib/dpkg/status" "$work/allowed" > "$report_dir/package-diff.txt" <<'PY'
 import pathlib,sys
 sys.path.insert(0, 'scripts')
 from check_apps import read_status
@@ -171,6 +175,9 @@ if removed != allowed or added or changed:
 PY
 umount "$root/proc"
 umount "$root/dev"
+)
+python3 scripts/collect_review.py "$root"
+purge_packages "$root" "$work/lower/var/lib/dpkg/status" reports
 du -x --apparent-size -B1 --max-depth=3 "$root" | sort -nr | sed -n '1,100p' > reports/rootfs-largest-dirs.tsv
 find "$root" -xdev -type f -size +10M -printf '%s\t%P\n' | sort -nr > reports/rootfs-largest-files.tsv
 if [[ $MODE == profile ]]; then
@@ -207,6 +214,47 @@ if [[ $MODE == profile ]]; then
   { echo '### Largest files after package removal'; echo '```'; sed -n '1,25p' reports/rootfs-largest-files.tsv; echo '```'; } >> "${GITHUB_STEP_SUMMARY:-$repo/reports/summary.md}"
   exit 0
 fi
+# Rebuild the install snapshot independently from the live filesystem.
+ostree_repo="$root/sysroot/ostree/repo"
+branch=openkylin/desktop/v3.0/community/general/all/release/amd64
+source_ref="openkylin:$branch"
+expected_commit=7abfcb4c781409a4e4adf4f4b5faf90011926151faa5285bb9ffd97038f2e3c2
+[[ $(ostree --repo="$ostree_repo" refs) == "$source_ref" ]]
+[[ $(ostree --repo="$ostree_repo" rev-parse "$source_ref") == "$expected_commit" ]]
+snapshot="$work/ostree-tree"
+ostree --repo="$ostree_repo" checkout --force-copy "$expected_commit" "$snapshot"
+[[ -d "$snapshot/usr/etc" && ! -e "$snapshot/etc" && ! -L "$snapshot/etc" ]]
+mv "$snapshot/usr/etc" "$snapshot/etc"
+cp "$snapshot/var/lib/dpkg/status" "$work/ostree-status-before"
+purge_packages "$snapshot" "$work/ostree-status-before" reports/ostree
+mv "$snapshot/etc" "$snapshot/usr/etc"
+
+# Create a parentless commit so the original package payload is not retained
+# through history. Retain the layout and release metadata required by openKylin.
+new_repo="$work/ostree-repo"
+mode=$(ostree --repo="$ostree_repo" config get core.mode)
+ostree --repo="$new_repo" init --mode="$mode"
+metadata=()
+for key in install-size os_version changelog update-name os_BuildID version update-type description download-size; do
+  value=$(ostree --repo="$ostree_repo" show --print-metadata-key="$key" "$expected_commit")
+  metadata+=(--add-metadata="$key=$value")
+done
+new_commit=$(ostree --repo="$new_repo" commit --parent=none --branch="$branch" \
+  --subject="$source_ref" --tree="dir=$snapshot" "${metadata[@]}")
+# The installer image exposes a remote-tracking ref. Reproduce the same ref
+# namespace in the fresh repository, without copying old commits or summaries.
+mkdir -p "$new_repo/refs/remotes/openkylin/$(dirname "$branch")"
+printf '%s\n' "$new_commit" > "$new_repo/refs/remotes/openkylin/$branch"
+ostree --repo="$new_repo" refs --delete "$branch"
+[[ $(ostree --repo="$new_repo" rev-parse "$source_ref") == "$new_commit" ]]
+ostree --repo="$new_repo" fsck > reports/ostree/fsck.txt
+printf '%s\n' "$new_commit" > reports/ostree/commit.txt
+du -sx --apparent-size -B1 "$ostree_repo" "$new_repo" > reports/ostree/repo-size.tsv
+rm -rf -- "$snapshot" "$ostree_repo"
+mkdir "$ostree_repo"
+cp -a "$new_repo/." "$ostree_repo/"
+rm -rf -- "$new_repo"
+disk_stage ostree-rebuilt
 size=$(du -sx --block-size=1 "$root" | cut -f1)
 mksquashfs "$root" "$work/filesystem.squashfs" -noappend -comp xz -b 1M -processors 2 -mem 2G
 # Release writable overlay changes as soon as the new filesystem is complete.

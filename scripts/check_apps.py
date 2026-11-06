@@ -82,6 +82,7 @@ AI_INTEGRATION_FILES = {
     '/usr/lib/systemd/user/kylin-ai-document-qa-service.service',
     '/usr/share/polkit-1/actions/org.kylin-ai-subsystem-modelconfig.policy',
 }
+BIOMETRIC_MANAGER_POLICY = '/usr/share/polkit-1/actions/org.ukui.biometric.manager.security.questions.policy'
 
 
 def read_status(text):
@@ -113,9 +114,10 @@ def check_app(name, fields, review, owned_files):
     if fields.get('Priority', '').lower() not in ('optional', 'extra'):
         raise ValueError(f'{name}: only optional/extra applications may be removed')
     section = fields.get('Section', '').split('/')[-1]
+    biometric_manager = name == 'ukui-biometric-manager'
     if component and review.get('section') != fields.get('Section'):
         raise ValueError(f'{name}: component section differs from reviewed metadata')
-    if not component and section in {'admin', 'libs', 'libdevel', 'kernel', 'metapackages',
+    if not component and not (biometric_manager and section == 'x11') and section in {'admin', 'libs', 'libdevel', 'kernel', 'metapackages',
                    'x11', 'fonts', 'localization', 'debian-installer'}:
         raise ValueError(f'{name}: protected package section {section}')
     if not component:
@@ -130,6 +132,7 @@ def check_app(name, fields, review, owned_files):
                           '/usr/share/polkit-1/', '/usr/share/xsessions/',
                           '/usr/share/wayland-sessions/')
     if any(path.startswith(protected_prefixes) and not (component and path in AI_INTEGRATION_FILES)
+           and not (biometric_manager and path == BIOMETRIC_MANAGER_POLICY)
            for path in owned_files):
         raise ValueError(f'{name}: owns protected system integration files')
 

@@ -2,6 +2,8 @@
 kylin-weather
 com.iflytek.iflyime
 kylin-ipmsg
+kylin-camera
+ukui-biometric-manager
 ai-kylin-deepseek-r1-cloud-model
 ai-kylin-deepseek-v3-cloud-model
 ai-kylin-qwen-plus-cloud-model

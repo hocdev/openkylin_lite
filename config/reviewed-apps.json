@@ -1,4 +1,14 @@
 {
+  "kylin-camera": {
+    "version": "1.3.0.16-ok1.80",
+    "reason": "User-requested removal of the bundled Camera application",
+    "desktop": "/usr/share/applications/kylin-camera.desktop"
+  },
+  "ukui-biometric-manager": {
+    "version": "4.10.0.0-ok4.15update1",
+    "reason": "User-requested removal of the biometric manager UI and its settings plugin",
+    "desktop": "/usr/share/applications/biometric-manager.desktop"
+  },
   "com.iflytek.iflyime": {
     "version": "15.0.2015",
     "reason": "Remove the optional iFlytek input app while retaining the built-in Fcitx5 stack",

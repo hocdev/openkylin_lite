@@ -141,6 +141,7 @@ comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
 [[ ! -s "$report_dir/unexpected-removals.txt" ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
 while read -r p; do
   case "$p" in
+    ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.
     linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
       echo "Protected system package: $p"; exit 1 ;;
   esac
@@ -272,6 +273,14 @@ mkdir "$ostree_repo"
 cp -a "$new_repo/." "$ostree_repo/"
 rm -rf -- "$new_repo"
 disk_stage ostree-rebuilt
+# Set the desktop language after LightDM/PAM and before D-Bus imports the
+# Xsession environment. Apply this only while booted from Casper media.
+cat > "$root/etc/X11/Xsession.d/45openkylin-lite-locale" <<'EOF'
+if grep -Eq '(^|[[:space:]])boot=casper([[:space:]]|$)' /proc/cmdline; then
+    unset LC_ALL
+    export LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_MESSAGES=en_US.UTF-8
+fi
+EOF
 size=$(du -sx --block-size=1 "$root" | cut -f1)
 squash_output="$work/filesystem.squashfs"
 squash_options=(-noappend -b 1M -processors 2 -mem 2G)

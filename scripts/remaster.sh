@@ -174,6 +174,25 @@ umount "$root/dev"
 du -x --apparent-size -B1 --max-depth=3 "$root" | sort -nr | sed -n '1,100p' > reports/rootfs-largest-dirs.tsv
 find "$root" -xdev -type f -size +10M -printf '%s\t%P\n' | sort -nr > reports/rootfs-largest-files.tsv
 if [[ $MODE == profile ]]; then
+  ostree_repo="$root/sysroot/ostree/repo"
+  if [[ -f "$ostree_repo/config" ]]; then
+    {
+      echo '### OSTree refs and their commits'
+      if refs=$(ostree --repo="$ostree_repo" refs); then
+        while IFS= read -r ref; do
+          [[ -n $ref ]] || continue
+          printf '%s\t' "$ref"
+          ostree --repo="$ostree_repo" rev-parse "$ref" || true
+        done <<< "$refs"
+      fi
+      echo '### Unreachable objects (dry run)'
+      ostree --repo="$ostree_repo" prune --no-prune || true
+      echo '### Deployment directories'
+      if [[ -d "$root/sysroot/ostree/deploy" ]]; then
+        find "$root/sysroot/ostree/deploy" -mindepth 1 -maxdepth 3 -type d -printf '%P\n'
+      fi
+    } > reports/ostree-profile.txt 2>&1
+  fi
   { echo '### Largest files after package removal'; echo '```'; sed -n '1,25p' reports/rootfs-largest-files.tsv; echo '```'; } >> "${GITHUB_STEP_SUMMARY:-$repo/reports/summary.md}"
   exit 0
 fi

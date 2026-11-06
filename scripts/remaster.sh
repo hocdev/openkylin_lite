@@ -309,15 +309,23 @@ snapshot="$work/ostree-tree"
 ostree --repo="$ostree_repo" checkout --force-copy "$expected_commit" "$snapshot"
 [[ -d "$snapshot/usr/etc" && ! -e "$snapshot/etc" && ! -L "$snapshot/etc" ]]
 mv "$snapshot/usr/etc" "$snapshot/etc"
-# A fresh OSTree checkout can omit mutable system accounts even though package
-# metadata (for example dpkg-statoverride) refers to root. Seed only the base
-# root account and group from the verified live root before offline dpkg runs.
+# A fresh OSTree checkout can omit mutable system accounts while dpkg metadata
+# (notably statoverrides) still refers to them. Merge missing account/group
+# records from the verified live root, preserving every entry already in the
+# snapshot. Only passwd/group databases are synchronized; no shadow data or
+# credentials are copied.
 for database in passwd group; do
-  if ! grep -q '^root:' "$snapshot/etc/$database"; then
-    entry=$(grep -m1 '^root:' "$root/etc/$database" || true)
-    [[ -n $entry ]] || { echo "Verified live root account is missing from /etc/$database"; exit 1; }
-    printf '%s\n' "$entry" >> "$snapshot/etc/$database"
-  fi
+  [[ -f "$root/etc/$database" && -f "$snapshot/etc/$database" ]] || {
+    echo "Missing account database: $database"; exit 1;
+  }
+  while IFS=: read -r name _; do
+    [[ -n $name ]] || continue
+    if ! grep -q "^${name}:" "$snapshot/etc/$database"; then
+      grep -m1 "^${name}:" "$root/etc/$database" >> "$snapshot/etc/$database" || {
+        echo "Unable to seed $name from live $database"; exit 1;
+      }
+    fi
+  done < "$root/etc/$database"
 done
 chroot "$snapshot" getent passwd root >/dev/null
 chroot "$snapshot" getent group root >/dev/null

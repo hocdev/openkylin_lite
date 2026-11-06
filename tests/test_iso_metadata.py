@@ -1,5 +1,6 @@
 import hashlib
 import pathlib
+import struct
 import sys
 import tempfile
 import unittest
@@ -24,8 +25,16 @@ class IsoMetadataTests(unittest.TestCase):
             }
             for relative, content in files.items():
                 (iso / relative).write_text(content, encoding='utf-8')
+            def cpio_entry(name, payload):
+                header = struct.pack('<13H', 0o70707, *([0] * 9), len(name), 0, len(payload))
+                return header + name + bytes(len(name) % 2) + payload + bytes(len(payload) % 2)
+
+            trailer = cpio_entry(b'TRAILER!!!\0', b'')
+            (iso / 'isolinux/bootlogo').write_bytes(cpio_entry(b'lang\0', b'zh_CN\n') + trailer)
             updates = configure_live_boot(iso, meta)
             self.assertEqual(updates['isolinux/lang'].read_text(), 'en\n')
+            self.assertEqual(updates['isolinux/bootlogo'].read_bytes(),
+                             cpio_entry(b'lang\0', b'en\n') + trailer)
             self.assertEqual(updates['isolinux/isolinux.cfg'].read_text(), 'timeout 20\n')
             self.assertIn('set timeout=2', updates['boot/grub/grub.cfg'].read_text())
             for relative in ('boot/grub/grub.cfg', 'isolinux/txt.cfg'):

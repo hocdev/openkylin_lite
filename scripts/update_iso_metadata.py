@@ -2,6 +2,7 @@
 import hashlib
 import pathlib
 import re
+import struct
 import sys
 
 
@@ -27,6 +28,32 @@ def update_checksums(text, updates, algorithm):
     return '\n'.join(result) + '\n'
 
 
+def english_gfxboot_archive(archive):
+    # gfxboot loads its default language from the binary cpio bootlogo archive.
+    magic = struct.pack('<H', 0o70707)
+    byte_order = '<' if archive.startswith(magic) else '>'
+    header = struct.Struct(byte_order + '13H')
+    offset = 0
+    while offset + header.size <= len(archive):
+        fields = list(header.unpack_from(archive, offset))
+        if fields[0] != 0o70707:
+            break
+        name_start = offset + header.size
+        name_end = name_start + fields[10]
+        data_start = (name_end + 1) & ~1
+        data_end = data_start + (fields[11] << 16) + fields[12]
+        next_entry = (data_end + 1) & ~1
+        name = archive[name_start:name_end]
+        if next_entry > len(archive) or name == b'TRAILER!!!\0':
+            break
+        if name == b'lang\0':
+            fields[11:13] = [0, 3]
+            return (archive[:offset] + header.pack(*fields)
+                    + archive[name_start:data_start] + b'en\n\0' + archive[next_entry:])
+        offset = next_entry
+    raise ValueError('Missing lang entry in the ISOLINUX bootlogo archive')
+
+
 def configure_live_boot(iso, meta):
     updates = {}
     for relative in ('boot/grub/grub.cfg', 'isolinux/isolinux.cfg',
@@ -46,6 +73,11 @@ def configure_live_boot(iso, meta):
         destination = meta / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(text, encoding='utf-8')
+        updates[relative] = destination
+    relative = 'isolinux/bootlogo'
+    if (iso / relative).is_file():
+        destination = meta / relative
+        destination.write_bytes(english_gfxboot_archive((iso / relative).read_bytes()))
         updates[relative] = destination
     return updates
 

@@ -104,6 +104,9 @@ BIOMETRIC_AUTH_INTEGRATION_FILES = {
 LIBPAM_BIOMETRIC_INTEGRATION_FILES = {
     '/etc/dbus-1/system.d/org.ukui.UniauthBackend.conf',
     '/etc/pam-configs/pam-biometric',
+    '/usr/share/polkit-1/actions/org.freedesktop.plicykit.pkexec.bioctl-helper.policy',
+    '/usr/share/polkit-1/actions/org.freedesktop.plicykit.pkexec.biodrvctl.policy',
+    '/usr/share/polkit-1/actions/org.freedesktop.plicykit.pkexec.biorestart.policy',
     '/usr/share/polkit-1/actions/org.ukui.biometric.policy',
 }
 

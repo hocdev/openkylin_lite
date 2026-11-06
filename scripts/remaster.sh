@@ -46,6 +46,18 @@ mapfile -d '' squash < <(find "$work/iso" -type f -name '*.squashfs' -print0)
 sq=${squash[0]}
 relative=${sq#"$work/iso/"}
 unsquashfs -s "$sq" > reports/squashfs-info.txt
+python3 - "$work/source.iso" "$sq" "$work/iso" > reports/size-budget.txt <<'PY'
+import json,pathlib,sys
+target=json.loads(pathlib.Path('config/size-target.json').read_text())
+source,squash,tree=map(pathlib.Path,sys.argv[1:])
+other=sum(p.stat().st_size for p in tree.rglob('*') if p.is_file() and p != squash)
+print('Target: 3-4 decimal GB; below 3 GB is acceptable without padding.')
+print(f'Source bytes: {source.stat().st_size}')
+print(f'Original squashfs bytes: {squash.stat().st_size}')
+print(f'Other ISO files, logical bytes: {other}')
+print(f'Approximate squashfs budget: {target["max_bytes"]-other} bytes BEFORE ISO metadata/boot overhead')
+print('This is a planning estimate, not a compressed-size prediction or proof of feasibility.')
+PY
 unsquashfs -cat "$sq" var/lib/dpkg/status > "$work/status"
 python3 - "$work/status" > reports/packages.tsv <<'PY'
 import sys
@@ -191,6 +203,14 @@ rm "$work/filesystem.squashfs"
 disk_stage squashfs-released
 stat -c '%s' "$work/lite.iso" > reports/output-bytes.txt
 (( $(stat -c %s "$work/lite.iso") < source_bytes )) || { echo 'Output did not shrink'; exit 1; }
+python3 - "$work/lite.iso" > reports/size-result.txt <<'PY'
+import json,pathlib,sys
+target=json.loads(pathlib.Path('config/size-target.json').read_text())
+size=pathlib.Path(sys.argv[1]).stat().st_size
+print(f'ISO size: {size} bytes ({size/1e9:.3f} GB); maximum: {target["max_bytes"]} bytes', flush=True)
+if size > target['max_bytes']:
+    raise SystemExit('Size target not met. Review optional apps; do not remove protected components to force the target.')
+PY
 (cd "$work" && sha256sum lite.iso) > output/SHA256SUMS
 # Move on the same filesystem; do not duplicate the ISO in the workspace.
 # The following workflow step uploads one part at a time, then deletes it.

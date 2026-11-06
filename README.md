@@ -2,6 +2,8 @@
 
 Nguồn cố định: `openKylin-Desktop-V3.0-20260918-x86_64.iso` (7.647.188.992 byte, khoảng 7,12 GiB).
 
+Mục tiêu: **3–4 GB thập phân**, tối đa 4.000.000.000 byte (khoảng 3,73 GiB), giảm khoảng 48–61% so với nguồn. Cấu hình tại `config/size-target.json`. Nhỏ hơn 3 GB vẫn được chấp nhận, không chèn dữ liệu cho đủ dung lượng. Build vượt 4 GB sẽ dừng trước upload ISO; xem `size-result.txt`. Inspect xuất `size-budget.txt` để phân biệt squashfs và phần còn lại trên ISO. Chưa xác nhận có thể đạt mục tiêu chỉ bằng xóa app tùy chọn; ưu tiên ổn định, giữ desktop/trình cài đặt/driver/font/bộ gõ.
+
 ## Khả năng chạy miễn phí
 
 - Repository public + runner Ubuntu tiêu chuẩn: compute miễn phí. Runner public Ubuntu có 4 CPU, 16 GB RAM, nhưng chỉ công bố 14 GB SSD. RAM không phải vấn đề chính; ổ đĩa mới là giới hạn.

@@ -1,0 +1,6 @@
+{
+  "preferred_min_bytes": 3000000000,
+  "max_bytes": 4000000000,
+  "unit": "decimal GB",
+  "stability_first": true
+}

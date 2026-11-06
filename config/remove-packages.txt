@@ -1,4 +1,6 @@
-# Exact version-pinned WPS/AI removal plan; see reviewed-apps.json.
+# Exact version-pinned removal plan; see reviewed-apps.json.
+app.web.openkylincommunity
+openkylin-token-center
 kylin-weather
 com.iflytek.iflyime
 kylin-ipmsg

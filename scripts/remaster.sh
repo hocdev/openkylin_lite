@@ -148,6 +148,40 @@ while read -r p; do
   essential=$(chroot "$root" dpkg-query -W '-f=${Essential}' "$p")
   [[ $essential != yes ]] || { echo "Essential package: $p"; exit 1; }
 done < "$work/planned"
+# Clear generated files in these package directories before dpkg tries to
+# remove them. Keep package-owned files available to the removal scripts.
+python3 - "$root" "$work/planned" <<'PY'
+import os
+from pathlib import Path
+import sys
+
+root, plan = map(Path, sys.argv[1:])
+planned = set(plan.read_text().splitlines())
+owned = set()
+for listing in (root / 'var/lib/dpkg/info').glob('*.list'):
+    owned.update(listing.read_text(errors='surrogateescape').splitlines())
+
+for package, relative in (
+    ('biometric-auth', 'etc/biometric-auth'),
+    ('wps-office', 'opt/kingsoft'),
+):
+    if package not in planned:
+        continue
+    directory = root / relative
+    if directory.resolve() != root.resolve() / relative:
+        raise SystemExit(f'Unexpected symlink in purge cleanup path: {directory}')
+    if not directory.is_dir():
+        continue
+    for parent, dirs, files in os.walk(directory, topdown=False):
+        for name in files + dirs:
+            path = Path(parent) / name
+            if '/' + path.relative_to(root).as_posix() in owned:
+                continue
+            if path.is_symlink() or not path.is_dir():
+                path.unlink()
+            elif not any(path.iterdir()):
+                path.rmdir()
+PY
 if [[ -e "$root/usr/sbin/policy-rc.d" || -L "$root/usr/sbin/policy-rc.d" ]]; then
   mv "$root/usr/sbin/policy-rc.d" "$work/policy-rc.d.original"
 fi

@@ -5,7 +5,7 @@ set -Eeuo pipefail
 export LC_ALL=C
 [[ $EUID == 0 ]] || { echo 'Run with sudo'; exit 1; }
 MODE=${MODE:-inspect}
-[[ $MODE == inspect || $MODE == build ]] || exit 1
+[[ $MODE == inspect || $MODE == profile || $MODE == build ]] || exit 1
 cd "${GITHUB_WORKSPACE:-$PWD}"
 repo=$PWD
 mkdir -p reports output
@@ -26,7 +26,7 @@ disk_stage() {
   { printf '\nStage: %s\n' "$1"; df -h "$work"; } | tee -a "$repo/reports/disk-stages.txt"
 }
 mkdir "$work/iso"
-if [[ $MODE == build && ! ${SOURCE_SHA256:-} =~ ^[[:xdigit:]]{64}$ ]]; then
+if [[ $MODE != inspect && ! ${SOURCE_SHA256:-} =~ ^[[:xdigit:]]{64}$ ]]; then
   echo 'Build requires a pinned source SHA256.'; exit 1
 fi
 df -h . "$work" | tee reports/disk-before.txt
@@ -99,7 +99,7 @@ fi
   df -h "$work"
   echo '```'
 } >> "${GITHUB_STEP_SUMMARY:-$repo/reports/summary.md}"
-[[ $MODE == build ]] || exit 0
+[[ $MODE != inspect ]] || exit 0
 mapfile -t packages < <(sed 's/#.*//;s/^[[:space:]]*//;s/[[:space:]]*$//;/^$/d' config/remove-packages.txt)
 (( ${#packages[@]} )) || { echo 'No packages selected. Edit config/remove-packages.txt.'; exit 1; }
 for p in "${packages[@]}"; do
@@ -171,6 +171,12 @@ if removed != allowed or added or changed:
 PY
 umount "$root/proc"
 umount "$root/dev"
+du -x --apparent-size -B1 --max-depth=3 "$root" | sort -nr | sed -n '1,100p' > reports/rootfs-largest-dirs.tsv
+find "$root" -xdev -type f -size +10M -printf '%s\t%P\n' | sort -nr > reports/rootfs-largest-files.tsv
+if [[ $MODE == profile ]]; then
+  { echo '### Largest files after package removal'; echo '```'; sed -n '1,25p' reports/rootfs-largest-files.tsv; echo '```'; } >> "${GITHUB_STEP_SUMMARY:-$repo/reports/summary.md}"
+  exit 0
+fi
 size=$(du -sx --block-size=1 "$root" | cut -f1)
 mksquashfs "$root" "$work/filesystem.squashfs" -noappend -comp xz -b 1M -processors 2 -mem 2G
 # Release writable overlay changes as soon as the new filesystem is complete.
@@ -201,11 +207,13 @@ rm "$work/filesystem.squashfs"
 disk_stage squashfs-released
 stat -c '%s' "$work/lite.iso" > reports/output-bytes.txt
 (( $(stat -c %s "$work/lite.iso") < source_bytes )) || { echo 'Output did not shrink'; exit 1; }
-python3 - "$work/lite.iso" > reports/size-result.txt <<'PY'
+python3 - "$work/lite.iso" <<'PY'
 import json,pathlib,sys
 target=json.loads(pathlib.Path('config/size-target.json').read_text())
 size=pathlib.Path(sys.argv[1]).stat().st_size
-print(f'ISO size: {size} bytes ({size/1e9:.3f} GB); maximum: {target["max_bytes"]} bytes', flush=True)
+message = f'ISO size: {size} bytes ({size/1e9:.3f} GB); maximum: {target["max_bytes"]} bytes'
+pathlib.Path('reports/size-result.txt').write_text(message + '\n')
+print(message, flush=True)
 if size > target['max_bytes']:
     raise SystemExit('Size target not met. Review optional apps; do not remove protected components to force the target.')
 PY

@@ -7,7 +7,7 @@ on:
       mode:
         description: Inspect first; build after reviewing config/remove-packages.txt
         type: choice
-        options: [inspect, build]
+        options: [inspect, profile, build]
         default: inspect
       sha256:
         description: Trusted SHA256 of the original ISO (required for build)
@@ -40,7 +40,7 @@ jobs:
     permissions:
       contents: write
     env:
-      MODE: ${{ inputs.mode || 'build' }}
+      MODE: ${{ inputs.mode || 'profile' }}
       # Pinned to the original ISO observed in the successful inspection.
       # This is an integrity pin, not an upstream signature verification.
       SOURCE_SHA256: ${{ inputs.sha256 || '4bc4389d15c8af8da7882c16871edcb43650d534ee56deeda8991ea1492652ce' }}

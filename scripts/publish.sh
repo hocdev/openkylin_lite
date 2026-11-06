@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
+# The remaster runs as root; uploads and split filters run as the runner user.
+sudo chown --reference=. output
 iso=$(cat output/iso-path.txt)
 work=$(dirname "$iso")
 [[ $work == "${RUNNER_TEMP}/openkylin."* && $iso == "$work/lite.iso" ]] || exit 1

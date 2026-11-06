@@ -19,30 +19,6 @@ concurrency:
   group: openkylin-lite
   cancel-in-progress: true
 jobs:
-  cleanup-superseded-runs:
-    if: ${{ !cancelled() && github.event_name == 'push' }}
-    needs: [verify-sources, remaster]
-    runs-on: ubuntu-24.04
-    timeout-minutes: 5
-    permissions:
-      actions: write
-    env:
-      GH_TOKEN: ${{ github.token }}
-    steps:
-      - name: Delete old cancelled or skipped push runs
-        shell: bash
-        run: |
-          runs="repos/$GITHUB_REPOSITORY/actions/workflows/lite.yml/runs"
-          for conclusion in cancelled skipped; do
-            ids=$(gh api --paginate "$runs?branch=main&event=push&status=$conclusion&per_page=100" \
-              | jq -r --argjson current "$GITHUB_RUN_NUMBER" \
-                '.workflow_runs[] | select(.status == "completed" and .run_number < $current) | .id')
-            while IFS= read -r id; do
-              [[ -n "$id" ]] || continue
-              gh api --method DELETE "repos/$GITHUB_REPOSITORY/actions/runs/$id"
-              echo "Deleted $conclusion push run $id"
-            done <<< "$ids"
-          done
   verify-sources:
     runs-on: ubuntu-24.04
     timeout-minutes: 10

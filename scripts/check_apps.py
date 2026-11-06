@@ -83,6 +83,23 @@ AI_INTEGRATION_FILES = {
     '/usr/share/polkit-1/actions/org.kylin-ai-subsystem-modelconfig.policy',
 }
 BIOMETRIC_MANAGER_POLICY = '/usr/share/polkit-1/actions/org.ukui.biometric.manager.security.questions.policy'
+BIOMETRIC_COMPONENTS = {
+    'biometric-auth',
+    'biometric-driver-community-multidevice',
+    'biometric-driver-fido',
+    'biometric-driver-wechat',
+    'biometric-driver-wechat-common',
+    'biometric-utils',
+    'libbiometric0',
+    'libfprint-2-2',
+    'libfprint-2-tod1',
+}
+BIOMETRIC_AUTH_INTEGRATION_FILES = {
+    '/lib/systemd/system/biometric-authentication.service',
+    '/usr/lib/systemd/system/biometric-authentication.service',
+    '/usr/share/polkit-1/actions/org.freedesktop.policykit.pkexec.biometric-authentication.policy',
+    '/usr/share/polkit-1/actions/org.ukui.biometric.policy',
+}
 
 
 def read_status(text):
@@ -101,7 +118,9 @@ def read_status(text):
 def check_app(name, fields, review, owned_files):
     if not isinstance(review, dict):
         raise ValueError(f'{name}: missing reviewed-apps.json entry')
-    component = review.get('kind') == 'ai-component' and name in AI_COMPONENTS
+    ai_component = review.get('kind') == 'ai-component' and name in AI_COMPONENTS
+    biometric_component = review.get('kind') == 'biometric-component' and name in BIOMETRIC_COMPONENTS
+    component = ai_component or biometric_component
     if name.startswith('lib') and not component:
         raise ValueError(f'{name}: shared libraries cannot be removed as desktop apps')
     for key in (('version', 'reason') if component else ('version', 'reason', 'desktop')):
@@ -131,7 +150,8 @@ def check_app(name, fields, review, owned_files):
                           '/usr/share/initramfs-tools/', '/etc/pam.d/',
                           '/usr/share/polkit-1/', '/usr/share/xsessions/',
                           '/usr/share/wayland-sessions/')
-    if any(path.startswith(protected_prefixes) and not (component and path in AI_INTEGRATION_FILES)
+    if any(path.startswith(protected_prefixes) and not (ai_component and path in AI_INTEGRATION_FILES)
+           and not (biometric_component and name == 'biometric-auth' and path in BIOMETRIC_AUTH_INTEGRATION_FILES)
            and not (biometric_manager and path == BIOMETRIC_MANAGER_POLICY)
            for path in owned_files):
         raise ValueError(f'{name}: owns protected system integration files')
@@ -148,7 +168,7 @@ def main():
         files = subprocess.check_output(['chroot', str(root), 'dpkg-query', '-L', name], text=True).splitlines()
         file_paths = [p for p in files if not (root / p.lstrip('/')).is_dir()]
         check_app(name, installed[name], reviews.get(name), file_paths)
-        if reviews[name].get('kind') != 'ai-component':
+        if 'desktop' in reviews[name]:
             launcher = root / reviews[name]['desktop'].lstrip('/')
             if not launcher.is_file():
                 raise ValueError(f'{name}: launcher missing')

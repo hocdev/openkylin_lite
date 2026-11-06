@@ -169,6 +169,17 @@ if [[ -e "$work/policy-rc.d.original" || -L "$work/policy-rc.d.original" ]]; the
   mv "$work/policy-rc.d.original" "$root/usr/sbin/policy-rc.d"
 fi
 (( purge_status == 0 )) || return "$purge_status"
+if grep -qx biometric-auth "$work/planned"; then
+  # UKUI's greeter and screen locker still depend on libpam-biometric.
+  # Deactivate its PAM profile using the same operation as its prerm script.
+  DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
+    chroot "$root" pam-auth-update --package --remove pam-biometric
+  if grep -Eq --exclude='*.pam-old' '^[[:space:]]*[^#[:space:]].*pam_biometric\.so' "$root"/etc/pam.d/*; then
+    echo 'Biometric PAM configuration is still active'
+    return 1
+  fi
+  grep -Eq '^[[:space:]]*auth[[:space:]].*pam_unix\.so' "$root/etc/pam.d/common-auth"
+fi
 chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
 [[ ! -s "$report_dir/dpkg-audit.txt" ]] || { echo 'dpkg audit failed'; exit 1; }

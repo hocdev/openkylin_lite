@@ -1,4 +1,58 @@
 {
+  "biometric-auth": {
+    "version": "0.9.63kord3~rc20-ok23",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "admin"
+  },
+  "biometric-driver-community-multidevice": {
+    "version": "0.9.63kord3~rc20-ok23",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "admin"
+  },
+  "biometric-driver-fido": {
+    "version": "0.0.1-ok9",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "admin"
+  },
+  "biometric-driver-wechat": {
+    "version": "1.0.0.1-0k0.5-ok6",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "admin"
+  },
+  "biometric-driver-wechat-common": {
+    "version": "1.0.0.1-0k0.5-ok6",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "admin"
+  },
+  "biometric-utils": {
+    "version": "0.9.63kord3~rc20-ok23",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "admin"
+  },
+  "libbiometric0": {
+    "version": "0.9.63kord3~rc20-ok23",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "libs"
+  },
+  "libfprint-2-2": {
+    "version": "1:1.95.1+tod1-ok1",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "libs"
+  },
+  "libfprint-2-tod1": {
+    "version": "1:1.95.1+tod1-ok1",
+    "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",
+    "kind": "biometric-component",
+    "section": "libs"
+  },
   "kylin-camera": {
     "version": "1.3.0.16-ok1.80",
     "reason": "User-requested removal of the bundled Camera application",

@@ -1,4 +1,14 @@
 {
+  "com.iflytek.iflyime": {
+    "version": "15.0.2015",
+    "reason": "Remove the optional iFlytek input app while retaining the built-in Fcitx5 stack",
+    "desktop": "/usr/share/applications/com.iflytek.iflyime.desktop"
+  },
+  "kylin-ipmsg": {
+    "version": "1.3.1.2-ok16.22",
+    "reason": "User-requested removal of the bundled LAN messenger",
+    "desktop": "/usr/share/applications/kylin-ipmsg.desktop"
+  },
   "kylin-weather": {
     "version": "3.2.0.3-ok16.17~2update3",
     "reason": "Optional weather indicator dedicated to China",

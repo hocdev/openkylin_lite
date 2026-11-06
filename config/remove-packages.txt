@@ -1,5 +1,7 @@
 # Exact version-pinned WPS/AI removal plan; see reviewed-apps.json.
 kylin-weather
+com.iflytek.iflyime
+kylin-ipmsg
 ai-kylin-deepseek-r1-cloud-model
 ai-kylin-deepseek-v3-cloud-model
 ai-kylin-qwen-plus-cloud-model

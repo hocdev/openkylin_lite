@@ -40,7 +40,7 @@ jobs:
     permissions:
       contents: write
     env:
-      MODE: ${{ inputs.mode || 'inspect' }}
+      MODE: ${{ inputs.mode || 'build' }}
       # Pinned to the original ISO observed in the successful inspection.
       # This is an integrity pin, not an upstream signature verification.
       SOURCE_SHA256: ${{ inputs.sha256 || '4bc4389d15c8af8da7882c16871edcb43650d534ee56deeda8991ea1492652ce' }}

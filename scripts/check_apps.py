@@ -74,6 +74,8 @@ AI_COMPONENTS = {
     'onnxruntime-backend',
 }
 AI_INTEGRATION_FILES = {
+    '/usr/lib/systemd/user/kyai-data-management-service.service',
+    '/usr/lib/systemd/system/kytensor.service',
     '/usr/lib/systemd/user/kylin-ai-vector-engine.service',
     '/usr/lib/systemd/user/kylin-ai-document-service.service',
     '/usr/lib/systemd/user/kylin-ai-knowledgebase-service.service',

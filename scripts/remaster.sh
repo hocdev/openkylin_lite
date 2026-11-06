@@ -114,8 +114,8 @@ mkdir "$root" "$work/lower" "$work/upper" "$work/overlay-work"
 mount -t squashfs -o loop,ro "$sq" "$work/lower"
 mount -t overlay overlay -o "lowerdir=$work/lower,upperdir=$work/upper,workdir=$work/overlay-work" "$root"
 disk_stage overlay-mounted
-purge_packages() (
-local root=$1 baseline=$2 report_dir=$3
+purge_packages() {
+local root=$1 baseline=$2 report_dir=$3 p essential
 mkdir -p "$report_dir"
 python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > "$report_dir/reviewed-apps.txt"
 mount --bind /dev "$root/dev"
@@ -175,7 +175,7 @@ if removed != allowed or added or changed:
 PY
 umount "$root/proc"
 umount "$root/dev"
-)
+}
 python3 scripts/collect_review.py "$root"
 purge_packages "$root" "$work/lower/var/lib/dpkg/status" reports
 du -x --apparent-size -B1 --max-depth=3 "$root" | sort -nr | sed -n '1,100p' > reports/rootfs-largest-dirs.tsv

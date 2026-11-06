@@ -48,3 +48,24 @@
  #endif
      m_pamAuth = QSharedPointer<PamAuthenticate>(new PamAuthenticate(m_lightDmHelper, this));
      m_sessionHelper = QSharedPointer<SessionHelper>(new SessionHelper(m_login1Helper, m_isLockStartupMode, this));
+--- a/debian/ukui-screensaver.postinst
++++ b/debian/ukui-screensaver.postinst
+@@ -4,17 +4,7 @@
+ 
+ glib-compile-schemas /usr/share/glib-2.0/schemas/
+ 
+-path_conf="/usr/share/lightdm/lightdm.conf.d/95-ukui-greeter.conf"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_conf".old
+-path_sh="/usr/lib/lightdm/lightdm-session-setup.sh "
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_sh".old
+-path_desktop="/usr/share/xgreeters/ukui-greeter.desktop"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_desktop".old
+-
+-path_sl_plugin="/usr/lib/`/usr/bin/dpkg-architecture -qDEB_TARGET_MULTIARCH`/ukui-control-center/libscreenlock.so"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_sl_plugin".old
+-path_ss_plugin="/usr/lib/`/usr/bin/dpkg-architecture -qDEB_TARGET_MULTIARCH`/ukui-control-center/libscreensaver.so"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_ss_plugin".old
++# Keep the preinst diversions while this package is installed.
+ 
+ if [ -x /usr/share/kylin-system-updater/kylin-reboot-required ]; then
+     #执行请求重启提示

@@ -88,7 +88,12 @@ if grep -Eq 'libpam-biometric[[:blank:]]*\(' debian/control; then
   echo "Could not remove the biometric dependency from $PACKAGE"
   exit 1
 fi
-dch --local +lite --distribution huanghe 'Disable biometric authentication in this candidate.'
+if [[ $PACKAGE == ukui-screensaver ]]; then
+  dch --newversion "$(dpkg-parsechangelog -SVersion)+lite2" --distribution huanghe \
+    'Disable biometric authentication and keep the required dpkg diversions.'
+else
+  dch --local +lite --distribution huanghe 'Disable biometric authentication in this candidate.'
+fi
 apt-get build-dep -y --no-install-recommends ./
 CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 

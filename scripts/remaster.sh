@@ -116,11 +116,17 @@ mount -t overlay overlay -o "lowerdir=$work/lower,upperdir=$work/upper,workdir=$
 disk_stage overlay-mounted
 purge_packages() {
 local root=$1 baseline=$2 report_dir=$3 p essential
+local -a apt_options=(-o Dpkg::Use-Pty=0)
 mkdir -p "$report_dir"
 python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > "$report_dir/reviewed-apps.txt"
 mount --bind /dev "$root/dev"
 mount -t proc proc "$root/proc"
-chroot "$root" apt-get check
+# The OSTree checkout can lack the deployment's runtime user database.
+# Only the offline commands below use this fallback. No package is fetched.
+if ! chroot "$root" getent passwd _apt >/dev/null; then
+  apt_options+=(-o APT::Sandbox::User=root)
+fi
+chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit-before.txt"
 [[ ! -s "$report_dir/dpkg-audit-before.txt" ]] || { echo 'Original package database is unhealthy'; exit 1; }
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-before.txt"
@@ -128,7 +134,7 @@ for p in "${packages[@]}"; do
   chroot "$root" dpkg-query -W '-f=${Status}\n' "$p" | grep -qx 'install ok installed'
 done
 # Do not autoremove: only the explicit package set is allowed to disappear.
-chroot "$root" apt-get -o APT::Get::AutomaticRemove=false -s purge "${packages[@]}" > "$report_dir/purge-plan.txt"
+chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false -s purge "${packages[@]}" > "$report_dir/purge-plan.txt"
 awk '/^(Remv|Purg) / {print $2}' "$report_dir/purge-plan.txt" | sort -u > "$work/planned"
 printf '%s\n' "${packages[@]}" | sort -u > "$work/allowed"
 comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
@@ -146,15 +152,16 @@ if [[ -e "$root/usr/sbin/policy-rc.d" || -L "$root/usr/sbin/policy-rc.d" ]]; the
 fi
 printf '#!/bin/sh\nexit 101\n' > "$root/usr/sbin/policy-rc.d"
 chmod +x "$root/usr/sbin/policy-rc.d"
-DEBIAN_FRONTEND=noninteractive chroot "$root" apt-get -o APT::Get::AutomaticRemove=false --no-download -y purge "${packages[@]}"
+DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
+  chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false --no-download -y purge "${packages[@]}"
 rm "$root/usr/sbin/policy-rc.d"
 if [[ -e "$work/policy-rc.d.original" || -L "$work/policy-rc.d.original" ]]; then
   mv "$work/policy-rc.d.original" "$root/usr/sbin/policy-rc.d"
 fi
-chroot "$root" apt-get check
+chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
 [[ ! -s "$report_dir/dpkg-audit.txt" ]] || { echo 'dpkg audit failed'; exit 1; }
-chroot "$root" apt-get clean
+chroot "$root" apt-get "${apt_options[@]}" clean
 find "$root/var/cache/apt/archives" -type f -name '*.deb' -delete
 find "$root/var/lib/apt/lists" -type f -delete
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-after.txt"

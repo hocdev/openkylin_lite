@@ -1,7 +1,7 @@
 name: openKylin Lite
 on:
   push:
-    branches: [main]
+    branches: [main, codex/ukui-password]
   workflow_dispatch:
     inputs:
       mode:
@@ -127,6 +127,7 @@ jobs:
             if [[ "$work" == "$RUNNER_TEMP"/openkylin.* && "$iso" == "$work/lite.iso" ]]; then
               sudo rm -rf -- "$work"
             fi
+          fi
 
   ukui-password-candidates:
     runs-on: ubuntu-24.04
@@ -162,4 +163,3 @@ jobs:
           path: ukui-output/
           if-no-files-found: error
           retention-days: 7
-          fi

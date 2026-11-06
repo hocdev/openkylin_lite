@@ -115,7 +115,7 @@ mount -t squashfs -o loop,ro "$sq" "$work/lower"
 mount -t overlay overlay -o "lowerdir=$work/lower,upperdir=$work/upper,workdir=$work/overlay-work" "$root"
 disk_stage overlay-mounted
 purge_packages() {
-local root=$1 baseline=$2 report_dir=$3 p essential
+local root=$1 baseline=$2 report_dir=$3 p essential guard purge_status=0
 local -a apt_options=(-o Dpkg::Use-Pty=0)
 mkdir -p "$report_dir"
 python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > "$report_dir/reviewed-apps.txt"
@@ -152,12 +152,22 @@ if [[ -e "$root/usr/sbin/policy-rc.d" || -L "$root/usr/sbin/policy-rc.d" ]]; the
 fi
 printf '#!/bin/sh\nexit 101\n' > "$root/usr/sbin/policy-rc.d"
 chmod +x "$root/usr/sbin/policy-rc.d"
+# The OSTree runtime guard probes D-Bus even after detecting the offline chroot.
+# Suspend this one dpkg hook while applying the already-validated removal plan.
+guard="$root/etc/dpkg/dpkg.cfg.d/ostree-guard"
+if [[ -e "$guard" || -L "$guard" ]]; then
+  mv -- "$guard" "$work/ostree-guard.original"
+fi
 DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
-  chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false --no-download -y purge "${packages[@]}"
+  chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false --no-download -y purge "${packages[@]}" || purge_status=$?
+if [[ -e "$work/ostree-guard.original" || -L "$work/ostree-guard.original" ]]; then
+  mv -- "$work/ostree-guard.original" "$guard"
+fi
 rm "$root/usr/sbin/policy-rc.d"
 if [[ -e "$work/policy-rc.d.original" || -L "$work/policy-rc.d.original" ]]; then
   mv "$work/policy-rc.d.original" "$root/usr/sbin/policy-rc.d"
 fi
+(( purge_status == 0 )) || return "$purge_status"
 chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
 [[ ! -s "$report_dir/dpkg-audit.txt" ]] || { echo 'dpkg audit failed'; exit 1; }

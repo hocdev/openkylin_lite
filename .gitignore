@@ -2,3 +2,4 @@
 /output/
 *.iso
 *.squashfs
+__pycache__/

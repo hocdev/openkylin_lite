@@ -1,0 +1,35 @@
+--- a/ukui-greeter/greeter/loginwindow.cpp
++++ b/ukui-greeter/greeter/loginwindow.cpp
+@@ -1186,30 +1186,8 @@
+ void LoginWindow::onShowPrompt(QString text, QLightDM::Greeter::PromptType type)
+ {
+     qDebug()<< "prompt: "<< text;
+-    if(isPowerup && m_configuration->getIs990()){
+-        waitBiometricServiceStatus();
+-        startFirstLogin();
+-    }
+-
+-    if(text == BIOMETRIC_PAM || text == BIOMETRIC_PAM_DOUBLE || text == BIOMETRIC_PAM_QRCODE) {
+-        if(isBioSuccess){
+-            m_greeter->respond(BIOMETRIC_SUCCESS);
+-            return ;
+-        }
+-        useDoubleAuth = true;
+-        if(authMode == PASSWORD) {
+-            skipBiometricAuth();
+-        } else {
+-            skipBiometricAuth();
+-            if(isPowerup  && m_configuration->getIs990()){
+-                QTimer::singleShot(1500, [&]{
+-                    performBiometricAuth();
+-                });
+-                isPowerup = false;
+-            }else{
+-                performBiometricAuth();
+-            }
+-	}
++    if (text == BIOMETRIC_PAM || text == BIOMETRIC_PAM_DOUBLE || text == BIOMETRIC_PAM_QRCODE) {
++        skipBiometricAuth();
+     } else {
+         m_name_is_login = false;
+         qDebug()<<"m_name_is_login = false";

@@ -1,0 +1,42 @@
+--- a/src/widgets/authdialog.cpp
++++ b/src/widgets/authdialog.cpp
+@@ -888,28 +888,8 @@
+ void AuthDialog::onPamShowPrompt(QString strPrompt, int nType)
+ {
+     qDebug() << "prompt: " << strPrompt << authMode;
+-    //    if(isPowerup && m_configuration->getIs990()){
+-    //        waitBiometricServiceStatus();
+-    //        startFirstLogin();
+-    //    }
+     if (strPrompt == BIOMETRIC_PAM || strPrompt == BIOMETRIC_PAM_DOUBLE || strPrompt == BIOMETRIC_PAM_QRCODE) {
+-        if (m_bDirectLogin) {
+-            onRespond(BIOMETRIC_SUCCESS);
+-            return;
+-        }
+-        if (authMode == PASSWORD) {
+-            skipBiometricAuth();
+-        } else {
+-            skipBiometricAuth();
+-            //            if(isPowerup  && m_configuration->getIs990()) {
+-            //                QTimer::singleShot(1500, [&]{
+-            //                    performBiometricAuth();
+-            //                });
+-            //                isPowerup = false;
+-            //            } else {
+-            performBiometricAuth();
+-            //            }
+-        }
++        skipBiometricAuth();
+     } else {
+         m_isNameLogin = false;
+         qDebug() << "m_isNameLogin = false";
+--- a/src/lock-backend/dbusupperinterface.cpp
++++ b/src/lock-backend/dbusupperinterface.cpp
+@@ -62,7 +62,6 @@
+     m_lightDmHelper = new LightDMHelper(m_accountsHelper, m_config, this);
+     m_login1Helper = new Login1Helper(this);
+     m_gsettingsHelper = new GSettingsHelper(this);
+-    m_bioAuth = new BioAuthenticate(this);
+     m_pamAuth = new PamAuthenticate(m_lightDmHelper, this);
+     m_usdHelper = new UsdHelper(this);
+     m_upowerHelper = new UpowerHelper(this);

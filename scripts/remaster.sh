@@ -166,44 +166,19 @@ done
 for p in "${packages[@]}"; do
   chroot "$root" dpkg-query -W '-f=${Status}\n' "$p" | grep -qx 'install ok installed'
 done
-# Do not autoremove: only the explicit package set is allowed to disappear.
-chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false -s purge "${packages[@]}" > "$report_dir/purge-plan.txt"
-awk '/^(Remv|Purg) / {print $2}' "$report_dir/purge-plan.txt" | sort -u > "$work/planned"
-printf '%s\n' "${packages[@]}" ukui-greeter ukui-screensaver | sort -u > "$work/allowed"
-printf '%s\n' "${packages[@]}" | sort -u > "$work/expected-removed"
-comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
-[[ ! -s "$report_dir/unexpected-removals.txt" ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
-while read -r p; do
-  case "$p" in
-    ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.
-    ukui-greeter|ukui-screensaver|ukui-polkit) [[ -n ${ukui_versions[$p]+present} ]] || { echo "Missing approved replacement for $p"; exit 1; } ;;
-    linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
-      echo "Protected system package: $p"; exit 1 ;;
-  esac
-  essential=$(chroot "$root" dpkg-query -W '-f=${Essential}' "$p")
-  [[ $essential != yes ]] || { echo "Essential package: $p"; exit 1; }
-done < "$work/planned"
+# Install source-built password-only replacements first. That updates the
+# greeter and screen-locker dependency metadata before APT plans biometric PAM
+# removal, avoiding removal of the desktop metapackage or display manager.
 if [[ -e "$root/usr/sbin/policy-rc.d" || -L "$root/usr/sbin/policy-rc.d" ]]; then
   mv "$root/usr/sbin/policy-rc.d" "$work/policy-rc.d.original"
 fi
 printf '#!/bin/sh\nexit 101\n' > "$root/usr/sbin/policy-rc.d"
 chmod +x "$root/usr/sbin/policy-rc.d"
-# The OSTree runtime guard probes D-Bus even after detecting the offline chroot.
-# Suspend this one dpkg hook while applying the already-validated removal plan.
+# Suspend the OSTree runtime guard only for these offline dpkg operations.
 guard="$root/etc/dpkg/dpkg.cfg.d/ostree-guard"
 if [[ -e "$guard" || -L "$guard" ]]; then
   mv -- "$guard" "$work/ostree-guard.original"
 fi
-DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
-  chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false --no-download -y purge "${packages[@]}" || purge_status=$?
-if [[ -e "$work/ostree-guard.original" || -L "$work/ostree-guard.original" ]]; then
-  mv -- "$work/ostree-guard.original" "$guard"
-fi
-rm "$root/usr/sbin/policy-rc.d"
-if [[ -e "$work/policy-rc.d.original" || -L "$work/policy-rc.d.original" ]]; then
-  mv "$work/policy-rc.d.original" "$root/usr/sbin/policy-rc.d"
-fi
-(( purge_status == 0 )) || return "$purge_status"
 candidate_debs=()
 for deb in "$ukui_deb_dir"/*.deb; do
   candidate_debs+=("$candidate_dir/$(basename "$deb")")
@@ -214,6 +189,33 @@ for package in ukui-greeter ukui-screensaver ukui-polkit; do
   actual=$(chroot "$root" dpkg-query -W '-f=${Version}' "$package")
   [[ $actual == "${expected_versions[$package]}" ]] || { echo "Unexpected candidate version for $package: $actual"; return 1; }
 done
+# Do not autoremove: only the explicit package set is allowed to disappear.
+chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false -s purge "${packages[@]}" > "$report_dir/purge-plan.txt"
+awk '/^(Remv|Purg) / {print $2}' "$report_dir/purge-plan.txt" | sort -u > "$work/planned"
+printf '%s\n' "${packages[@]}" | sort -u > "$work/allowed"
+printf '%s\n' "${packages[@]}" | sort -u > "$work/expected-removed"
+comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
+[[ ! -s "$report_dir/unexpected-removals.txt" ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
+while read -r p; do
+  case "$p" in
+    ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.
+    libpam-biometric) ;; # Exact PAM component reviewed above; candidates no longer depend on it.
+    linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
+      echo "Protected system package: $p"; exit 1 ;;
+  esac
+  essential=$(chroot "$root" dpkg-query -W '-f=${Essential}' "$p")
+  [[ $essential != yes ]] || { echo "Essential package: $p"; exit 1; }
+done < "$work/planned"
+DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
+  chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false --no-download -y purge "${packages[@]}" || purge_status=$?
+if [[ -e "$work/ostree-guard.original" || -L "$work/ostree-guard.original" ]]; then
+  mv -- "$work/ostree-guard.original" "$guard"
+fi
+rm "$root/usr/sbin/policy-rc.d"
+if [[ -e "$work/policy-rc.d.original" || -L "$work/policy-rc.d.original" ]]; then
+  mv "$work/policy-rc.d.original" "$root/usr/sbin/policy-rc.d"
+fi
+(( purge_status == 0 )) || return "$purge_status"
 rm -rf "$root$candidate_dir"
 if grep -qx biometric-auth "$work/planned"; then
   # Deactivate the biometric PAM profile while retaining Unix password auth.

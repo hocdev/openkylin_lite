@@ -1,0 +1,62 @@
+name: openKylin Lite
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: Inspect first; build after reviewing config/remove-packages.txt
+        type: choice
+        options: [inspect, build]
+        default: inspect
+      sha256:
+        description: Trusted SHA256 of the original ISO (required for build)
+        type: string
+        required: false
+permissions:
+  contents: read
+concurrency:
+  group: openkylin-lite
+  cancel-in-progress: false
+jobs:
+  remaster:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 330
+    permissions:
+      contents: write
+    env:
+      MODE: ${{ inputs.mode }}
+      SOURCE_SHA256: ${{ inputs.sha256 }}
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install ISO tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y xorriso squashfs-tools shellcheck
+          shellcheck scripts/*.sh
+          python3 -m unittest discover -s tests -v
+      - name: Inspect or remaster
+        run: sudo --preserve-env=MODE,SOURCE_SHA256,RUNNER_TEMP,GITHUB_WORKSPACE,GITHUB_STEP_SUMMARY bash scripts/remaster.sh
+      - name: Save small inspection reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: inspection-${{ github.run_id }}
+          path: reports/
+          retention-days: 3
+          if-no-files-found: warn
+      - name: Save ISO to a draft release
+        if: inputs.mode == 'build'
+        env:
+          RELEASE_TAG: lite-${{ github.run_id }}-${{ github.run_attempt }}
+        run: |
+          bash scripts/publish.sh
+      - name: Clean pending ISO after cancellation or failure
+        if: always()
+        run: |
+          if [[ -f output/iso-path.txt ]]; then
+            iso=$(cat output/iso-path.txt)
+            work=$(dirname "$iso")
+            if [[ "$work" == "$RUNNER_TEMP"/openkylin.* && "$iso" == "$work/lite.iso" ]]; then
+              sudo rm -rf -- "$work"
+            fi
+          fi

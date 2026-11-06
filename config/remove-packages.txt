@@ -1,0 +1,5 @@
+# One exact installed package name per line; no wildcards.
+# Run inspect, review reports/packages.tsv and desktop-files.txt first.
+# Add confirmed unwanted applications here. No package is removed by default.
+# Each package must also have a version, reason and owned desktop launcher
+# in config/reviewed-apps.json. Chinese text is not a removal criterion.

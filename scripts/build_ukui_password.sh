@@ -14,7 +14,7 @@ deb [signed-by=/usr/share/keyrings/openkylin-archive-keyring.gpg] http://archive
 EOF
 apt_options=(-o "Dir::Etc::sourcelist=$work/iso.list" -o Dir::Etc::sourceparts=- -o Acquire::Retries=3)
 apt-get "${apt_options[@]}" update
-apt-get "${apt_options[@]}" install -y --no-install-recommends ca-certificates git build-essential devscripts equivs
+apt-get "${apt_options[@]}" install -y --no-install-recommends ca-certificates git build-essential devscripts
 
 git init "$work/source"
 cd "$work/source"

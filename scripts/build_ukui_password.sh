@@ -12,21 +12,28 @@ apt-get install -y --no-install-recommends ca-certificates git build-essential d
 
 git init "$work/source"
 cd "$work/source"
-git fetch --depth=1 "https://gitee.com/openkylin/$PACKAGE.git" "refs/tags/$SOURCE_TAG"
+git fetch --depth=1 "https://gitee.com/openkylin/$SOURCE_PACKAGE.git" "refs/tags/$SOURCE_TAG"
 git checkout --detach FETCH_HEAD
 [[ $(git rev-parse HEAD) == "$SOURCE_COMMIT" ]]
+# Materialize the vendor's quilt patches before changing overlapping code.
+dpkg-source --before-build .
 git apply --check "$workspace/patches/ukui-password/$PACKAGE.patch"
 git apply "$workspace/patches/ukui-password/$PACKAGE.patch"
+if [[ $PACKAGE == ukui-screensaver ]]; then
+  backend=src/lock-backend/dbusupperinterface.cpp
+  grep -Fxq '    m_bioAuth = new BioAuthenticate(this);' "$backend"
+  sed -i '/^    m_bioAuth = new BioAuthenticate(this);$/d' "$backend"
+fi
 
 # Keep the regular LightDM/PAM dependencies. Only remove the biometric backend.
-grep -q 'libpam-biometric' debian/control
 sed -Ei '
   /^[[:blank:]]+libpam-biometric[[:blank:]]*\([^)]*\),[[:blank:]]*$/d
   s/libpam-biometric[[:blank:]]*\([^)]*\),[[:blank:]]*//
   /^Suggests: biometric-auth$/d
   / supports biometric /,+1d
+  / The ukui-polkit package supports general authentication and/,+2c\ This authentication agent uses passwords.
 ' debian/control
-if grep -q 'libpam-biometric' debian/control; then
+if grep -Eq 'libpam-biometric[[:blank:]]*\(' debian/control; then
   echo "Could not remove the biometric dependency from $PACKAGE"
   exit 1
 fi

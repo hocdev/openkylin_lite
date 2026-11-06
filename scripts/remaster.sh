@@ -183,6 +183,17 @@ if [[ $MODE == profile ]]; then
           [[ -n $ref ]] || continue
           printf '%s\t' "$ref"
           ostree --repo="$ostree_repo" rev-parse "$ref" || true
+          ostree --repo="$ostree_repo" show --raw "$ref" || true
+          ostree --repo="$ostree_repo" ls "$ref" / || true
+          for path in /etc /usr/etc /usr/lib/modules /var/lib/dpkg/status /usr/share/dpkg/status; do
+            ostree --repo="$ostree_repo" ls "$ref" "$path" || true
+          done
+          for path in /var/lib/dpkg/status /usr/share/dpkg/status; do
+            report_name=${path//\//-}
+            if ! ostree --repo="$ostree_repo" cat "$ref" "$path" > "reports/ostree${report_name}.txt"; then
+              rm -f "reports/ostree${report_name}.txt"
+            fi
+          done
         done <<< "$refs"
       fi
       echo '### Unreachable objects (dry run)'

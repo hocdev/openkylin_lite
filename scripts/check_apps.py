@@ -104,6 +104,7 @@ BIOMETRIC_AUTH_INTEGRATION_FILES = {
 LIBPAM_BIOMETRIC_INTEGRATION_FILES = {
     '/etc/dbus-1/system.d/org.ukui.UniauthBackend.conf',
     '/etc/pam-configs/pam-biometric',
+    '/usr/share/polkit-1/actions/org.ukui.biometric.policy',
 }
 
 
@@ -155,12 +156,16 @@ def check_app(name, fields, review, owned_files):
                           '/usr/share/initramfs-tools/', '/etc/pam.d/',
                           '/usr/share/polkit-1/', '/usr/share/xsessions/',
                           '/usr/share/wayland-sessions/')
-    if any(path.startswith(protected_prefixes) and not (ai_component and path in AI_INTEGRATION_FILES)
-           and not (biometric_component and name == 'biometric-auth' and path in BIOMETRIC_AUTH_INTEGRATION_FILES)
-           and not (biometric_component and name == 'libpam-biometric' and path in LIBPAM_BIOMETRIC_INTEGRATION_FILES)
-           and not (biometric_manager and path == BIOMETRIC_MANAGER_POLICY)
-           for path in owned_files):
-        raise ValueError(f'{name}: owns protected system integration files')
+    protected_files = [
+        path for path in owned_files
+        if path.startswith(protected_prefixes)
+        and not (ai_component and path in AI_INTEGRATION_FILES)
+        and not (biometric_component and name == 'biometric-auth' and path in BIOMETRIC_AUTH_INTEGRATION_FILES)
+        and not (biometric_component and name == 'libpam-biometric' and path in LIBPAM_BIOMETRIC_INTEGRATION_FILES)
+        and not (biometric_manager and path == BIOMETRIC_MANAGER_POLICY)
+    ]
+    if protected_files:
+        raise ValueError(f'{name}: owns protected system integration files: {", ".join(protected_files)}')
 
 
 def main():

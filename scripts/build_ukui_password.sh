@@ -55,7 +55,7 @@ PYTHON
 fi
 if [[ $PACKAGE == ukui-polkit ]]; then
   # Keep password-dialog translations under the package that loads them.
-  sed -i 's|${UKUI_BIOMETRIC_DIR}/i18n_qm/polkit|/usr/share/ukui-polkit/translations|' polkit-agent/CMakeLists.txt
+  sed -i "s|\${UKUI_BIOMETRIC_DIR}/i18n_qm/polkit|/usr/share/ukui-polkit/translations|" polkit-agent/CMakeLists.txt
   sed -i '
     s|%1/i18n_qm/polkit/%2.qm").arg(GET_STR(UKUI_BIOMETRIC)).arg(locale)|/usr/share/ukui-polkit/translations/%1.qm").arg(locale)|
     s/QTranslator translator_main, translator_bio;/QTranslator translator_main;/

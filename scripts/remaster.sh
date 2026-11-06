@@ -11,6 +11,8 @@ repo=$PWD
 mkdir -p reports output
 work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/openkylin.XXXXXX")
 cleanup() {
+  mountpoint -q "$work/root/proc" && umount "$work/root/proc"
+  mountpoint -q "$work/root/dev" && umount "$work/root/dev"
   mountpoint -q "$work/root" && umount "$work/root"
   mountpoint -q "$work/lower" && umount "$work/lower"
   mountpoint -q "$work/iso" && umount "$work/iso"
@@ -110,7 +112,10 @@ mkdir "$root" "$work/lower" "$work/upper" "$work/overlay-work"
 mount -t squashfs -o loop,ro "$sq" "$work/lower"
 mount -t overlay overlay -o "lowerdir=$work/lower,upperdir=$work/upper,workdir=$work/overlay-work" "$root"
 disk_stage overlay-mounted
+python3 scripts/collect_review.py "$root"
 python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > reports/reviewed-apps.txt
+mount --bind /dev "$root/dev"
+mount -t proc proc "$root/proc"
 chroot "$root" apt-get check
 chroot "$root" dpkg --audit > reports/dpkg-audit-before.txt
 [[ ! -s reports/dpkg-audit-before.txt ]] || { echo 'Original package database is unhealthy'; exit 1; }
@@ -126,7 +131,7 @@ comm -23 "$work/planned" "$work/allowed" > reports/unexpected-removals.txt
 [[ ! -s reports/unexpected-removals.txt ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
 while read -r p; do
   case "$p" in
-    linux-*|grub*|shim*|systemd*|udev*|lib*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|*kylin*core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
+    linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
       echo "Protected system package: $p"; exit 1 ;;
   esac
   essential=$(chroot "$root" dpkg-query -W '-f=${Essential}' "$p")
@@ -164,6 +169,8 @@ print('Version changes:', ', '.join(sorted(changed)))
 if removed != allowed or added or changed:
     raise SystemExit('Package changes differ from the reviewed removal list')
 PY
+umount "$root/proc"
+umount "$root/dev"
 size=$(du -sx --block-size=1 "$root" | cut -f1)
 mksquashfs "$root" "$work/filesystem.squashfs" -noappend -comp xz -b 1M -processors 2 -mem 2G
 # Release writable overlay changes as soon as the new filesystem is complete.

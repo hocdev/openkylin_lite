@@ -1,1 +1,413 @@
-{}
+{
+  "ai-kylin-deepseek-r1-cloud-model": {
+    "version": "1.0.0.0-ok0.1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "ai-kylin-deepseek-v3-cloud-model": {
+    "version": "1.0.0.0-ok0.1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "ai-kylin-qwen-plus-cloud-model": {
+    "version": "1.0.0.0-ok0.1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kolourpaint": {
+    "version": "4:23.08.3-ok3.18",
+    "reason": "Depends directly on removed kylin-aiassistant",
+    "desktop": "/usr/share/applications/org.kde.kolourpaint.desktop"
+  },
+  "kyai-data-management-service": {
+    "version": "1.2.0.0-ok0.17",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-ai-abstract-models": {
+    "version": "1.2.0.0-0k0.21",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-ai-document-qa-service": {
+    "version": "1.2.0.0-ok0.7",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-ai-document-service": {
+    "version": "1.2.0.0-ok0.6",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kylin-ai-engine-plugins": {
+    "version": "1.1.0.1-ok1.5",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kylin-ai-knowledge-base-service": {
+    "version": "1.2.0.0-ok0.7",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-ai-parser-extension": {
+    "version": "1.2.0.0-ok0.4",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kylin-ai-python-env": {
+    "version": "1.2.0.0-ok0.6",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-ai-runtime": {
+    "version": "1.1.0.1-ok0.21",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "admin"
+  },
+  "kylin-ai-subsystem": {
+    "version": "1.3.0.0-ok0.4",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kylin-ai-subsystem-modelconfig": {
+    "version": "1.0.0.1-ok1.11",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kylin-ai-subsystem-plugin": {
+    "version": "1.0.0.2-ok1.13",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kylin-ai-vector-engine": {
+    "version": "1.2.0.1-ok0.11",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "x11"
+  },
+  "kylin-aiassistant": {
+    "version": "5.0.0.0-0k1.33",
+    "reason": "User explicitly requested removing all AI and kylin-aiassistant",
+    "desktop": "/usr/share/applications/kylin-aiassistant.desktop"
+  },
+  "kylin-bot": {
+    "version": "0.7.5-ok1.9",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-cn-clip-model": {
+    "version": "1.0.0.1-ok1.3",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-gte-base-model": {
+    "version": "1.0.0.1-ok1.3",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-paddle-ocr-model": {
+    "version": "1.0.0.1-ok1.1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-portrait-matting-model": {
+    "version": "1.0.0.0-ok0.9",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-sam-model": {
+    "version": "1.2.0.0-0k1.0",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-sam-model-onnx": {
+    "version": "1.0.0.0-ok0.2",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-speech-asr-model": {
+    "version": "1.0.0.0-ok0.3update1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-speech-asr-model-onnx": {
+    "version": "1.0.0.0-ok0.3",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-speech-tts-model": {
+    "version": "1.0.0.0-ok0.3",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-speech-tts-model-onnx": {
+    "version": "1.0.0.0-ok0.1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kylin-universal-matting-model": {
+    "version": "1.0.0.0-ok0.2",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "kytensor-client": {
+    "version": "2.49.0.6-0ok11",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kytensor-llm": {
+    "version": "1.0.0-ok0.7~1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kytensor-python": {
+    "version": "2.49.0.6-0ok11",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "kytensor-server": {
+    "version": "2.49.0.6-0ok11",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkyai-assistant0": {
+    "version": "1.0.0.1-ok2.5",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkyai-business-framework": {
+    "version": "1.2.0.0-ok0.5",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkyai-config0": {
+    "version": "1.1.0.1-ok2.6",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-ai-document-qa-service": {
+    "version": "1.2.0.0-ok0.7",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "utils"
+  },
+  "libkylin-ai-document-service": {
+    "version": "1.2.0.0-ok0.6",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-baidu-ai-engine-plugin": {
+    "version": "1.0.0.2-ok0.6",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-baidu-nlp-engine": {
+    "version": "1.1.0.0-ok0.10",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-baidu-speech-engine": {
+    "version": "1.0.0.2-ok0.10",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-baidu-vision-engine": {
+    "version": "1.0.0.2-ok0.10",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-coreai-embedding": {
+    "version": "1.2.0.0-ok0.5",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libdevel"
+  },
+  "libkylin-custom-ai-engine-plugin": {
+    "version": "1.1.0.1-ok0.3update1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-custom-nlp-engine": {
+    "version": "1.1.0.1-ok0.9",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-deepseek-ai-engine-plugin": {
+    "version": "1.1.0.1-ok0.4",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-deepseek-nlp-engine": {
+    "version": "1.1.0.1-ok0.12",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-freetrial-ai-engine-plugin": {
+    "version": "1.2.0.0-ok0.1",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-freetrial-nlp-engine": {
+    "version": "1.1.0.0-ok0.5",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-ondevice-ai-engine-plugin": {
+    "version": "1.2.0.0-ok0.8",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-ondevice-embedding-engine": {
+    "version": "1.2.0.0-ok0.7",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-ondevice-nlp-engine": {
+    "version": "1.2.0.0-ok0.13",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-ondevice-speech-engine": {
+    "version": "1.2.0.0-ok0.3",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-ondevice-traditional-ai-engine-plugin": {
+    "version": "1.2.0.0-ok0.4",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-ondevice-vision-engine": {
+    "version": "1.2.0.0-ok0.9",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-qwen-ai-engine-plugin": {
+    "version": "1.1.0.2-ok0.5",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-qwen-nlp-engine": {
+    "version": "1.1.0.1-ok0.12",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-xunfei-ai-engine-plugin": {
+    "version": "1.1.0.1-ok0.6",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-xunfei-nlp-engine": {
+    "version": "1.1.0.1-ok0.9",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-xunfei-speech-engine": {
+    "version": "1.1.0.1-ok0.8",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkylin-xunfei-vision-engine": {
+    "version": "1.1.0.1-ok0.10",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkysdk-genai-nlp0": {
+    "version": "1.1.0.1-ok1.6",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkysdk-genai-vision0": {
+    "version": "1.1.0.1-ok1.5",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkysdk-mcp": {
+    "version": "1.0.0.0-ok0.1",
+    "reason": "User requested removing all AI integration including MCP runtime",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "libkysdk-vector-engine-client": {
+    "version": "1.2.0.0-ok0.7",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "llm-backend": {
+    "version": "1.0.1-0ok3",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "onnxruntime-backend": {
+    "version": "1.0.0-0ok3",
+    "reason": "User approved removing all removable AI components",
+    "kind": "ai-component",
+    "section": "libs"
+  },
+  "wps-office": {
+    "version": "12.1.2.26885.AK.preread.sw-ok2",
+    "reason": "User-approved removal of bundled WPS Office",
+    "desktop": "/usr/share/applications/wps-office-wps.desktop"
+  }
+}

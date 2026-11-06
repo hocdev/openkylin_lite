@@ -37,6 +37,17 @@ class AppPolicyTests(unittest.TestCase):
             check_app('chat', self.fields, self.review,
                       self.files + ['/usr/lib/systemd/system/core.service'])
 
+    def test_exact_ai_component_without_launcher(self):
+        review = {'kind': 'ai-component', 'version': '1.2', 'reason': 'Approved AI model', 'section': 'utils'}
+        check_app('kylin-gte-base-model', self.fields, review, ['/usr/share/kylin-gte-base-model/model.onnx'])
+        with self.assertRaises(ValueError):
+            check_app('unreviewed-component', self.fields, review, [])
+
+    def test_ai_component_cannot_remove_core_unit(self):
+        review = {'kind': 'ai-component', 'version': '1.2', 'reason': 'Approved AI model', 'section': 'utils'}
+        with self.assertRaises(ValueError):
+            check_app('kylin-gte-base-model', self.fields, review, ['/usr/lib/systemd/system/core.service'])
+
 
 if __name__ == '__main__':
     unittest.main()

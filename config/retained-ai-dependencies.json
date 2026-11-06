@@ -1,0 +1,28 @@
+{
+  "libonnxruntime": [
+    "kylin-photo-viewer"
+  ],
+  "libkysdk-ai-common": [
+    "libukui-search2",
+    "peony-intelligent-data-management-service",
+    "ukui-search"
+  ],
+  "libkyai-data-management-client": [
+    "libukui-search2",
+    "peony-intelligent-data-management-service",
+    "ukui-search"
+  ],
+  "libkysdk-coreai-speech0": [
+    "orca",
+    "ukui-voice-wing"
+  ],
+  "libkysdk-advanced-ai0": [
+    "peony-intelligent-data-management-service"
+  ],
+  "libkysdk-coreai-vision0": [
+    "ukui-clipboard"
+  ],
+  "libkysdk-ocr": [
+    "kylin-photo-viewer"
+  ]
+}

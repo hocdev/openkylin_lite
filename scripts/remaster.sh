@@ -24,19 +24,19 @@ disk_stage() {
   { printf '\nStage: %s\n' "$1"; df -h "$work"; } | tee -a "$repo/reports/disk-stages.txt"
 }
 mkdir "$work/iso"
-url=https://releases.openkylin.top/3.0/openKylin-Desktop-V3.0-20260918-x86_64.iso
 if [[ $MODE == build && ! ${SOURCE_SHA256:-} =~ ^[[:xdigit:]]{64}$ ]]; then
-  echo 'Build requires an independently verified upstream SHA256.'; exit 1
+  echo 'Build requires a pinned source SHA256.'; exit 1
 fi
 df -h . "$work" | tee reports/disk-before.txt
 free_bytes=$(df -B1 --output=avail "$work" | tail -1)
-(( free_bytes > 10 * 1024**3 )) || { echo 'Need at least 10 GiB free to inspect.'; exit 1; }
-if command -v aria2c >/dev/null; then
-  aria2c --max-connection-per-server=8 --split=8 --min-split-size=4M --max-tries=5 --timeout=60 --file-allocation=none --summary-interval=60 --console-log-level=warn --dir="$work" --out=source.iso "$url"
+if [[ -n ${ISO_SOURCE_DIR:-} ]]; then
+  [[ -f "$ISO_SOURCE_DIR/source.iso" ]] || { echo 'Prepare original ISO first'; exit 1; }
+  ln -s "$ISO_SOURCE_DIR/source.iso" "$work/source.iso"
 else
-  curl --fail --location --retry 5 --connect-timeout 30 --max-time 3600 "$url" -o "$work/source.iso"
+  (( free_bytes > 10 * 1024**3 )) || { echo 'Need at least 10 GiB free to download ISO.'; exit 1; }
+  ISO_SOURCE_DIR="$work" bash scripts/prepare_source.sh
 fi
-[[ $(stat -c %s "$work/source.iso") == 7647188992 ]] || { echo 'Unexpected ISO size'; exit 1; }
+[[ $(stat -Lc %s "$work/source.iso") == 7647188992 ]] || { echo 'Unexpected ISO size'; exit 1; }
 sha256sum "$work/source.iso" | tee reports/source-sha256.txt
 if [[ -n ${SOURCE_SHA256:-} ]]; then
   [[ ${SOURCE_SHA256} =~ ^[[:xdigit:]]{64}$ ]] || exit 1
@@ -174,40 +174,17 @@ disk_stage squashfs-complete
 mkdir "$work/meta"
 cp reports/manifest-after.txt "$work/meta/filesystem.manifest"
 printf '%s\n' "$size" > "$work/meta/filesystem.size"
-parent=$(dirname "$relative")
-args=(-map "$work/filesystem.squashfs" "/$relative")
-for name in filesystem.manifest filesystem.size; do
-  [[ ! -f "$work/iso/$parent/$name" ]] || args+=(-map "$work/meta/$name" "/$parent/$name")
+python3 scripts/update_iso_metadata.py "$work/iso" "$work/meta" "$relative" "$work/filesystem.squashfs" "$work/allowed" > "$work/maps"
+mapfile -d '' mappings < "$work/maps"
+args=()
+for ((i=0; i<${#mappings[@]}; i+=2)); do
+  args+=(-map "${mappings[i]}" "${mappings[i+1]}")
 done
-# Installer-specific subset manifests cannot safely be guessed.
-if find "$work/iso" -type f -name 'filesystem.manifest*' ! -name filesystem.manifest | grep -q .; then
-  echo 'Installer subset manifests detected. Add a source-specific update before building.'; exit 1
-fi
-# Update the usual live-media checksum list, preserving original path spelling.
-if [[ -f "$work/iso/md5sum.txt" ]]; then
-  python3 - "$work/iso" "$work/meta" "$relative" "$work/filesystem.squashfs" <<'PY'
-import hashlib,pathlib,sys
-iso,meta=map(pathlib.Path,sys.argv[1:3]); relative=sys.argv[3]
-updates={relative:pathlib.Path(sys.argv[4])}
-for n in ('filesystem.manifest','filesystem.size'):
-    path=str(pathlib.PurePosixPath(relative).parent/n)
-    if (iso/path).is_file(): updates[path]=meta/n
-lines=[]
-for line in (iso/'md5sum.txt').read_text().splitlines():
-    digest,path=line.split(maxsplit=1); key=path.lstrip('*')
-    key=key[2:] if key.startswith('./') else key
-    if key in updates:
-        with updates[key].open('rb') as f: digest=hashlib.file_digest(f,'md5').hexdigest()
-    lines.append(f'{digest}  {path}')
-(meta/'md5sum.txt').write_text('\n'.join(lines)+'\n')
-PY
-  args+=(-map "$work/meta/md5sum.txt" /md5sum.txt)
-fi
 xorriso -indev "$work/source.iso" -outdev "$work/lite.iso" "${args[@]}" -boot_image any replay -commit -end
-source_bytes=$(stat -c %s "$work/source.iso")
+source_bytes=$(stat -Lc %s "$work/source.iso")
 umount "$work/iso"
 rm "$work/source.iso"
-disk_stage source-released
+disk_stage source-unmounted-original-retained-in-cache
 xorriso -indev "$work/lite.iso" -report_el_torito plain > reports/boot-output.txt 2>&1
 # Mount and compare directly: no second extracted squashfs on disk.
 mount -o loop,ro "$work/lite.iso" "$work/iso"

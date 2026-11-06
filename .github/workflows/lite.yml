@@ -26,21 +26,38 @@ jobs:
       contents: write
     env:
       MODE: ${{ inputs.mode || 'inspect' }}
-      SOURCE_SHA256: ${{ inputs.sha256 }}
+      # Pinned to the original ISO observed in the successful inspection.
+      # This is an integrity pin, not an upstream signature verification.
+      SOURCE_SHA256: ${{ inputs.sha256 || '4bc4389d15c8af8da7882c16871edcb43650d534ee56deeda8991ea1492652ce' }}
+      ISO_SOURCE_DIR: ${{ runner.temp }}/openkylin-source
       GH_TOKEN: ${{ github.token }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       - name: Install ISO tools
         run: |
           sudo apt-get update
           sudo apt-get install -y xorriso squashfs-tools shellcheck aria2
           shellcheck scripts/*.sh
           python3 -m unittest discover -s tests -v
+      - name: Restore original ISO cache
+        id: iso-cache
+        uses: actions/cache/restore@v5
+        with:
+          path: ${{ env.ISO_SOURCE_DIR }}/source.iso
+          key: openkylin-source-v1-${{ env.SOURCE_SHA256 }}
+      - name: Prepare and verify original ISO
+        run: bash scripts/prepare_source.sh
+      - name: Save verified original ISO before remastering
+        if: steps.iso-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v5
+        with:
+          path: ${{ env.ISO_SOURCE_DIR }}/source.iso
+          key: openkylin-source-v1-${{ env.SOURCE_SHA256 }}
       - name: Inspect or remaster
-        run: sudo --preserve-env=MODE,SOURCE_SHA256,RUNNER_TEMP,GITHUB_WORKSPACE,GITHUB_STEP_SUMMARY bash scripts/remaster.sh
+        run: sudo --preserve-env=MODE,SOURCE_SHA256,ISO_SOURCE_DIR,RUNNER_TEMP,GITHUB_WORKSPACE,GITHUB_STEP_SUMMARY bash scripts/remaster.sh
       - name: Save small inspection reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: inspection-${{ github.run_id }}
           path: reports/

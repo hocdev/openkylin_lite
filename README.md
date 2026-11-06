@@ -1,5 +1,12 @@
 # openKylin Lite qua GitHub Actions
 
+## Cập nhật quy trình
+
+- ISO gốc được giữ trong Actions cache theo SHA256 cố định, dùng chung giữa các push. Kiểm tra hash mỗi lần restore; chỉ tải lại upstream khi cache miss hoặc file hỏng. Cache có thể bị GitHub thu hồi khi lâu không dùng hoặc hết quota, nên không phải lưu trữ vĩnh viễn. Một ISO chiếm khoảng 7,12 GiB trong quota cache 10 GiB; không tạo cache mới theo từng commit.
+- Cache được lưu ngay sau tải/xác minh, trước remaster, nên lỗi build sau đó không làm mất bản gốc đã cache. Dữ liệu tạm vẫn được dọn; ISO gốc cache được giữ lại theo yêu cầu.
+- Dùng `actions/checkout@v6`, `actions/upload-artifact@v6` và `actions/cache/{restore,save}@v5`, đều chạy Node.js 24.
+- SHA256 mặc định là dấu vân tay từ lượt kiểm kê thành công, không phải chữ ký xác thực upstream. Có thể cung cấp hash đã xác minh độc lập khi chạy thủ công.
+
 Nguồn cố định: `openKylin-Desktop-V3.0-20260918-x86_64.iso` (7.647.188.992 byte, khoảng 7,12 GiB).
 
 Mục tiêu: **3–4 GB thập phân**, tối đa 4.000.000.000 byte (khoảng 3,73 GiB), giảm khoảng 48–61% so với nguồn. Cấu hình tại `config/size-target.json`. Nhỏ hơn 3 GB vẫn được chấp nhận, không chèn dữ liệu cho đủ dung lượng. Build vượt 4 GB sẽ dừng trước upload ISO; xem `size-result.txt`. Inspect xuất `size-budget.txt` để phân biệt squashfs và phần còn lại trên ISO. Chưa xác nhận có thể đạt mục tiêu chỉ bằng xóa app tùy chọn; ưu tiên ổn định, giữ desktop/trình cài đặt/driver/font/bộ gõ.

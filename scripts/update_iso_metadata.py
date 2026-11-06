@@ -1,6 +1,7 @@
 """Update Casper package metadata and checksums without dropping install rules."""
 import hashlib
 import pathlib
+import re
 import sys
 
 
@@ -26,11 +27,35 @@ def update_checksums(text, updates, algorithm):
     return '\n'.join(result) + '\n'
 
 
+def configure_live_boot(iso, meta):
+    updates = {}
+    for relative in ('boot/grub/grub.cfg', 'isolinux/isolinux.cfg',
+                     'isolinux/txt.cfg', 'isolinux/lang'):
+        source = iso / relative
+        text = source.read_text(encoding='utf-8')
+        if relative == 'isolinux/lang':
+            text = 'en\n'
+        elif relative == 'boot/grub/grub.cfg':
+            text = re.sub(r'^set timeout=\d+$', 'set timeout=2', text, flags=re.M)
+            text = text.replace('locale=zh_CN', 'locale=en_US.UTF-8')
+        elif relative == 'isolinux/isolinux.cfg':
+            text = re.sub(r'^timeout \d+$', 'timeout 20', text, flags=re.M)
+        else:
+            text = re.sub(r'(^\s*append\s+boot=casper\b)',
+                          r'\1 locale=en_US.UTF-8', text, flags=re.M)
+        destination = meta / relative
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(text, encoding='utf-8')
+        updates[relative] = destination
+    return updates
+
+
 def main():
     iso, meta = map(pathlib.Path, sys.argv[1:3])
     relative, squash, removed_file = sys.argv[3:]
     parent = pathlib.PurePosixPath(relative).parent
     updates = {relative: pathlib.Path(squash)}
+    updates.update(configure_live_boot(iso, meta))
     known = {'filesystem.manifest', 'filesystem.manifest-remove'}
     unknown = [p for p in iso.rglob('filesystem.manifest*') if p.name not in known]
     if unknown:

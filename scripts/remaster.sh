@@ -263,7 +263,36 @@ cp -a "$new_repo/." "$ostree_repo/"
 rm -rf -- "$new_repo"
 disk_stage ostree-rebuilt
 size=$(du -sx --block-size=1 "$root" | cut -f1)
-mksquashfs "$root" "$work/filesystem.squashfs" -noappend -comp xz -b 1M -processors 2 -mem 2G
+squash_output="$work/filesystem.squashfs"
+squash_options=(-noappend -b 1M -processors 2 -mem 2G)
+compression=xz
+# Boot kernels must be able to mount SquashFS before the live root is available.
+if grep -qsx 'CONFIG_SQUASHFS_ZSTD=y' "$root/boot/config-7.0.0-3-generic" \
+    "$root/usr/lib/modules/7.0.0-3-generic/config"; then
+  echo 'Trying Zstandard for faster live filesystem reads'
+  mksquashfs "$root" "$squash_output" "${squash_options[@]}" -comp zstd -Xcompression-level 19
+  python3 - "$work/iso" "$sq" "$squash_output" > "$work/zstd-fits" <<'PY'
+import json
+import pathlib
+import sys
+
+iso, original, candidate = map(pathlib.Path, sys.argv[1:])
+limit = json.loads(pathlib.Path('config/size-target.json').read_text())['max_bytes']
+other_bytes = sum(p.stat().st_size for p in iso.rglob('*')
+                  if p.is_file() and p != original)
+print(int(candidate.stat().st_size + other_bytes + 4 * 1024**2 <= limit))
+PY
+  if [[ $(cat "$work/zstd-fits") == 1 ]]; then
+    compression=zstd
+  else
+    echo 'Zstandard candidate exceeds the ISO size budget; rebuilding with XZ'
+    rm -- "$squash_output"
+  fi
+fi
+if [[ $compression == xz ]]; then
+  mksquashfs "$root" "$squash_output" "${squash_options[@]}" -comp xz
+fi
+printf '%s\n' "$compression" | tee reports/live-compression.txt
 # Release writable overlay changes as soon as the new filesystem is complete.
 umount "$root"
 umount "$work/lower"

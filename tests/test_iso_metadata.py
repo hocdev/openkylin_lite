@@ -5,10 +5,35 @@ import tempfile
 import unittest
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / 'scripts'))
-from update_iso_metadata import filter_remove_manifest, update_checksums
+from update_iso_metadata import configure_live_boot, filter_remove_manifest, update_checksums
 
 
 class IsoMetadataTests(unittest.TestCase):
+    def test_english_boot_keeps_explicit_install_and_live_entries(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = pathlib.Path(directory)
+            iso, meta = root / 'iso', root / 'meta'
+            (iso / 'boot/grub').mkdir(parents=True)
+            (iso / 'isolinux').mkdir()
+            files = {
+                'boot/grub/grub.cfg': 'set timeout=3\nlinux /casper/vmlinuz boot=casper locale=zh_CN live\n'
+                                     'linux /casper/vmlinuz boot=casper only-ubiquity locale=zh_CN\n',
+                'isolinux/isolinux.cfg': 'timeout 50\n',
+                'isolinux/txt.cfg': '  append boot=casper live --\n  append boot=casper only-ubiquity --\n',
+                'isolinux/lang': 'zh_CN\n',
+            }
+            for relative, content in files.items():
+                (iso / relative).write_text(content, encoding='utf-8')
+            updates = configure_live_boot(iso, meta)
+            self.assertEqual(updates['isolinux/lang'].read_text(), 'en\n')
+            self.assertEqual(updates['isolinux/isolinux.cfg'].read_text(), 'timeout 20\n')
+            self.assertIn('set timeout=2', updates['boot/grub/grub.cfg'].read_text())
+            for relative in ('boot/grub/grub.cfg', 'isolinux/txt.cfg'):
+                text = updates[relative].read_text()
+                self.assertEqual(text.count('locale=en_US.UTF-8'), 2)
+                self.assertIn('only-ubiquity', text)
+                self.assertNotIn('zh_CN', text)
+
     def test_preserves_installer_removal_rules(self):
         text = '# install-only cleanup\ncasper\nwps-office\nkylin-os-installer\n'
         self.assertEqual(filter_remove_manifest(text, {'wps-office'}),

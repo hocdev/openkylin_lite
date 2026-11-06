@@ -53,6 +53,19 @@ project.write_text(re.sub(r' -lopencv_\w+', '', text))
 PYTHON
   sed -Ei '/^[[:blank:]]+libopencv-dev,[[:blank:]]*$/d' debian/control
 fi
+if [[ $PACKAGE == ukui-polkit ]]; then
+  # Keep password-dialog translations under the package that loads them.
+  sed -i 's|${UKUI_BIOMETRIC_DIR}/i18n_qm/polkit|/usr/share/ukui-polkit/translations|' polkit-agent/CMakeLists.txt
+  sed -i '
+    s|%1/i18n_qm/polkit/%2.qm").arg(GET_STR(UKUI_BIOMETRIC)).arg(locale)|/usr/share/ukui-polkit/translations/%1.qm").arg(locale)|
+    s/QTranslator translator_main, translator_bio;/QTranslator translator_main;/
+    /qmfile_bio/d
+    /translator_bio/d
+    /#include "biodevices.h"/d
+    /    BioDevices devices;/,+2d
+  ' polkit-agent/src/PolkitAgent.cpp
+  sed -i 's|/usr/share/ukui-biometric/i18n_qm/polkit/|/usr/share/ukui-polkit/translations/|' debian/ukui-polkit.install
+fi
 # Keep the regular LightDM/PAM dependencies. Only remove the biometric backend.
 sed -Ei '
   /^[[:blank:]]+libpam-biometric[[:blank:]]*\([^)]*\),[[:blank:]]*$/d
@@ -72,7 +85,7 @@ CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 deb=( "$work/${PACKAGE}_"*_amd64.deb )
 [[ ${#deb[@]} == 1 && -f ${deb[0]} ]]
 dependencies=$(dpkg-deb -f "${deb[0]}" Depends Pre-Depends Recommends Suggests)
-if grep -Eq 'libpam-biometric|biometric-auth' <<< "$dependencies"; then
+if grep -Eq 'biometric|fprint|bio-(app|drv)-api' <<< "$dependencies"; then
   echo "Biometric package dependency remains in $PACKAGE"
   exit 1
 fi

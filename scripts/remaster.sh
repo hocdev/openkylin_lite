@@ -229,6 +229,16 @@ if grep -qx biometric-auth "$work/planned"; then
     return 1
   fi
   grep -Eq '^[[:space:]]*auth[[:space:]].*pam_unix\.so' "$root/etc/pam.d/common-auth"
+  # The PAM package's postinst generates this directory outside dpkg ownership.
+  rm -rf -- "$root/etc/biometric-auth"
+  for path in /usr/share/ukui-biometric /etc/pam-configs/pam-biometric \
+    /usr/share/applications/biometric-manager.desktop \
+    /usr/lib/systemd/system/biometric-authentication.service; do
+    if [[ -e "$root$path" || -L "$root$path" ]]; then
+      echo "Biometric file remains after purge: $path"
+      return 1
+    fi
+  done
 fi
 chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
@@ -239,7 +249,7 @@ find "$root/var/lib/apt/lists" -type f -delete
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-after.txt"
 printf '%s\n' "ukui-greeter ${ukui_versions[ukui-greeter]}" "ukui-screensaver ${ukui_versions[ukui-screensaver]}" "ukui-polkit ${ukui_versions[ukui-polkit]}" > "$report_dir/ukui-candidate-versions.txt"
 python3 - "$baseline" "$root/var/lib/dpkg/status" "$work/expected-removed" "$report_dir/ukui-candidate-versions.txt" > "$report_dir/package-diff.txt" <<'PY'
-import pathlib,sys
+import pathlib,re,sys
 sys.path.insert(0, 'scripts')
 from check_apps import read_status
 before,after=[read_status(pathlib.Path(p).read_text()) for p in sys.argv[1:3]]
@@ -256,6 +266,14 @@ if removed != allowed or added or changed != set(versions):
 for package,version in versions.items():
     if after[package]['Version'] != version:
         raise SystemExit(f'{package} candidate version mismatch')
+biometric_package = re.compile(r'biometric|fprint|bio-(?:app|drv)-api')
+for package, fields in sorted(after.items()):
+    for key in ('Package', 'Pre-Depends', 'Depends', 'Recommends', 'Suggests', 'Provides'):
+        # Strip version constraints before checking package names.
+        names = re.sub(r'\([^)]*\)', '', fields.get(key, ''))
+        if biometric_package.search(names):
+            raise SystemExit(f'{package}: biometric package reference in {key}: {names}')
+print('Biometric package and dependency audit passed')
 PY
 umount "$root/proc"
 umount "$root/dev"

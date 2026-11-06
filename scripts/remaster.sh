@@ -8,6 +8,29 @@ MODE=${MODE:-inspect}
 [[ $MODE == inspect || $MODE == profile || $MODE == build ]] || exit 1
 cd "${GITHUB_WORKSPACE:-$PWD}"
 repo=$PWD
+ukui_deb_dir=${UKUI_DEB_DIR:-}
+declare -A ukui_versions=()
+if [[ $MODE != inspect ]]; then
+  [[ -n $ukui_deb_dir && -d $ukui_deb_dir ]] || { echo 'Password-only UKUI candidate packages are required'; exit 1; }
+  shopt -s nullglob
+  for deb in "$ukui_deb_dir"/*.deb; do
+    package=$(dpkg-deb -f "$deb" Package)
+    version=$(dpkg-deb -f "$deb" Version)
+    case $package in
+      ukui-greeter|ukui-screensaver|ukui-polkit) ;;
+      *) echo "Unexpected UKUI candidate package: $package"; exit 1 ;;
+    esac
+    [[ ! ${ukui_versions[$package]+present} ]] || { echo "Duplicate candidate: $package"; exit 1; }
+    ukui_versions[$package]=$version
+    if dpkg-deb -f "$deb" Depends | grep -Eq 'libpam-biometric|biometric-auth'; then
+      echo "$package still depends on biometric authentication"; exit 1
+    fi
+  done
+  [[ ${#ukui_versions[@]} == 3 ]] || { echo 'Expected exactly three password-only UKUI packages'; exit 1; }
+  for package in ukui-greeter ukui-screensaver ukui-polkit; do
+    [[ -n ${ukui_versions[$package]+present} ]] || { echo "Missing candidate: $package"; exit 1; }
+  done
+fi
 mkdir -p reports output
 work=$(mktemp -d "${RUNNER_TEMP:-/tmp}/openkylin.XXXXXX")
 cleanup() {
@@ -117,6 +140,8 @@ disk_stage overlay-mounted
 purge_packages() {
 local root=$1 baseline=$2 report_dir=$3 p essential guard purge_status=0
 local -a apt_options=(-o Dpkg::Use-Pty=0)
+local candidate_dir=/tmp/openkylin-ukui-candidates deb candidate_count=0
+local -A expected_versions=()
 mkdir -p "$report_dir"
 python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > "$report_dir/reviewed-apps.txt"
 mount --bind /dev "$root/dev"
@@ -130,18 +155,28 @@ chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit-before.txt"
 [[ ! -s "$report_dir/dpkg-audit-before.txt" ]] || { echo 'Original package database is unhealthy'; exit 1; }
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-before.txt"
+mkdir -p "$root$candidate_dir"
+for deb in "$ukui_deb_dir"/*.deb; do
+  cp "$deb" "$root$candidate_dir/"
+  package=$(dpkg-deb -f "$deb" Package)
+  expected_versions[$package]=${ukui_versions[$package]}
+  ((candidate_count+=1))
+done
+(( candidate_count == 3 )) || { echo 'Candidate package staging is incomplete'; return 1; }
 for p in "${packages[@]}"; do
   chroot "$root" dpkg-query -W '-f=${Status}\n' "$p" | grep -qx 'install ok installed'
 done
 # Do not autoremove: only the explicit package set is allowed to disappear.
 chroot "$root" apt-get "${apt_options[@]}" -o APT::Get::AutomaticRemove=false -s purge "${packages[@]}" > "$report_dir/purge-plan.txt"
 awk '/^(Remv|Purg) / {print $2}' "$report_dir/purge-plan.txt" | sort -u > "$work/planned"
-printf '%s\n' "${packages[@]}" | sort -u > "$work/allowed"
+printf '%s\n' "${packages[@]}" ukui-greeter ukui-screensaver | sort -u > "$work/allowed"
+printf '%s\n' "${packages[@]}" | sort -u > "$work/expected-removed"
 comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
 [[ ! -s "$report_dir/unexpected-removals.txt" ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
 while read -r p; do
   case "$p" in
     ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.
+    ukui-greeter|ukui-screensaver|ukui-polkit) [[ -n ${ukui_versions[$p]+present} ]] || { echo "Missing approved replacement for $p"; exit 1; } ;;
     linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
       echo "Protected system package: $p"; exit 1 ;;
   esac
@@ -169,11 +204,23 @@ if [[ -e "$work/policy-rc.d.original" || -L "$work/policy-rc.d.original" ]]; the
   mv "$work/policy-rc.d.original" "$root/usr/sbin/policy-rc.d"
 fi
 (( purge_status == 0 )) || return "$purge_status"
+candidate_debs=()
+for deb in "$ukui_deb_dir"/*.deb; do
+  candidate_debs+=("$candidate_dir/$(basename "$deb")")
+done
+DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
+  chroot "$root" dpkg -i "${candidate_debs[@]}"
+for package in ukui-greeter ukui-screensaver ukui-polkit; do
+  actual=$(chroot "$root" dpkg-query -W '-f=${Version}' "$package")
+  [[ $actual == "${expected_versions[$package]}" ]] || { echo "Unexpected candidate version for $package: $actual"; return 1; }
+done
+rm -rf "$root$candidate_dir"
 if grep -qx biometric-auth "$work/planned"; then
-  # UKUI's greeter and screen locker still depend on libpam-biometric.
-  # Deactivate its PAM profile using the same operation as its prerm script.
-  DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
-    chroot "$root" pam-auth-update --package --remove pam-biometric
+  # Deactivate the biometric PAM profile while retaining Unix password auth.
+  if [[ -e "$root/etc/pam-configs/pam-biometric" ]]; then
+    DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
+      chroot "$root" pam-auth-update --package --remove pam-biometric
+  fi
   if grep -Eq --exclude='*.pam-old' '^[[:space:]]*[^#[:space:]].*pam_biometric\.so' "$root"/etc/pam.d/*; then
     echo 'Biometric PAM configuration is still active'
     return 1
@@ -187,20 +234,25 @@ chroot "$root" apt-get "${apt_options[@]}" clean
 find "$root/var/cache/apt/archives" -type f -name '*.deb' -delete
 find "$root/var/lib/apt/lists" -type f -delete
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-after.txt"
-python3 - "$baseline" "$root/var/lib/dpkg/status" "$work/allowed" > "$report_dir/package-diff.txt" <<'PY'
+printf '%s\n' "ukui-greeter ${ukui_versions[ukui-greeter]}" "ukui-screensaver ${ukui_versions[ukui-screensaver]}" "ukui-polkit ${ukui_versions[ukui-polkit]}" > "$report_dir/ukui-candidate-versions.txt"
+python3 - "$baseline" "$root/var/lib/dpkg/status" "$work/expected-removed" "$report_dir/ukui-candidate-versions.txt" > "$report_dir/package-diff.txt" <<'PY'
 import pathlib,sys
 sys.path.insert(0, 'scripts')
 from check_apps import read_status
 before,after=[read_status(pathlib.Path(p).read_text()) for p in sys.argv[1:3]]
 allowed=set(pathlib.Path(sys.argv[3]).read_text().splitlines())
+versions=dict(line.split() for line in pathlib.Path(sys.argv[4]).read_text().splitlines())
 removed=set(before)-set(after)
 added=set(after)-set(before)
 changed={p for p in before.keys() & after.keys() if before[p]['Version'] != after[p]['Version']}
 print('Removed:', ', '.join(sorted(removed)))
 print('Added:', ', '.join(sorted(added)))
 print('Version changes:', ', '.join(sorted(changed)))
-if removed != allowed or added or changed:
-    raise SystemExit('Package changes differ from the reviewed removal list')
+if removed != allowed or added or changed != set(versions):
+    raise SystemExit('Package changes differ from the reviewed removals and replacements')
+for package,version in versions.items():
+    if after[package]['Version'] != version:
+        raise SystemExit(f'{package} candidate version mismatch')
 PY
 umount "$root/proc"
 umount "$root/dev"

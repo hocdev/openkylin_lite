@@ -59,6 +59,7 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
   remaster:
+    needs: [ukui-password-candidates]
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
@@ -71,6 +72,14 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v6
+      - name: Download password-only UKUI packages
+        uses: actions/download-artifact@v6
+        with:
+          pattern: ukui-*-password-candidate
+          path: ukui-candidates
+          merge-multiple: true
+      - name: Set UKUI candidate package directory
+        run: echo "UKUI_DEB_DIR=$GITHUB_WORKSPACE/ukui-candidates" >> "$GITHUB_ENV"
       - name: Set original ISO location
         run: echo "ISO_SOURCE_DIR=$RUNNER_TEMP/openkylin-source" >> "$GITHUB_ENV"
       - name: Install ISO tools
@@ -94,7 +103,7 @@ jobs:
           path: ${{ env.ISO_SOURCE_DIR }}/source.iso
           key: openkylin-source-v1-${{ env.SOURCE_SHA256 }}
       - name: Inspect or remaster
-        run: sudo --preserve-env=MODE,SOURCE_SHA256,ISO_SOURCE_DIR,RUNNER_TEMP,GITHUB_WORKSPACE,GITHUB_STEP_SUMMARY bash scripts/remaster.sh
+        run: sudo --preserve-env=MODE,SOURCE_SHA256,ISO_SOURCE_DIR,RUNNER_TEMP,GITHUB_WORKSPACE,GITHUB_STEP_SUMMARY,UKUI_DEB_DIR bash scripts/remaster.sh
       - name: Save small inspection reports
         if: always()
         uses: actions/upload-artifact@v6
@@ -118,4 +127,39 @@ jobs:
             if [[ "$work" == "$RUNNER_TEMP"/openkylin.* && "$iso" == "$work/lite.iso" ]]; then
               sudo rm -rf -- "$work"
             fi
+
+  ukui-password-candidates:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - package: ukui-greeter
+            tag: build/4.10.0.0-ok5.5update1
+            commit: 9f2be4c16f0453820c898f41d0d67d1df48f6bd2
+          - package: ukui-screensaver
+            tag: build/4.20.0.0-ok5.7
+            commit: ac1a511b62b172d88f0d83e1e2074fef62178376
+          - package: ukui-polkit
+            source: ukui-biometric-auth
+            tag: build/4.20.0.0-ok2.11update2
+            commit: d8dfb162c39e651bbf8104c3ce363042c3cc860b
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build password-only UKUI package
+        shell: bash
+        env:
+          PACKAGE: ${{ matrix.package }}
+          SOURCE_PACKAGE: ${{ matrix.source || matrix.package }}
+          SOURCE_TAG: ${{ matrix.tag }}
+          SOURCE_COMMIT: ${{ matrix.commit }}
+        run: bash scripts/build_ukui_password.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ${{ matrix.package }}-password-candidate
+          path: ukui-output/
+          if-no-files-found: error
+          retention-days: 7
           fi

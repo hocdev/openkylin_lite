@@ -84,6 +84,7 @@ AI_INTEGRATION_FILES = {
 }
 BIOMETRIC_MANAGER_POLICY = '/usr/share/polkit-1/actions/org.ukui.biometric.manager.security.questions.policy'
 BIOMETRIC_COMPONENTS = {
+    'libpam-biometric',
     'biometric-auth',
     'biometric-driver-community-multidevice',
     'biometric-driver-fido',
@@ -99,6 +100,10 @@ BIOMETRIC_AUTH_INTEGRATION_FILES = {
     '/usr/lib/systemd/system/biometric-authentication.service',
     '/usr/share/polkit-1/actions/org.freedesktop.policykit.pkexec.biometric-authentication.policy',
     '/usr/share/polkit-1/actions/org.ukui.biometric.policy',
+}
+LIBPAM_BIOMETRIC_INTEGRATION_FILES = {
+    '/etc/dbus-1/system.d/org.ukui.UniauthBackend.conf',
+    '/etc/pam-configs/pam-biometric',
 }
 
 
@@ -152,6 +157,7 @@ def check_app(name, fields, review, owned_files):
                           '/usr/share/wayland-sessions/')
     if any(path.startswith(protected_prefixes) and not (ai_component and path in AI_INTEGRATION_FILES)
            and not (biometric_component and name == 'biometric-auth' and path in BIOMETRIC_AUTH_INTEGRATION_FILES)
+           and not (biometric_component and name == 'libpam-biometric' and path in LIBPAM_BIOMETRIC_INTEGRATION_FILES)
            and not (biometric_manager and path == BIOMETRIC_MANAGER_POLICY)
            for path in owned_files):
         raise ValueError(f'{name}: owns protected system integration files')

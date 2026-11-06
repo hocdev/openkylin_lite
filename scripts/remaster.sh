@@ -318,8 +318,12 @@ for database in passwd group; do
   [[ -f "$root/etc/$database" && -f "$snapshot/etc/$database" ]] || {
     echo "Missing account database: $database"; exit 1;
   }
+  accounts_tmp=$(mktemp -d)
+  cp "$snapshot/etc/$database" "$accounts_tmp/snapshot"
   awk -F: 'NR==FNR { present[$1]=1; next } !present[$1]' \
-    "$snapshot/etc/$database" "$root/etc/$database" >> "$snapshot/etc/$database"
+    "$accounts_tmp/snapshot" "$root/etc/$database" > "$accounts_tmp/missing"
+  cat "$accounts_tmp/missing" >> "$snapshot/etc/$database"
+  rm -rf -- "$accounts_tmp"
 done
 chroot "$snapshot" getent passwd root >/dev/null
 chroot "$snapshot" getent group root >/dev/null

@@ -12,7 +12,17 @@ apt-get install -y --no-install-recommends ca-certificates git build-essential d
 
 git init "$work/source"
 cd "$work/source"
-git fetch --depth=1 "https://gitee.com/openkylin/$SOURCE_PACKAGE.git" "refs/tags/$SOURCE_TAG"
+for attempt in 1 2 3 4; do
+  if git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=60 fetch --depth=1 \
+    "https://gitee.com/openkylin/$SOURCE_PACKAGE.git" "refs/tags/$SOURCE_TAG"; then
+    break
+  fi
+  if (( attempt == 4 )); then
+    echo "Gitee source fetch failed after four attempts"
+    exit 1
+  fi
+  sleep "$((attempt * 5))"
+done
 git checkout --detach FETCH_HEAD
 [[ $(git rev-parse HEAD) == "$SOURCE_COMMIT" ]]
 # Materialize the vendor's quilt patches before changing overlapping code.

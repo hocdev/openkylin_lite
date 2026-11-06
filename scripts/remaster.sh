@@ -200,6 +200,7 @@ while read -r p; do
   case "$p" in
     ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.
     libpam-biometric) ;; # Exact PAM component reviewed above; candidates no longer depend on it.
+    biometric-auth|biometric-driver-*|biometric-utils) ;; # Exact biometric packages are version-pinned and individually reviewed.
     linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
       echo "Protected system package: $p"; exit 1 ;;
   esac

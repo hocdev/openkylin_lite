@@ -20,7 +20,12 @@ git apply "$workspace/patches/ukui-password/$PACKAGE.patch"
 
 # Keep the regular LightDM/PAM dependencies. Only remove the biometric backend.
 grep -q 'libpam-biometric' debian/control
-sed -Ei 's/libpam-biometric[[:space:]]*\([^)]*\),[[:space:]]*//; /^Suggests: biometric-auth$/d; / supports biometric /,+1d' debian/control
+sed -Ei '
+  /^[[:blank:]]+libpam-biometric[[:blank:]]*\([^)]*\),[[:blank:]]*$/d
+  s/libpam-biometric[[:blank:]]*\([^)]*\),[[:blank:]]*//
+  /^Suggests: biometric-auth$/d
+  / supports biometric /,+1d
+' debian/control
 if grep -q 'libpam-biometric' debian/control; then
   echo "Could not remove the biometric dependency from $PACKAGE"
   exit 1

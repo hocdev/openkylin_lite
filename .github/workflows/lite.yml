@@ -2,7 +2,6 @@ name: openKylin Lite
 on:
   push:
     branches: [main]
-    paths: [.github/inspect-request.txt]
   workflow_dispatch:
     inputs:
       mode:
@@ -18,7 +17,7 @@ permissions:
   contents: read
 concurrency:
   group: openkylin-lite
-  cancel-in-progress: false
+  cancel-in-progress: true
 jobs:
   remaster:
     runs-on: ubuntu-24.04

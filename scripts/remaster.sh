@@ -318,14 +318,17 @@ for database in passwd group; do
   [[ -f "$root/etc/$database" && -f "$snapshot/etc/$database" ]] || {
     echo "Missing account database: $database"; exit 1;
   }
+  missing_accounts=$(mktemp)
   while IFS=: read -r name _; do
     [[ -n $name ]] || continue
     if ! grep -q "^${name}:" "$snapshot/etc/$database"; then
-      grep -m1 "^${name}:" "$root/etc/$database" >> "$snapshot/etc/$database" || {
+      grep -m1 "^${name}:" "$root/etc/$database" >> "$missing_accounts" || {
         echo "Unable to seed $name from live $database"; exit 1;
       }
     fi
   done < "$root/etc/$database"
+  cat "$missing_accounts" >> "$snapshot/etc/$database"
+  rm -f "$missing_accounts"
 done
 chroot "$snapshot" getent passwd root >/dev/null
 chroot "$snapshot" getent group root >/dev/null

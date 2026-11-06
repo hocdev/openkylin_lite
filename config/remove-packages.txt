@@ -3,6 +3,7 @@ kylin-weather
 com.iflytek.iflyime
 kylin-ipmsg
 kylin-camera
+app.web.openkylincommunity
 ukui-biometric-manager
 libpam-biometric
 biometric-auth

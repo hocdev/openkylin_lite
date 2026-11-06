@@ -389,12 +389,31 @@ mkdir "$ostree_repo"
 cp -a "$new_repo/." "$ostree_repo/"
 rm -rf -- "$new_repo"
 disk_stage ostree-rebuilt
-# Set the desktop language after LightDM/PAM and before D-Bus imports the
-# Xsession environment. Apply this only while booted from Casper media.
+# Casper can create localized directories before Xsession sets the locale.
+rmdir "$root/etc/skel/模板" 2>/dev/null || true
+test -f "$root/usr/share/applications/kylin-os-installer.desktop"
+test -x "$root/usr/bin/kylin-os-installer-live"
+# Set the Live locale and desktop paths before UKUI starts.
 cat > "$root/etc/X11/Xsession.d/45openkylin-lite-locale" <<'EOF'
 if grep -Eq '(^|[[:space:]])boot=casper([[:space:]]|$)' /proc/cmdline; then
     unset LC_ALL
     export LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_MESSAGES=en_US.UTF-8
+    if mkdir -p "$HOME/Desktop" "$HOME/Templates"; then
+        xdg-user-dirs-update --set DESKTOP "$HOME/Desktop"
+        xdg-user-dirs-update --set TEMPLATES "$HOME/Templates"
+        lite_installer=/usr/share/applications/kylin-os-installer.desktop
+        lite_shortcut="$HOME/Desktop/kylin-os-installer.desktop"
+        lite_old_shortcut="$HOME/桌面/kylin-os-installer.desktop"
+        if [ ! -e "$lite_shortcut" ] && [ ! -L "$lite_shortcut" ]; then
+            install -m 0755 "$lite_installer" "$lite_shortcut"
+        fi
+        # Remove only the unmodified Casper shortcut and empty legacy folders.
+        if cmp -s "$lite_shortcut" "$lite_installer" && cmp -s "$lite_old_shortcut" "$lite_installer"; then
+            rm -f -- "$lite_old_shortcut"
+        fi
+        rmdir "$HOME/桌面" "$HOME/模板" 2>/dev/null || true
+        unset lite_installer lite_shortcut lite_old_shortcut
+    fi
 fi
 EOF
 size=$(du -sx --block-size=1 "$root" | cut -f1)

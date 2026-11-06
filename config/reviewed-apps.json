@@ -1,4 +1,9 @@
 {
+  "app.web.openkylincommunity": {
+    "version": "1.0.0",
+    "reason": "Remove the standalone openKylin community website launcher",
+    "desktop": "/usr/share/applications/app.web.openkylincommunity.desktop"
+  },
   "biometric-auth": {
     "version": "0.9.63kord3~rc20-ok23",
     "reason": "User-requested removal of the biometric service, drivers and their dedicated dependencies",

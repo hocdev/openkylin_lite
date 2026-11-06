@@ -1,4 +1,9 @@
 {
+  "kylin-weather": {
+    "version": "3.2.0.3-ok16.17~2update3",
+    "reason": "Optional weather indicator dedicated to China",
+    "desktop": "/usr/share/applications/kylin-weather.desktop"
+  },
   "ai-kylin-deepseek-r1-cloud-model": {
     "version": "1.0.0.0-ok0.1",
     "reason": "User approved removing all removable AI components",

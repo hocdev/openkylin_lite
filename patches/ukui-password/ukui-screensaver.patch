@@ -1,6 +1,6 @@
 --- a/src/widgets/authdialog.cpp
 +++ b/src/widgets/authdialog.cpp
-@@ -888,28 +888,8 @@
+@@ -888,30 +888,8 @@
  void AuthDialog::onPamShowPrompt(QString strPrompt, int nType)
  {
      qDebug() << "prompt: " << strPrompt << authMode;
@@ -19,7 +19,9 @@
 -            skipBiometricAuth();
 -            //            if(isPowerup  && m_configuration->getIs990()) {
 -            //                QTimer::singleShot(1500, [&]{
--            //                    performBiometricAuth();
+-            //                    syslog(LOG_INFO, "[ukui-screensaver-dialog] check bio auth begin!!");
+-            performBiometricAuth();
+-            syslog(LOG_INFO, "[ukui-screensaver-dialog] check bio auth done!!");
 -            //                });
 -            //                isPowerup = false;
 -            //            } else {
@@ -28,5 +30,5 @@
 -        }
 +        skipBiometricAuth();
      } else {
+         syslog(LOG_INFO, "[ukui-screensaver-dialog] auth alraedy!!");
          m_isNameLogin = false;
-         qDebug() << "m_isNameLogin = false";

@@ -59,7 +59,7 @@ index 5e8f5ec..f226b00 100644
          ZLIB::ZLIB)
  
 diff --git a/src/extractors/image-extractor.cpp b/src/extractors/image-extractor.cpp
-index b817c18..e3938fe 100644
+index b817c18..1ee87e0 100644
 --- a/src/extractors/image-extractor.cpp
 +++ b/src/extractors/image-extractor.cpp
 @@ -22,7 +22,6 @@
@@ -77,10 +77,10 @@ index b817c18..e3938fe 100644
 -    if (result->inputFlags() & ExtractionResult::ExtractPlainText) {
 -        result->append(OcrUtils::getTextInPicture(result->inputUrl()));
 -    }
-+    
++
  }
 diff --git a/src/extractors/png-extractor.cpp b/src/extractors/png-extractor.cpp
-index 6f42e7a..997d04a 100644
+index 6f42e7a..349dd35 100644
 --- a/src/extractors/png-extractor.cpp
 +++ b/src/extractors/png-extractor.cpp
 @@ -6,7 +6,6 @@
@@ -91,11 +91,22 @@ index 6f42e7a..997d04a 100644
  #include "thumbnail-utils.h"
  #include <QImageReader>
  
+@@ -37,10 +36,6 @@ const QMap<QString, Property::Property> keywordMap = {
+ void PngExtractor::extract(ExtractionResult *result) {
+     result->addType(Type::Image);
+ 
+-    if (result->inputFlags().testFlag(ExtractionResult::ExtractPlainText)) {
+-       result->append(OcrUtils::getTextInPicture(result->inputUrl()));
+-    }
+-
+     if (result->inputFlags() & ExtractionResult::ExtractThumbnail) {
+         if (ThumbnailUtils::needGenerateThumbnail(result, PLUGIN_NAME, VERSION)) {
+             QImage thumbnail(result->inputUrl());
 diff --git a/src/ocr-utils.cpp b/src/ocr-utils.cpp
-index 74973ae..48b5fe1 100644
+index 74973ae..f7710bf 100644
 --- a/src/ocr-utils.cpp
 +++ b/src/ocr-utils.cpp
-@@ -5,97 +5,11 @@
+@@ -5,97 +5,12 @@
  */
  
  #include "ocr-utils.h"
@@ -109,7 +120,7 @@ index 74973ae..48b5fe1 100644
 -#include <QDir>
 -#include <QFileInfo>
 -#include <QDateTime>
- 
+-
 -using namespace UkuiFileMetadata;
 -
 -static const QString VERSION = "0.0";
@@ -197,5 +208,5 @@ index 74973ae..48b5fe1 100644
 +    Q_UNUSED(path)
 +    return QString();
  }
--
--
+ 
+ 

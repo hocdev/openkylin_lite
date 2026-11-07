@@ -21,7 +21,7 @@ index 384c35d..d159c77 100644
           libboundscheck,
           ${shlibs:Depends}
 diff --git a/kylin-scanner.pro b/kylin-scanner.pro
-index 7f2327d..4c86913 100644
+index 7f2327d..279e81b 100644
 --- a/kylin-scanner.pro
 +++ b/kylin-scanner.pro
 @@ -47,7 +47,6 @@ LIBS += -lpthread \
@@ -32,22 +32,65 @@ index 7f2327d..4c86913 100644
          -lleptonica \
          -lfreeimage \
          -lusb-1.0 \
-@@ -93,7 +92,6 @@ SOURCES += \
-     src/imageOp/imageoperationbase.cpp \
-     src/imageOp/imageoperationbeauty.cpp \
-     src/imageOp/imageoperationmirror.cpp \
--    src/imageOp/imageoperationocr.cpp \
-     src/imageOp/imageoperationrectify.cpp \
-     src/leftimagehandlesuccesspagewidget.cpp \
-     src/leftsuccesspagewidget.cpp \
-@@ -142,7 +140,6 @@ HEADERS += \
-     src/imageOp/imageoperationbase.h \
-     src/imageOp/imageoperationbeauty.h \
-     src/imageOp/imageoperationmirror.h \
--    src/imageOp/imageoperationocr.h \
-     src/imageOp/imageoperationrectify.h \
-     src/include/common.h \
-     src/include/theme.h \
+diff --git a/src/imageOp/imageoperationocr.cpp b/src/imageOp/imageoperationocr.cpp
+index fc039dc..eea32d4 100644
+--- a/src/imageOp/imageoperationocr.cpp
++++ b/src/imageOp/imageoperationocr.cpp
+@@ -19,8 +19,6 @@
+ #include "imageoperationocr.h"
+ #include "../saneobject.h"
+ #include "../include/common.h"
+-#include <tesseract/baseapi.h>
+-#include <leptonica/allheaders.h>
+ #include <QDebug>
+ 
+ ImageOperationOCR::ImageOperationOCR(QImage *origin)
+@@ -37,45 +35,4 @@ void ImageOperationOCR::ImageOP(){
+ 
+ void ImageOperationOCR::ocr()
+ {
+-    qDebug() << "begin to run ocr thread !\n";
+-    m_origin->save(ScanningPicture);
+-    tesseract::TessBaseAPI  *api = new tesseract::TessBaseAPI();
+-
+-    if (api->Init(NULL, "chi_sim")) {
+-        qDebug() << "Could not initialize tesseract.\n";
+-        g_sane_object->ocrOutputText = tr("Unable to read text, please retrey");
+-        return;
+-    }
+-    if(isInterupt){
+-        if (api)
+-            api->End();
+-        return;
+-    }
+-    qDebug() << "before pixRead.";
+-    Pix *image = pixRead(ScanningPicture);
+-    if (! image) {
+-        qDebug() << "pixRead error!";
+-        g_sane_object->ocrOutputText = tr("Unable to read text, please retrey");
+-        if (api)
+-            api->End();
+-        return;
+-    }
+-    if(isInterupt){
+-        if (api)
+-            api->End();
+-        return;
+-    }
+-
+-    if (image) {
+-        qDebug() << "before setImage.";
+-        api->SetImage(image);
+-        g_sane_object->ocrOutputText = api->GetUTF8Text();
+-    }
+-    qDebug() << "before destroy image.";
+-    if (api) {
+-        api->End();
+-    }
+-    if (image) {
+-        pixDestroy(&image);
+-    }
+ }
 diff --git a/src/showimagewidget.cpp b/src/showimagewidget.cpp
 index 2df6f97..43944a7 100644
 --- a/src/showimagewidget.cpp

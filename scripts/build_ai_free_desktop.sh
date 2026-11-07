@@ -51,6 +51,19 @@ Pin: version 4.25.0.0-ok0.2
 Pin-Priority: 1001
 PIN
 apt-get install -y --allow-downgrades --no-install-recommends "$work/quick/"*.deb
+# Keep file-metadata aligned with the pinned ISO so shlibdeps doesn't bump dependencies beyond the Live root.
+mkdir "$work/metadata-deps"
+while read -r digest file; do
+  [[ $digest =~ ^[0-9a-f]{64}$ && $file == libukui-file-metadata*4.25.0.0-ok0.1_amd64.deb ]]
+  curl -fL --retry 4 -o "$work/metadata-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/u/ukui-file-metadata/$file"
+  echo "$digest  $work/metadata-deps/$file" | sha256sum -c -
+done < "$workspace/config/metadata-build-deps.sha256"
+cat > /etc/apt/preferences.d/openkylin-lite-metadata <<'PIN'
+Package: libukui-file-metadata-bin libukui-file-metadata-dev libukui-file-metadata1
+Pin: version 4.25.0.0-ok0.1
+Pin-Priority: 1001
+PIN
+apt-get install -y --allow-downgrades --no-install-recommends "$work/metadata-deps/"*.deb
 apt-get build-dep -y --no-install-recommends ./
 for pc in /usr/lib/*/pkgconfig/poppler.pc /usr/lib/pkgconfig/poppler.pc; do
   [[ -f "$pc" ]] && sed -Ei 's/libcurl >= [0-9.]+/libcurl/g' "$pc"

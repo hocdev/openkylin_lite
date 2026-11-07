@@ -1,0 +1,186 @@
+{
+  "sources": {
+    "ukui-search": {
+      "binaries": {
+        "libchinese-segmentation-common": "4.24.0.0-ok0.2",
+        "libchinese-segmentation1": "4.24.0.0-ok0.2",
+        "libukui-search-common": "4.24.0.0-ok0.2",
+        "libukui-search-tcmalloc0": "4.24.0.0-ok0.2",
+        "libukui-search2": "4.24.0.0-ok0.2",
+        "ukui-search": "4.24.0.0-ok0.2",
+        "ukui-search-service": "4.24.0.0-ok0.2",
+        "ukui-search-systemdbus": "4.24.0.0-ok0.2"
+      }
+    },
+    "ukui-clipboard": {
+      "binaries": {
+        "ukui-clipboard": "2.0.0.0-ok0.17"
+      }
+    },
+    "kylin-photo-viewer": {
+      "binaries": {
+        "kylin-photo-viewer": "1.3.0.3-ok22.56",
+        "peony-rotate-menu-plugin": "1.3.0.3-ok22.56"
+      }
+    },
+    "peony-extensions": {
+      "binaries": {
+        "parchives": "4.24.0.0-ok5",
+        "peony-bluetooth": "4.24.0.0-ok5",
+        "peony-desktop-clock-widget": "4.24.0.0-ok5",
+        "peony-desktop-image-widget": "4.24.0.0-ok5",
+        "peony-device-rename": "4.24.0.0-ok5",
+        "peony-extension-computer-view": "4.24.0.0-ok5",
+        "peony-extensions": "4.24.0.0-ok5",
+        "peony-open-terminal": "4.24.0.0-ok5",
+        "peony-send-to-device": "4.24.0.0-ok5",
+        "peony-set-wallpaper": "4.24.0.0-ok5",
+        "peony-share": "4.24.0.0-ok5"
+      }
+    },
+    "orca": {
+      "binaries": {
+        "orca": "46.1-ok6"
+      }
+    },
+    "ukui-file-metadata": {
+      "binaries": {
+        "libukui-file-metadata-bin": "4.25.0.0-ok0.1",
+        "libukui-file-metadata1": "4.25.0.0-ok0.1"
+      }
+    },
+    "kylin-scanner": {
+      "binaries": {
+        "kylin-scanner": "3.2.1-ok2.46"
+      }
+    }
+  },
+  "additional_packages": [
+    "speech-dispatcher-espeak-ng",
+    "libespeak-ng1",
+    "espeak-ng-data",
+    "libpcaudio0"
+  ],
+  "removals": {
+    "libonnxruntime": {
+      "version": "1.20.1+dfsg-ok2",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libkysdk-ai-common": {
+      "version": "1.1.0.1-ok0.5",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libkyai-data-management-client": {
+      "version": "1.2.0.0-ok0.5",
+      "section": "utils",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libkysdk-coreai-speech0": {
+      "version": "1.1.0.1-ok1.5",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libkysdk-advanced-ai0": {
+      "version": "1.0.0.1-ok0.10",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libkysdk-coreai-vision0": {
+      "version": "1.1.0.1-ok1.3",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libkysdk-ocr": {
+      "version": "3.0.1.0-ok0.21",
+      "section": "utils",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "ukui-voice-wing": {
+      "version": "4.24.0.0-ok0.1k0.3",
+      "section": "utils",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "peony-intelligent-data-management-service": {
+      "version": "4.24.0.0-ok5",
+      "section": "x11",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "peony-intelligent-plugin": {
+      "version": "4.24.0.0-ok5",
+      "section": "x11",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "peony-spaceview-plugin": {
+      "version": "4.24.0.0-ok5",
+      "section": "x11",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libonnx1t64": {
+      "version": "1.16.2-ok1",
+      "section": "science",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libopencv-dnn406": {
+      "version": "4.6.0+dfsg-ok9",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libopencv-dnn410": {
+      "version": "4.10.0+dfsg-ok1",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libopencv-video406": {
+      "version": "4.6.0+dfsg-ok9",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "libtesseract5": {
+      "version": "5.3.4-ok4",
+      "section": "libs",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "tesseract-ocr": {
+      "version": "5.3.4-ok4",
+      "section": "graphics",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "tesseract-ocr-chi-sim": {
+      "version": "1:4.1.0-ok2",
+      "section": "graphics",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "tesseract-ocr-eng": {
+      "version": "1:4.1.0-ok2",
+      "section": "graphics",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    },
+    "tesseract-ocr-osd": {
+      "version": "1:4.1.0-ok2",
+      "section": "graphics",
+      "kind": "ai-component",
+      "reason": "Remove AI inference/OCR or AI-only desktop integration after rebuilding its consumers"
+    }
+  }
+}

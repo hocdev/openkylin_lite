@@ -3,6 +3,7 @@ import json
 from pathlib import Path
 import sys
 from check_apps import PRIVACY_COMPONENTS, read_status
+from ai_policy import REMOVALS
 
 
 def prepare(root, list_file, review_file, output):
@@ -10,6 +11,13 @@ def prepare(root, list_file, review_file, output):
     selected = [line.split('#', 1)[0].strip() for line in list_file.read_text().splitlines()]
     selected = list(filter(None, selected))
     reviews = json.loads(review_file.read_text())
+    for name, review in REMOVALS.items():
+        if name not in installed:
+            continue
+        if (installed[name]['Version'], installed[name]['Section']) != (review['version'], review['section']):
+            raise ValueError(f'{name}: AI removal metadata differs from the pinned ISO inventory')
+        selected.append(name)
+        reviews[name] = review
     for name, (version, section) in PRIVACY_COMPONENTS.items():
         if name not in installed:
             continue

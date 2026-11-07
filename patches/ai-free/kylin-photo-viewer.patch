@@ -1,0 +1,270 @@
+diff --git a/debian/control b/debian/control
+index e73293a..840671b 100644
+--- a/debian/control
++++ b/debian/control
+@@ -12,7 +12,6 @@ Build-Depends: debhelper (>=9),
+                libkysdk-waylandhelper-dev,
+                libkysdk-applications-dev,
+                libkysdk-base-dev,
+-               libkysdk-ocr-dev,
+                libkysdk-datacollect-dev,
+                libpng-dev,
+                libqt5x11extras5-dev,
+@@ -26,7 +25,6 @@ Build-Depends: debhelper (>=9),
+                qtquickcontrols2-5-dev,
+                qtscript5-dev,
+                qttools5-dev-tools,
+-               libonnxruntime-dev [amd64 arm64 !loong64 !riscv64 !sw64],
+                librsvg2-dev,
+                libukui-log4qt-dev,
+                libpeony-dev,
+@@ -39,9 +37,7 @@ Package: kylin-photo-viewer
+ Architecture: any
+ Depends: apng2gif,
+          apngasm,
+-         libkysdk-ocr,
+          peony-rotate-menu-plugin,
+-         libonnxruntime [amd64 arm64 !loong64 !riscv64 !sw64],
+          ${misc:Depends}, ${shlibs:Depends}
+ Description:Photo viewer, support to view, zoom and rotate images
+  of various formats.
+diff --git a/debian/kylin-photo-viewer.install b/debian/kylin-photo-viewer.install
+index 56165a9..ac42343 100644
+--- a/debian/kylin-photo-viewer.install
++++ b/debian/kylin-photo-viewer.install
+@@ -1,4 +1,3 @@
+-model /usr/share/kylin-photo-viewer
+ usr/include/
+ usr/bin/
+ usr/lib/*.so*
+diff --git a/src/controller/core/core.cpp b/src/controller/core/core.cpp
+index 778f540..b9aa69c 100644
+--- a/src/controller/core/core.cpp
++++ b/src/controller/core/core.cpp
+@@ -2507,23 +2507,7 @@ void Core::fileChangedNeedUpdated()
+ }
+ 
+ // 获取图片中文字
+-void Core::getTextFromImage()
+-{
+-    QThread *m_ocrThread = new QThread(this);
+-    OcrWorker *m_ocrWorker = new OcrWorker();
+-    m_ocrWorker->moveToThread(m_ocrThread);
+-
+-    // 连接信号槽
+-    connect(m_ocrWorker, &OcrWorker::ocrFinished, this, &Core::sendOcrResult);
+-    connect(m_ocrWorker, &OcrWorker::ocrFinished, m_ocrThread, &QThread::quit);
+-    connect(m_ocrThread, &QThread::finished, m_ocrWorker, &QObject::deleteLater);
+-    connect(m_ocrThread, &QThread::finished, m_ocrThread, &QObject::deleteLater);
+ 
+-    m_ocrThread->start();
+-
+-    // 通过信号触发OCR工作
+-    QMetaObject::invokeMethod(m_ocrWorker, "doOcr", Qt::QueuedConnection, Q_ARG(QString, m_nowpath));
+-}
+ 
+ void Core::sendOcrResult(QString path, QVector<QString> result)
+ {
+diff --git a/src/controller/core/core.h b/src/controller/core/core.h
+index ae77518..ab9d26c 100644
+--- a/src/controller/core/core.h
++++ b/src/controller/core/core.h
+@@ -18,7 +18,6 @@
+ #include "base.h"
+ #include <cmath>
+ #include <climits>
+-#include "ocr.h"
+ #include <QThread>
+ #define SET_BACKGROUND_PICTURE_GSETTINGS_PATH "org.mate.background"
+ #define SET_BACKGROUND_PICTURE_GSETTINGS_NAME "pictureFilename"
+@@ -109,7 +108,6 @@ public:
+     void needSaveCutImage(int proportion);                   //保存裁剪图片
+     void needSaveAsImage(QString path);                      //另存为
+     void reloadImage(QModelIndex modelIndex);                //判断是否需要加载
+-    void getTextFromImage();                                 //获取当前打开图片中文字
+     void getDefaultProportion(const QSize &size);
+ 
+ 
+diff --git a/src/controller/core/coreinteraction.cpp b/src/controller/core/coreinteraction.cpp
+index 6a92355..492ab5a 100644
+--- a/src/controller/core/coreinteraction.cpp
++++ b/src/controller/core/coreinteraction.cpp
+@@ -113,7 +113,6 @@ void CoreInteraction::initConnect()
+     connect(m_core, &Core::returnMouseType, this, &CoreInteraction::returnMouseShape);      //回传鼠标形状
+     connect(m_core, &Core::isCutNotSave, this, &CoreInteraction::isCutNotSave);   //正在裁剪还未保存就要关闭
+     connect(this, &CoreInteraction::coreReloadImage, m_core, &Core::reloadImage); //将当前页的item传给后端
+-    connect(this, &CoreInteraction::coreGetText, m_core, &Core::getTextFromImage);        //获取图片中文字
+     connect(m_core, &Core::getTextResult, this, &CoreInteraction::getTextFinish);         //图片中文字识别结果
+     connect(m_core, &Core::exitOcrModeSign, this, &CoreInteraction::exitOcrModeSign);    //退出ocr模式
+ 
+@@ -500,10 +499,7 @@ void CoreInteraction::cutImage()
+     kdk_dia_data_free(node);
+ }
+ #endif
+-void CoreInteraction::getText()
+-{
+-    Q_EMIT coreGetText();
+-}
++
+ 
+ void CoreInteraction::cutRegion(const QPoint &point)
+ {
+diff --git a/src/controller/core/coreinteraction.h b/src/controller/core/coreinteraction.h
+index af694a7..c2f724a 100644
+--- a/src/controller/core/coreinteraction.h
++++ b/src/controller/core/coreinteraction.h
+@@ -120,7 +120,6 @@ protected:
+     virtual void printImage(QPrinter *printer);                          //打印
+     virtual void cutImage();                                             //裁剪
+ #endif
+-    virtual void getText();                                              //获取当前打开图片中文字
+     virtual void cutRegion(const QPoint &point);                         //裁剪区域
+     virtual void startChange(const QPoint &point);                       //起始点-裁剪
+     virtual void releasePos(const QPoint &point);                        //裁剪-鼠标释放
+diff --git a/src/controller/interaction.h b/src/controller/interaction.h
+index 24ec09b..b7ee0c5 100644
+--- a/src/controller/interaction.h
++++ b/src/controller/interaction.h
+@@ -350,7 +350,6 @@ public:
+      * 参数类型：QPoint
+      * 参数描述：鼠标在导航栏的坐标
+      */
+-    virtual void getText() = 0; //获取图片中文字
+     /*
+      * 接口功能：ocr
+      * 接口场景：点击工具栏ocr按钮
+diff --git a/src/src.pro b/src/src.pro
+index cd75083..10e058c 100644
+--- a/src/src.pro
++++ b/src/src.pro
+@@ -56,16 +56,10 @@ LIBS += -lopencv_core \
+         -lopencv_highgui \
+ 
+ contains(QMAKE_HOST.arch, x86_64){
+-DEFINES += USE_ONNXRUNTIME
+-INCLUDEPATH += /usr/include/onnxruntime
+-PKGCONFIG += libonnxruntime
+ #LIBS += -L/usr/lib -lonnxruntime
+ }
+ 
+ contains(QMAKE_HOST.arch, aarch64){
+-DEFINES += USE_ONNXRUNTIME
+-INCLUDEPATH += /usr/include/onnxruntime
+-PKGCONFIG += libonnxruntime
+ #LIBS += -L/usr/lib -lonnxruntime
+ }
+ 
+@@ -79,7 +73,6 @@ SOURCES += main.cpp \
+     controller/core/coreinteraction.cpp \
+     controller/core/albumthumbnail.cpp \
+     controller/core/multitiffoperate.cpp \
+-    controller/core/ocr.cpp \
+     global/computingtime.cpp \
+     global/horizontalorverticalmode.cpp \
+     global/interactiveqml.cpp \
+@@ -125,7 +118,6 @@ HEADERS += \
+     controller/core/albumthumbnail.h \
+     controller/core/base.h \
+     controller/core/multitiffoperate.h \
+-    controller/core/ocr.h \
+     global/computingtime.h \
+     global/horizontalorverticalmode.h \
+     global/interactiveqml.h \
+diff --git a/src/view/toolbar.cpp b/src/view/toolbar.cpp
+index 4122202..22ebfea 100644
+--- a/src/view/toolbar.cpp
++++ b/src/view/toolbar.cpp
+@@ -161,7 +161,6 @@ ToolBar::ToolBar(QWidget *parent) : QWidget(parent)
+     m_imageMatting->setText(tr("Cutout for background"));
+ 
+     //m_editMenu->addAction(m_filter);
+-    m_editMenu->addAction(m_ocr);
+     m_editMenu->addAction(m_scanner);
+     m_editMenu->addAction(m_imageMatting);
+ #else
+@@ -170,7 +169,7 @@ ToolBar::ToolBar(QWidget *parent) : QWidget(parent)
+     m_ocr->setAccessibleName("Kylin-photo-viewer_KBorderlessButton_ocr");
+     m_ocr->setAccessibleDescription("ocr");
+     m_ocr->setFocusPolicy(Qt::NoFocus);
+-    m_ocr->setToolTip(tr("OCR"));
++    m_ocr->setVisible(false); // OCR is not built in this edition.
+     m_ocr->setAttribute(Qt::WA_TranslucentBackground);
+ #endif
+ 
+@@ -267,7 +266,6 @@ void ToolBar::initControlQss()
+ #ifdef USE_ONNXRUNTIME
+         m_toolLayout->addWidget(m_edit, 0, Qt::AlignCenter);
+ #else
+-        m_toolLayout->addWidget(m_ocr, 0, Qt::AlignCenter);
+ #endif
+         m_toolLayout->setSpacing(10);
+         //    m_toolLayout->addWidget(m_filter,0,Qt::AlignCenter);
+@@ -312,7 +310,6 @@ void ToolBar::initControlQss()
+ #ifdef USE_ONNXRUNTIME
+         m_toolLayout->addWidget(m_edit, 0, Qt::AlignCenter);
+ #else
+-        m_toolLayout->addWidget(m_ocr, 0, Qt::AlignCenter);
+ #endif
+         m_toolLayout->setSpacing(20);
+         m_toolLayout->addWidget(m_line2, 0, Qt::AlignCenter);
+@@ -356,13 +353,10 @@ void ToolBar::initConnect()
+         QPixmap icon(":/res/res/ai/arrowup.svg");
+         changeEditIcon(icon);
+     });
+-    connect(m_ocr, &QAction::triggered, this, &ToolBar::getText);
+     connect(m_scanner, &QAction::triggered, this, &ToolBar::scanner);
+     connect(m_imageMatting, &QAction::triggered, this, &ToolBar::matting);
+ #else
+-    connect(m_ocr, &kdk::KBorderlessButton::clicked, this, &ToolBar::getText);
+ #endif
+-    connect(this, &ToolBar::ocrSignal, this, &ToolBar::getText);
+ }
+ 
+ void ToolBar::showEditMenu()
+@@ -504,13 +498,7 @@ void ToolBar::reCut()
+ //    qDebug() << "滤镜";
+ //}
+ //文字识别
+-void ToolBar::getText()
+-{
+-    operayteMode = OperayteMode::Ocr;
+-    InteractiveQml::getInstance()->setOperateWay(int(operayteMode));
+-    Q_EMIT viewOCRMode();
+-    Interaction::getInstance()->getText();
+-}
++
+ //扫描黑白件
+ void ToolBar::scanner()
+ {
+diff --git a/src/view/toolbar.h b/src/view/toolbar.h
+index 091b4ae..b11a787 100644
+--- a/src/view/toolbar.h
++++ b/src/view/toolbar.h
+@@ -123,7 +123,6 @@ private:
+ #endif
+     //QAction *m_filter;              //滤镜
+     //void filter();                  //滤镜
+-    void getText();                 //文字识别
+     void scanner();                 //扫描黑白件
+     void matting();                 //抠图
+ 
+diff --git a/tests/tests.pro b/tests/tests.pro
+index 0b24440..1f9397c 100644
+--- a/tests/tests.pro
++++ b/tests/tests.pro
+@@ -80,7 +80,6 @@ SOURCES += $$PWD/../tests/tst_mytest.cpp \ #
+            $$PWD/../src/controller/core/coreinteraction.cpp \
+            $$PWD/../src/controller/core/multitiffoperate.cpp \
+            $$PWD/../src/controller/core/albumthumbnail.cpp \
+-           $$PWD/../src/controller/core/ocr.cpp \
+            $$PWD/../src/global/variable.cpp \
+            $$PWD/../src/model/marktool/marktool.cpp \
+            $$PWD/../src/model/file/file.cpp \
+@@ -127,7 +126,6 @@ HEADERS += $$PWD/../src/controller/interaction.h \
+            $$PWD/../src/controller/core/coreinteraction.h \
+            $$PWD/../src/controller/core/multitiffoperate.h \
+            $$PWD/../src/controller/core/albumthumbnail.h \
+-           $$PWD/../src/controller/core/ocr.h \
+            $$PWD/../src/controller/core/base.h \
+            $$PWD/../src/global/variable.h \
+            $$PWD/../src/model/marktool/marktool.h \

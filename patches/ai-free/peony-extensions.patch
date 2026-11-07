@@ -1,0 +1,71 @@
+diff --git a/debian/control b/debian/control
+index 0b54b5b..51eda83 100644
+--- a/debian/control
++++ b/debian/control
+@@ -27,16 +27,13 @@ Build-Depends: cmake,
+ 	           libukui-common-dev,
+ 	           libkysdk-alm-dev,
+ 	           libkysdk-filesystem-dev,
+-	           libkysdk-ai-common-dev,
+                libgudev-1.0-dev,
+                libukui-search-dev, 
+                libkysdk-systime-dev,
+-               libkyai-data-management-client-dev,
+                libqt5remoteobjects5-dev,
+                libukui-log4qt-dev,
+ 	           libukui-file-metadata-dev,
+                libkysdk-disk-dev(>=3.0.1.0-0k1.15),
+-               libkysdk-advanced-ai-dev [amd64 arm64],
+                libukui-previewhub-dev
+ Standards-Version: 4.5.0
+ Rules-Requires-Root: no
+@@ -136,9 +133,6 @@ Depends: parchives(>=3.2.2+1015),
+          peony-send-to-device(>=3.2.2+1015),
+          peony-set-wallpaper(>=3.2.2+1015),
+          peony-share(>=3.2.2+1015),
+-         peony-intelligent-data-management-service,
+-         peony-intelligent-plugin,
+-         peony-spaceview-plugin,
+          peony-desktop-clock-widget,
+          peony-desktop-image-widget,
+          ${misc:Depends},
+@@ -149,25 +143,6 @@ Description: Peony qt extensions
+  package is a metapackage, which adds extended functionality to
+  the Peony file manager.
+ 
+-Package: peony-intelligent-data-management-service
+-Architecture: any
+-Depends:${misc:Depends},${shlibs:Depends}
+-Description: Peony intelligent Spaces Service
+- Peony is the official file manager for the UKUI desktop. This
+- package is a service, which provide the intelligent ability for the peony spaces.
+-
+-Package: peony-intelligent-plugin
+-Architecture: any
+-Depends:${misc:Depends},${shlibs:Depends}
+-Description: Peony intelligent Plugin
+- The related plugins integrated into the intelligent data manager include the VFS plugin, custom view plugin, etc.
+-
+-Package: peony-spaceview-plugin
+-Architecture: any
+-Depends:${misc:Depends},${shlibs:Depends}
+-Description: Peony space view Plugin
+- The related plugins integrated into the intelligent data manager when the space file content is empty.
+-
+ Package: peony-desktop-clock-widget
+ Architecture: any
+ Depends: ${misc:Depends}, ${shlibs:Depends}
+diff --git a/peony-extensions.pro b/peony-extensions.pro
+index 01e9db1..89de055 100644
+--- a/peony-extensions.pro
++++ b/peony-extensions.pro
+@@ -13,9 +13,6 @@ SUBDIRS = \
+     peony-engrampa-menu-plugin          \
+     peony-extension-computer-view       \
+     peony-menu-plugin-mate-terminal     \
+-    peony-intelligent-data-management-service \
+-    peony-intelligent-plugin            \
+-    peony-spaceview-plugin              \
+     org.ukui.desktop-clock-widget       \
+     org.ukui.desktop-image-widget       \
+ #    test-computer-view

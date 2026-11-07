@@ -10,6 +10,9 @@ cd "${GITHUB_WORKSPACE:-$PWD}"
 repo=$PWD
 ukui_deb_dir=${UKUI_DEB_DIR:-}
 declare -A ukui_versions=()
+mapfile -t desktop_candidates < <(python3 scripts/ai_policy.py)
+declare -A desktop_allowed=()
+for package in "${desktop_candidates[@]}"; do desktop_allowed[$package]=1; done
 if [[ $MODE != inspect ]]; then
   [[ -n $ukui_deb_dir && -d $ukui_deb_dir ]] || { echo 'Candidate packages are required'; exit 1; }
   [[ -f "$ukui_deb_dir/legacy-diagnostics-disabled.so" ]] || { echo 'Legacy telemetry replacement is required'; exit 1; }
@@ -19,7 +22,7 @@ if [[ $MODE != inspect ]]; then
     version=$(dpkg-deb -f "$deb" Version)
     case $package in
       ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer|ukui-control-center|libukcc3|libkysdk-datacollect|libkysdk-datacollect-dev|libkysdk-diagnosetest|libkysdk-diagnosetest-dev|libkysdk-diagnosetest-doc|openkylin-default-settings) ;;
-      *) echo "Unexpected candidate package: $package"; exit 1 ;;
+      *) [[ ${desktop_allowed[$package]+present} ]] || { echo "Unexpected candidate package: $package"; exit 1; } ;;
     esac
     [[ ! ${ukui_versions[$package]+present} ]] || { echo "Duplicate candidate: $package"; exit 1; }
     ukui_versions[$package]=$version
@@ -27,7 +30,10 @@ if [[ $MODE != inspect ]]; then
       echo "$package still depends on biometric authentication"; exit 1
     fi
   done
-  [[ ${#ukui_versions[@]} == 12 ]] || { echo 'Expected password, installer, control center, defaults and disabled telemetry SDK candidates'; exit 1; }
+  [[ ${#ukui_versions[@]} == $((12 + ${#desktop_candidates[@]})) ]] || { echo 'Incomplete password, desktop, installer or privacy candidates'; exit 1; }
+  for package in "${desktop_candidates[@]}"; do
+    [[ ${ukui_versions[$package]+present} ]] || { echo "Missing AI-free desktop candidate: $package"; exit 1; }
+  done
   for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer ukui-control-center libukcc3 libkysdk-datacollect libkysdk-datacollect-dev libkysdk-diagnosetest libkysdk-diagnosetest-dev libkysdk-diagnosetest-doc openkylin-default-settings; do
     [[ -n ${ukui_versions[$package]+present} ]] || { echo "Missing candidate: $package"; exit 1; }
   done
@@ -42,7 +48,7 @@ cleanup() {
   mountpoint -q "$work/root" && umount "$work/root"
   mountpoint -q "$work/lower" && umount "$work/lower"
   mountpoint -q "$work/iso" && umount "$work/iso"
-  if ! mountpoint -q "$work/ostree-tree/proc" && ! mountpoint -q "$work/ostree-tree/dev" && ! mountpoint -q "$work/iso" && ! mountpoint -q "$work/root" && ! mountpoint -q "$work/lower"; then
+  if ! mountpoint -q "$work/ostree-tree/proc" && ! mountpoint -q "$work/ostree-tree/dev" && ! mountpoint -q "$work/root/proc" && ! mountpoint -q "$work/root/dev" && ! mountpoint -q "$work/iso" && ! mountpoint -q "$work/root" && ! mountpoint -q "$work/lower"; then
     rm -rf -- "$work"
   fi
   return 0
@@ -161,6 +167,13 @@ chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifes
 mkdir -p "$root$candidate_dir"
 for deb in "$ukui_deb_dir"/*.deb; do
   package=$(dpkg-deb -f "$deb" Package)
+  if [[ ${desktop_allowed[$package]+present} ]]; then
+    status=$(chroot "$root" dpkg-query -W '-f=${Status}' "$package" 2>/dev/null || true)
+    case $package in
+      speech-dispatcher-espeak-ng|libespeak-ng1|espeak-ng-data|libpcaudio0) ;;
+      *) [[ $status == 'install ok installed' ]] || continue ;;
+    esac
+  fi
   if [[ $package == kylin-os-installer || $package == libkysdk-* || $package == openkylin-default-settings ]]; then
     status=$(chroot "$root" dpkg-query -W '-f=${Status}' "$package" 2>/dev/null || true)
     [[ $status == 'install ok installed' ]] || continue
@@ -217,6 +230,7 @@ while read -r p; do
     ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.
     biometric-driver-community-multidevice|biometric-driver-fido|biometric-driver-wechat|biometric-driver-wechat-common) ;; # Exact biometric drivers reviewed above.
     libpam-biometric) ;; # Reviewed PAM component removed after installing the candidates.
+    ukui-voice-wing) ;; # AI voice input; preserve the ordinary input methods.
     linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
       echo "Protected system package: $p"; exit 1 ;;
   esac
@@ -244,6 +258,8 @@ for package, relative in (
     if package not in planned:
         continue
     directory = root / relative
+    if directory.is_symlink():
+        raise SystemExit(f'Refusing generated-file cleanup through symlink: {directory}')
     if not directory.is_dir():
         continue
     for parent, dirs, files in os.walk(directory, topdown=False):
@@ -278,8 +294,16 @@ if grep -qx biometric-auth "$work/planned"; then
     return 1
   fi
   grep -Eq '^[[:space:]]*auth[[:space:]].*pam_unix\.so' "$root/etc/pam.d/common-auth"
-  # The PAM package's postinst generates this directory outside dpkg ownership.
-  rm -rf -- "$root/etc/biometric-auth"
+  # Generated files were cleaned above, preserving all package-owned files.
+  # Refuse unexpected leftovers instead of deleting another package's data.
+  chroot "$root" python3 - <<'PY'
+from pathlib import Path
+directory = Path('/etc/biometric-auth')
+if directory.is_symlink():
+    raise SystemExit('Unexpected biometric configuration symlink after purge')
+if directory.exists():
+    directory.rmdir()
+PY
   for path in /usr/share/ukui-biometric /etc/pam-configs/pam-biometric \
     /usr/share/applications/biometric-manager.desktop \
     /usr/lib/systemd/system/biometric-authentication.service; do
@@ -299,6 +323,14 @@ cp scripts/clean_privacy_activation.py "$root/tmp/clean_privacy_activation.py"
 chroot "$root" python3 /tmp/clean_privacy_activation.py / > "$report_dir/privacy-activation-cleanup.txt"
 rm "$root/tmp/clean_privacy_activation.py"
 python3 scripts/check_privacy_image.py "$root" > "$report_dir/privacy-audit.txt"
+python3 scripts/check_ai_free.py "$root" > "$report_dir/ai-free-audit.txt"
+python3 - <<'PY' >> "$root/etc/apt/preferences.d/openkylin-lite-privacy"
+import sys
+sys.path.insert(0, 'scripts')
+from ai_policy import REBUILT, REMOVALS
+print('\nPackage: ' + ' '.join(sorted(set(REBUILT) | set(REMOVALS))))
+print('Pin: version *\nPin-Priority: -1')
+PY
 chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
 [[ ! -s "$report_dir/dpkg-audit.txt" ]] || { echo 'dpkg audit failed'; exit 1; }
@@ -316,6 +348,7 @@ python3 - "$baseline" "$root/var/lib/dpkg/status" "$work/expected-removed" "$rep
 import pathlib,re,sys
 sys.path.insert(0, 'scripts')
 from check_apps import read_status
+from ai_policy import ADDITIONS
 before,after=[read_status(pathlib.Path(p).read_text()) for p in sys.argv[1:3]]
 allowed=set(pathlib.Path(sys.argv[3]).read_text().splitlines())
 versions=dict(line.split() for line in pathlib.Path(sys.argv[4]).read_text().splitlines())
@@ -325,7 +358,9 @@ changed={p for p in before.keys() & after.keys() if before[p]['Version'] != afte
 print('Removed:', ', '.join(sorted(removed)))
 print('Added:', ', '.join(sorted(added)))
 print('Version changes:', ', '.join(sorted(changed)))
-if removed != allowed or added or changed != set(versions):
+expected_added = set(versions) - set(before)
+if (removed != allowed or added != expected_added or not added <= ADDITIONS
+        or changed != set(versions) & set(before)):
     raise SystemExit('Package changes differ from the reviewed removals and replacements')
 for package,version in versions.items():
     if after[package]['Version'] != version:

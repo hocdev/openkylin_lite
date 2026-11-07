@@ -1,0 +1,102 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 92011a8..146e8dc 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -115,7 +115,6 @@ target_link_libraries(ukui-clipboard PRIVATE
+     KF5::GlobalAccel
+     qtsingleapplication
+     Xtst
+-    kylin-ai-base
+     ${X11_LIBRARIES}
+     ${EXTERNAL_LIBS}
+     ukui-quick::platform
+diff --git a/clipboardbackend.cpp b/clipboardbackend.cpp
+index dccf447..e201366 100644
+--- a/clipboardbackend.cpp
++++ b/clipboardbackend.cpp
+@@ -166,11 +166,7 @@ bool ClipboardBackend::processClipboardData()
+             return false;
+         }
+         this->addImage(image);
+-        QtConcurrent::run([this, &image]() {
+-            setPlainText(convertImageToPlainText(image));
+-        });
+         setOriginalType(ContentMenu::Image);
+-        this->addContentMenu(new ContentMenu(ContentMenu::PlainText, tr("text recognition")));
+         this->addContentMenu(new ContentMenu(ContentMenu::Original, tr("original paste")));
+     } else if (mimeData->hasHtml() && !mimeData->hasFormat("Art::Table ClipFormat")) {
+         qDebug()<<"获取到了html，并且不带格式";
+@@ -185,11 +181,7 @@ bool ClipboardBackend::processClipboardData()
+         qDebug()<<"获取到了Image";
+         QImage image = qvariant_cast<QImage>(mimeData->imageData());
+         this->addImage(image);
+-        QtConcurrent::run([this, &image]() {
+-            setPlainText(convertImageToPlainText(image));
+-        });
+         setOriginalType(ContentMenu::Image);
+-        this->addContentMenu(new ContentMenu(ContentMenu::PlainText, tr("text recognition")));
+         this->addContentMenu(new ContentMenu(ContentMenu::Original, tr("original paste")));
+     } else {
+         qDebug()<<"获取到了文本";
+diff --git a/debian/control b/debian/control
+index 1139ac8..3e6ed3d 100644
+--- a/debian/control
++++ b/debian/control
+@@ -24,10 +24,7 @@ Build-Depends: cmake,
+                libkysdk-qtwidgets-dev,
+                libukui-log4qt-dev,
+                liblept5,
+-               libleptonica-dev,
+-               libtesseract-dev,
+                libboundscheck,
+-               libkysdk-coreai-vision-dev [amd64 arm64],
+                waylandpp-dev
+ Standards-Version: 4.6.0
+ Homepage: https://gitee.com/openkylin/ukui-clipboard.git
+diff --git a/utils.cpp b/utils.cpp
+index 1c9ad2f..02361fd 100644
+--- a/utils.cpp
++++ b/utils.cpp
+@@ -1,5 +1,4 @@
+ #include "utils.h"
+-#include <kylin-ai/ai-base/ocr.h>
+ #include <QBuffer>
+ #include <QClipboard>
+ #include <QCursor>
+@@ -53,24 +52,7 @@ QString convertRichTextToPlainText(const QString& richText)
+     return plainText;
+ }
+ 
+-QString convertImageToPlainText(const QImage &image)
+-{
+-    OcrSession session;
+-    ocr_create_session(&session);
+-
+-    QBuffer buffer;
+-    buffer.open(QIODevice::WriteOnly);
+-    image.save(&buffer, "PNG"); // 使用PNG格式，您可以选择其他格式
+-    QByteArray imageData = buffer.data();
+ 
+-    // 将QByteArray转换为uchar*并存储到std::string
+-    std::string apiKey_(imageData.constData(), imageData.size());
+-
+-    const char* textFromImageData = ocr_get_text_from_image_data(session,  imageData.data(), imageData.size());
+-    QString resultStr(textFromImageData);
+-    delete textFromImageData;
+-    return resultStr;
+-}
+ 
+ QString convertImageToRichText(const QImage &image)
+ {
+diff --git a/utils.h b/utils.h
+index 507634a..57db7b3 100644
+--- a/utils.h
++++ b/utils.h
+@@ -8,7 +8,6 @@ QImage convertRichTextToImage(const QString& richText);
+ 
+ QString convertRichTextToPlainText(const QString& richText);
+ 
+-QString convertImageToPlainText(const QImage &image);
+ 
+ QString convertImageToRichText(const QImage &image);
+ 

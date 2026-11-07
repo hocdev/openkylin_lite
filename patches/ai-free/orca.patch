@@ -1,0 +1,126 @@
+diff --git a/debian/control b/debian/control
+index 0cce3f9..96f7867 100644
+--- a/debian/control
++++ b/debian/control
+@@ -17,7 +17,6 @@ Build-Depends: debhelper-compat (= 13), meson, git,
+                libatspi2.0-dev (>= 2.50.0~),
+                libgstreamer1.0-dev,
+                libglib2.0-dev,
+-               libkysdk-coreai-speech-dev,
+                pkg-config,
+                python3,
+                python-gi-dev,
+@@ -52,7 +51,7 @@ Depends: ${shlibs:Depends},
+          at-spi2-core (>= 2.50.0~),
+          python3-speechd,
+          speech-dispatcher,
+-         libkysdk-coreai-speech0 | libkysdk-coreai0,
++         speech-dispatcher-espeak-ng,
+          gsettings-desktop-schemas,
+ Recommends: xbrlapi
+ Suggests: brltty
+@@ -69,5 +68,4 @@ Description: Scriptable screen reader
+  infrastructure to activate and deactivate scripts, as well as a host of
+  services accessible from within the scripts.
+  .
+- This package includes the Kylin native speech-dispatcher module
+- (sd_kylin_speech) for openKylin TTS integration.
++ This build uses the standard Speech Dispatcher eSpeak NG backend.
+diff --git a/debian/control.in b/debian/control.in
+index 4b5ad54..0eb2f06 100644
+--- a/debian/control.in
++++ b/debian/control.in
+@@ -13,7 +13,6 @@ Build-Depends: debhelper-compat (= 13), meson, git,
+                libatspi2.0-dev (>= 2.50.0~),
+                libgstreamer1.0-dev,
+                libglib2.0-dev,
+-               libkysdk-coreai-speech-dev,
+                pkg-config,
+                python3,
+                python-gi-dev,
+@@ -48,7 +47,7 @@ Depends: ${shlibs:Depends},
+          at-spi2-core (>= 2.50.0~),
+          python3-speechd,
+          speech-dispatcher,
+-         libkysdk-coreai-speech0 | libkysdk-coreai0,
++         speech-dispatcher-espeak-ng,
+          gsettings-desktop-schemas,
+ Recommends: xbrlapi
+ Suggests: brltty
+@@ -65,5 +64,4 @@ Description: Scriptable screen reader
+  infrastructure to activate and deactivate scripts, as well as a host of
+  services accessible from within the scripts.
+  .
+- This package includes the Kylin native speech-dispatcher module
+- (sd_kylin_speech) for openKylin TTS integration.
++ This build uses the standard Speech Dispatcher eSpeak NG backend.
+diff --git a/debian/orca.postinst b/debian/orca.postinst
+index 9349259..1936567 100755
+--- a/debian/orca.postinst
++++ b/debian/orca.postinst
+@@ -1,32 +1,7 @@
+ #!/bin/sh
+ set -e
+-
+-speechd_conf=/etc/speech-dispatcher/speechd.conf
+-speechd_dir="$(dirname "$speechd_conf")"
+-
+-default_module=xunfei_speech
+-if [ -f /etc/os-release ] && grep -q '^NAME="openKylin"$' /etc/os-release; then
+-    default_module=kylin_speech
++if [ "$1" = configure ] && [ -f /etc/speech-dispatcher/speechd.conf ]; then
++    sed -i -E '/^AddModule "(kylin_speech|xunfei_speech|xfspark|xfspark-native)" /d; s/^DefaultModule "?(kylin_speech|xunfei_speech|xfspark|xfspark-native)"?$/DefaultModule espeak-ng/' /etc/speech-dispatcher/speechd.conf
+ fi
+-
+-if [ "$1" = "configure" ]; then
+-    mkdir -p "$speechd_dir"
+-    touch "$speechd_conf"
+-
+-    sed -i '/^AddModule "xfspark" ".*" "xfspark.conf"$/d' "$speechd_conf"
+-    sed -i '/^AddModule "xfspark-native" "sd_xfspark" "xfspark-native.conf"$/d' "$speechd_conf"
+-    sed -i '/^AddModule "kylin_speech" "sd_kylin_speech" "kylin_speech.conf"$/d' "$speechd_conf"
+-    sed -i '/^AddModule "xunfei_speech" "sd_xunfei_speech" "xunfei_speech.conf"$/d' "$speechd_conf"
+-    printf '%s\n' 'AddModule "kylin_speech" "sd_kylin_speech" "kylin_speech.conf"' >> "$speechd_conf"
+-    printf '%s\n' 'AddModule "xunfei_speech" "sd_xunfei_speech" "xunfei_speech.conf"' >> "$speechd_conf"
+-
+-    if grep -q '^DefaultModule ' "$speechd_conf"; then
+-        sed -i "s/^DefaultModule .*/DefaultModule ${default_module}/" "$speechd_conf"
+-    else
+-        printf '%s\n' "DefaultModule ${default_module}" >> "$speechd_conf"
+-    fi
+-fi
+-
+ #DEBHELPER#
+-
+ exit 0
+diff --git a/debian/rules b/debian/rules
+index 8fcddc1..3f70afb 100755
+--- a/debian/rules
++++ b/debian/rules
+@@ -6,14 +6,6 @@ export ORCA_DEBIAN_PACKAGE_BUILD = 1
+ %:
+ 	dh $@
+ 
+-# Kylin CoreAI SDK may ship private libs; same pattern as ukui-control-center.
+-# speech.so 旧版由 speech0 提供、新版并入 coreai0；去掉 shlibdeps 硬依赖，改由 control 中 OR 表达。
+-override_dh_shlibdeps:
+-	dh_shlibdeps --dpkg-shlibdeps-params=--ignore-missing-info
+-	@if [ -f debian/orca.substvars ]; then \
+-		perl -i -pe 's/\b(libkysdk-coreai0|libkysdk-coreai-speech0)(\s*\([^)]*\))?\s*,?\s*//g; s/,\s*,/,/g; s/:Depends=\s*,/:Depends=/; s/,\s*$$//' debian/orca.substvars; \
+-	fi
+-
+ # speechd.conf is configured in orca.postinst, not shipped as a conffile.
+ override_dh_auto_install:
+ 	dh_auto_install
+diff --git a/meson.build b/meson.build
+index ca185cb..6c1a03d 100644
+--- a/meson.build
++++ b/meson.build
+@@ -108,7 +108,5 @@ subdir('po')
+ subdir('src')
+ 
+ add_languages('c', 'cpp', required: true)
+-subdir('kylin-speech-module')
+-subdir('xunfei-speech-module')
+ 
+ summary(summary)

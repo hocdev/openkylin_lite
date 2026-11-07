@@ -3,6 +3,7 @@ import json
 import pathlib
 import subprocess
 import sys
+from ai_policy import REMOVALS
 
 # Exact AI component families approved for this ISO; no generic library removal.
 AI_COMPONENTS = {
@@ -74,6 +75,7 @@ AI_COMPONENTS = {
     'onnxruntime-backend',
 }
 AI_INTEGRATION_FILES = {
+    '/usr/lib/systemd/user/peony-intelligent-data-management-service.service',
     '/usr/lib/systemd/user/kyai-data-management-service.service',
     '/usr/lib/systemd/system/kytensor.service',
     '/usr/lib/systemd/user/kylin-ai-vector-engine.service',
@@ -82,6 +84,7 @@ AI_INTEGRATION_FILES = {
     '/usr/lib/systemd/user/kylin-ai-document-qa-service.service',
     '/usr/share/polkit-1/actions/org.kylin-ai-subsystem-modelconfig.policy',
 }
+AI_COMPONENTS.update(REMOVALS)
 BIOMETRIC_MANAGER_POLICY = '/usr/share/polkit-1/actions/org.ukui.biometric.manager.security.questions.policy'
 BIOMETRIC_COMPONENTS = {
     'libpam-biometric',

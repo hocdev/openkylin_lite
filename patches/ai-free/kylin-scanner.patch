@@ -1,0 +1,197 @@
+diff --git a/debian/control b/debian/control
+index 384c35d..d159c77 100644
+--- a/debian/control
++++ b/debian/control
+@@ -30,7 +30,6 @@ Build-Depends: debhelper-compat (=12),
+ 	       libtiff-dev,
+ 	       libudev-dev,
+ 	       cimg-dev,
+-	       libtesseract-dev,
+                libleptonica-dev,
+ 	       libtiff-dev,
+ 	       libudev-dev,
+@@ -53,9 +52,6 @@ Vcs-Browser: https://github.com/ubuntukylin/kylin-scanner
+ Package: kylin-scanner
+ Architecture: any
+ Depends: ${misc:Depends},
+-         tesseract-ocr,
+-         tesseract-ocr-chi-sim,
+-         tesseract-ocr-eng,
+          kylin-system-updater,
+          libboundscheck,
+          ${shlibs:Depends}
+diff --git a/kylin-scanner.pro b/kylin-scanner.pro
+index 7f2327d..4c86913 100644
+--- a/kylin-scanner.pro
++++ b/kylin-scanner.pro
+@@ -47,7 +47,6 @@ LIBS += -lpthread \
+         -ltiff \
+         -ljpeg \
+         -lpng \
+-        -ltesseract \
+         -lleptonica \
+         -lfreeimage \
+         -lusb-1.0 \
+@@ -93,7 +92,6 @@ SOURCES += \
+     src/imageOp/imageoperationbase.cpp \
+     src/imageOp/imageoperationbeauty.cpp \
+     src/imageOp/imageoperationmirror.cpp \
+-    src/imageOp/imageoperationocr.cpp \
+     src/imageOp/imageoperationrectify.cpp \
+     src/leftimagehandlesuccesspagewidget.cpp \
+     src/leftsuccesspagewidget.cpp \
+@@ -142,7 +140,6 @@ HEADERS += \
+     src/imageOp/imageoperationbase.h \
+     src/imageOp/imageoperationbeauty.h \
+     src/imageOp/imageoperationmirror.h \
+-    src/imageOp/imageoperationocr.h \
+     src/imageOp/imageoperationrectify.h \
+     src/include/common.h \
+     src/include/theme.h \
+diff --git a/src/showimagewidget.cpp b/src/showimagewidget.cpp
+index 2df6f97..43944a7 100644
+--- a/src/showimagewidget.cpp
++++ b/src/showimagewidget.cpp
+@@ -22,7 +22,6 @@
+ 
+ #include "imageOp/imageoperationbeauty.h"
+ #include "imageOp/imageoperationmirror.h"
+-#include "imageOp/imageoperationocr.h"
+ #include "imageOp/imageoperationrectify.h"
+ 
+ ShowImageWidget::ShowImageWidget(QWidget *parent) : QWidget(parent)
+@@ -184,7 +183,6 @@ void ShowImageWidget::initConnect()
+     connect(g_user_signal, &GlobalUserSignal::toolbarRectifyOperationStartSignal, this, &ShowImageWidget::rectifyStartSlot);
+     connect(g_user_signal, &GlobalUserSignal::doRectifyOperationFinishedSignal, this, &ShowImageWidget::rectifyStopSlot);
+ 
+-    connect(g_user_signal, &GlobalUserSignal::toolbarOcrOperationStartSignal, this, &ShowImageWidget::ocrStartSlot);
+ 
+     connect(g_user_signal, &GlobalUserSignal::cancleCorpSignal, m_cancelButton, &QPushButton::click);
+     connect(m_cancelButton, &QPushButton::clicked, this, &ShowImageWidget::cropCancelSlot);
+@@ -1220,19 +1218,7 @@ void ShowImageWidget::rectifyStopSlot(bool isTrue)
+     }
+ }
+ 
+-void ShowImageWidget::ocrStartSlot()
+-{
+-    QString realLoadPathDelayUpdate = QFileInfo(m_loadPathDelayUpdate).absolutePath() + "/" +  QFileInfo(m_loadPathDelayUpdate).baseName() + "_temp" + ".jpg";
+-    m_normalImage->save(realLoadPathDelayUpdate);
+-    emit g_user_signal->showScanWidgetSignal(realLoadPathDelayUpdate);
+-    imageOp = new ImageOperationOCR(m_normalImage);
+-    imageOpThread = new QThread();
+-    imageOp->moveToThread(imageOpThread);
+-    imageOpThread->start();
+-    connect(this,&ShowImageWidget::OCRSignal,imageOp,&ImageOperationBase::ImageOP);
+-    connect(imageOp,&ImageOperationBase::finished,this,&ShowImageWidget::ocrStopSlot);
+-    emit OCRSignal();
+-}
++
+ 
+ void ShowImageWidget::ocrStopSlot()
+ {
+diff --git a/src/showimagewidget.h b/src/showimagewidget.h
+index c061194..f3816bd 100644
+--- a/src/showimagewidget.h
++++ b/src/showimagewidget.h
+@@ -140,7 +140,6 @@ public slots:
+     void beautyStopSlot();
+     void rectifyStartSlot();
+     void rectifyStopSlot(bool isTrue);
+-    void ocrStartSlot();
+     void ocrStopSlot();
+ 
+     void saveCurrentPicture();
+diff --git a/src/toolbarwidget.cpp b/src/toolbarwidget.cpp
+index 0f351d0..1e596db 100644
+--- a/src/toolbarwidget.cpp
++++ b/src/toolbarwidget.cpp
+@@ -52,6 +52,7 @@ void ToolBarWidget::setupGui()
+     m_beautyButton->setObjectName("m_beautyButton");
+     m_rectifyButton->setObjectName("m_rectifyButton");
+     m_ocrButton->setObjectName("m_ocrButton");
++    m_ocrButton->hide();
+     m_leftFrame->setObjectName("m_leftFrame");
+     m_cropButton->setObjectName("m_cropButton");
+     m_rotateButton->setObjectName("m_rotateButton");
+@@ -135,7 +136,6 @@ void ToolBarWidget::setupGui()
+         m_mainHLayout->addSpacing(4);
+         m_mainHLayout->addWidget(m_rectifyButton);
+         m_mainHLayout->addSpacing(4);
+-        m_mainHLayout->addWidget(m_ocrButton);
+         m_mainHLayout->addSpacing(8);
+         m_mainHLayout->addWidget(m_leftFrame);
+         m_mainHLayout->addSpacing(4);
+@@ -229,7 +229,6 @@ void ToolBarWidget::setupGui()
+     m_mainHLayout->addSpacing(4);
+     m_mainHLayout->addWidget(m_rectifyButton);
+     m_mainHLayout->addSpacing(4);
+-    m_mainHLayout->addWidget(m_ocrButton);
+     m_mainHLayout->addSpacing(8);
+     m_mainHLayout->addWidget(m_leftFrame);
+     m_mainHLayout->addSpacing(4);
+@@ -262,7 +261,6 @@ void ToolBarWidget::initConnect()
+     connect(g_user_signal, &GlobalUserSignal::toolbarPercentageChangedSignel, this, &ToolBarWidget::percentageChangedSlot);
+     connect(m_beautyButton, &QPushButton::clicked, this, &ToolBarWidget::beautyButtonClickedSlot);
+     connect(m_rectifyButton, &QPushButton::clicked, this, &ToolBarWidget::rectifyButtonClickedSlot);
+-    connect(m_ocrButton, &QPushButton::clicked, this, &ToolBarWidget::ocrButtonClickedSlot);
+     connect(m_cropButton, &QPushButton::clicked, this, &ToolBarWidget::cropButtonClickedSlot);
+     connect(m_rotateButton, &QPushButton::clicked, this, &ToolBarWidget::rotateButtonClickedSlot);
+     connect(m_mirrorButton, &QPushButton::clicked, this, &ToolBarWidget::mirrorButtonClickedSlot);
+@@ -489,45 +487,7 @@ void ToolBarWidget::rectifyButtonClickedSlot()
+ 
+ }
+ 
+-void ToolBarWidget::ocrButtonClickedSlot()
+-{
+-    qDebug() << "click ocr button.";
+-
+-    if(g_sane_object->cropFlag){
+-        qDebug() << "do nothing,exit ocr!";
+-        return;
+-    }
+-    emit g_user_signal->switchPageSig();
+-    if(g_sane_object->ocrFlag){
+-        g_user_signal->setAddDevStatusSignal(true);
+-        qDebug() << "exit OCR page...";
+-        emit g_user_signal->exitOCR();
+-        g_sane_object->ocrFlag = 0;
+-        ocrOtherIconState(true);
+ 
+-    }else{
+-        QMap<QString, QString> buried_data;
+-        buried_data.insert("functionName", QString::fromStdString(kabase::BuriedPoint::convertPTtoString(kabase::BuriedPoint::PT::KylinScannerTextRecognition)));
+-        buried_data.insert("action", "OCR");
+-        buried_data.insert("function", "in toolbarwidget.cpp function ocrButtonClickedSlot()");
+-
+-        int cursor{0};
+-        KCustomProperty property[buried_data.size()];
+-        for (auto iter = buried_data.begin(); iter != buried_data.end(); iter++) {
+-            property[cursor].key = strdup(iter.key().toLocal8Bit().data());
+-            property[cursor].value = strdup(iter.value().toLocal8Bit().data());
+-            cursor++;
+-        }
+-        KTrackData *node = kdk_dia_data_init(KEVENTSOURCE_DESKTOP, KEVENT_CUSTOM);
+-        kdk_dia_append_custom_property(node, property, buried_data.size());
+-        kdk_dia_upload_default(node, "text_recognition", const_cast<char *>("mainPage"));
+-        kdk_dia_data_free(node);
+-
+-        ocrOtherIconState(false);
+-        g_user_signal->toolbarOcrOperationStart();
+-        g_sane_object->ocrFlag = 1;
+-    }
+-}
+ 
+ void ToolBarWidget::cropButtonClickedSlot()
+ {
+diff --git a/src/toolbarwidget.h b/src/toolbarwidget.h
+index 1083a59..afcb637 100644
+--- a/src/toolbarwidget.h
++++ b/src/toolbarwidget.h
+@@ -80,7 +80,6 @@ public slots:
+ 
+     void beautyButtonClickedSlot();
+     void rectifyButtonClickedSlot();
+-    void ocrButtonClickedSlot();
+     void cropButtonClickedSlot();
+     void rotateButtonClickedSlot();
+     void mirrorButtonClickedSlot();

@@ -51,32 +51,51 @@ Pin: version 4.25.0.0-ok0.2
 Pin-Priority: 1001
 PIN
 apt-get install -y --allow-downgrades --no-install-recommends "$work/quick/"*.deb
-# Keep file-metadata aligned with the pinned ISO so shlibdeps doesn't bump dependencies beyond the Live root.
-mkdir "$work/metadata-deps"
-while read -r digest file; do
-  [[ $digest =~ ^[0-9a-f]{64}$ && $file == libukui-file-metadata*4.25.0.0-ok0.1_amd64.deb ]]
-  curl -fL --retry 4 -o "$work/metadata-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/u/ukui-file-metadata/$file"
-  echo "$digest  $work/metadata-deps/$file" | sha256sum -c -
-done < "$workspace/config/metadata-build-deps.sha256"
-cat > /etc/apt/preferences.d/openkylin-lite-metadata <<'PIN'
+if [[ $source_package == ukui-search ]]; then
+  # Keep file-metadata aligned with the pinned ISO so shlibdeps doesn't bump dependencies beyond the Live root.
+  mkdir "$work/metadata-deps"
+  while read -r digest file; do
+    [[ $digest =~ ^[0-9a-f]{64}$ && $file == libukui-file-metadata*4.25.0.0-ok0.1_amd64.deb ]]
+    curl -fL --retry 4 -o "$work/metadata-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/u/ukui-file-metadata/$file"
+    echo "$digest  $work/metadata-deps/$file" | sha256sum -c -
+  done < "$workspace/config/metadata-build-deps.sha256"
+  cat > /etc/apt/preferences.d/openkylin-lite-metadata <<'PIN'
 Package: libukui-file-metadata-bin libukui-file-metadata-dev libukui-file-metadata1
 Pin: version 4.25.0.0-ok0.1
 Pin-Priority: 1001
 PIN
-apt-get install -y --allow-downgrades --no-install-recommends "$work/metadata-deps/"*.deb
-# Keep libkysdk-base aligned with the pinned ISO so shlibdeps doesn't bump dependencies beyond the Live root.
-mkdir "$work/kysdk-base-deps"
-while read -r digest file; do
-  [[ $digest =~ ^[0-9a-f]{64}$ && $file == libkysdk-*3.0.1.0-ok0.1*.deb ]]
-  curl -fL --retry 4 -o "$work/kysdk-base-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/libk/libkysdk-base/$file"
-  echo "$digest  $work/kysdk-base-deps/$file" | sha256sum -c -
-done < "$workspace/config/kysdk-base-build-deps.sha256"
-cat > /etc/apt/preferences.d/openkylin-lite-kysdk-base <<'PIN'
+  apt-get install -y --allow-downgrades --no-install-recommends "$work/metadata-deps/"*.deb
+fi
+if [[ $source_package == kylin-scanner || $source_package == kylin-photo-viewer ]]; then
+  # Keep libkysdk-base aligned with the pinned ISO so shlibdeps doesn't bump dependencies beyond the Live root.
+  mkdir "$work/kysdk-base-deps"
+  while read -r digest file; do
+    [[ $digest =~ ^[0-9a-f]{64}$ && $file == libkysdk-*3.0.1.0-ok0.1*.deb ]]
+    curl -fL --retry 4 -o "$work/kysdk-base-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/libk/libkysdk-base/$file"
+    echo "$digest  $work/kysdk-base-deps/$file" | sha256sum -c -
+  done < "$workspace/config/kysdk-base-build-deps.sha256"
+  cat > /etc/apt/preferences.d/openkylin-lite-kysdk-base <<'PIN'
 Package: libkysdk-base libkysdk-base-dev libkysdk-basecommon libkysdk-conf2 libkysdk-conf2-dev libkysdk-conf2-tools libkysdk-config libkysdk-config-dev libkysdk-diagnostics libkysdk-diagnostics-dev libkysdk-gsetting libkysdk-gsetting-dev libkysdk-log libkysdk-log-dev libkysdk-timer libkysdk-timer-dev libkysdk-utils libkysdk-utils-dev
 Pin: version 3.0.1.0-ok0.1*
 Pin-Priority: 1001
 PIN
-apt-get install -y --allow-downgrades --no-install-recommends "$work/kysdk-base-deps/"*.deb
+  apt-get install -y --allow-downgrades --no-install-recommends "$work/kysdk-base-deps/"*.deb
+fi
+if [[ $source_package == kylin-scanner ]]; then
+  # Keep libkysdk-system (powermanagement) aligned with the pinned ISO.
+  mkdir "$work/kysdk-system-deps"
+  while read -r digest file; do
+    [[ $digest =~ ^[0-9a-f]{64}$ && $file == libkysdk-powermanagement*3.0.1.0-ok0.21*.deb ]]
+    curl -fL --retry 4 -o "$work/kysdk-system-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/libk/libkysdk-system/$file"
+    echo "$digest  $work/kysdk-system-deps/$file" | sha256sum -c -
+  done < "$workspace/config/powermanagement-build-deps.sha256"
+  cat > /etc/apt/preferences.d/openkylin-lite-powermanagement <<'PIN'
+Package: libkysdk-powermanagement libkysdk-powermanagement-dev
+Pin: version 3.0.1.0-ok0.21*
+Pin-Priority: 1001
+PIN
+  apt-get install -y --allow-downgrades --no-install-recommends "$work/kysdk-system-deps/"*.deb
+fi
 apt-get build-dep -y --no-install-recommends ./
 for pc in /usr/lib/*/pkgconfig/poppler.pc /usr/lib/pkgconfig/poppler.pc; do
   [[ -f "$pc" ]] && sed -Ei 's/libcurl >= [0-9.]+/libcurl/g' "$pc"

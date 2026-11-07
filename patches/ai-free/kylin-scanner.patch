@@ -102,7 +102,7 @@ index c061194..f3816bd 100644
  
      void saveCurrentPicture();
 diff --git a/src/toolbarwidget.cpp b/src/toolbarwidget.cpp
-index 0f351d0..1e596db 100644
+index 0f351d0..0f56253 100644
 --- a/src/toolbarwidget.cpp
 +++ b/src/toolbarwidget.cpp
 @@ -52,6 +52,7 @@ void ToolBarWidget::setupGui()
@@ -137,12 +137,10 @@ index 0f351d0..1e596db 100644
      connect(m_cropButton, &QPushButton::clicked, this, &ToolBarWidget::cropButtonClickedSlot);
      connect(m_rotateButton, &QPushButton::clicked, this, &ToolBarWidget::rotateButtonClickedSlot);
      connect(m_mirrorButton, &QPushButton::clicked, this, &ToolBarWidget::mirrorButtonClickedSlot);
-@@ -489,45 +487,7 @@ void ToolBarWidget::rectifyButtonClickedSlot()
+@@ -491,42 +489,6 @@ void ToolBarWidget::rectifyButtonClickedSlot()
  
- }
- 
--void ToolBarWidget::ocrButtonClickedSlot()
--{
+ void ToolBarWidget::ocrButtonClickedSlot()
+ {
 -    qDebug() << "click ocr button.";
 -
 -    if(g_sane_object->cropFlag){
@@ -156,7 +154,7 @@ index 0f351d0..1e596db 100644
 -        emit g_user_signal->exitOCR();
 -        g_sane_object->ocrFlag = 0;
 -        ocrOtherIconState(true);
- 
+-
 -    }else{
 -        QMap<QString, QString> buried_data;
 -        buried_data.insert("functionName", QString::fromStdString(kabase::BuriedPoint::convertPTtoString(kabase::BuriedPoint::PT::KylinScannerTextRecognition)));
@@ -179,19 +177,6 @@ index 0f351d0..1e596db 100644
 -        g_user_signal->toolbarOcrOperationStart();
 -        g_sane_object->ocrFlag = 1;
 -    }
--}
+ }
  
  void ToolBarWidget::cropButtonClickedSlot()
- {
-diff --git a/src/toolbarwidget.h b/src/toolbarwidget.h
-index 1083a59..afcb637 100644
---- a/src/toolbarwidget.h
-+++ b/src/toolbarwidget.h
-@@ -80,7 +80,6 @@ public slots:
- 
-     void beautyButtonClickedSlot();
-     void rectifyButtonClickedSlot();
--    void ocrButtonClickedSlot();
-     void cropButtonClickedSlot();
-     void rotateButtonClickedSlot();
-     void mirrorButtonClickedSlot();

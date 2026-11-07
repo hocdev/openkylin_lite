@@ -261,7 +261,7 @@ index d5388e3..3ccb5b8 100644
          mAboutWidget->getTrialBtn()->setVisible(false);
          mAboutWidget->getAndLabel()->setVisible(false);
          mThemePixmap = loadSvg("://img/plugins/about/logoukui.svg", 130, 50);
-@@ -613,44 +422,9 @@ void About::setPrivacyCompent()
+@@ -613,44 +422,37 @@ void About::setPrivacyCompent()
      mAboutWidget->getPriBtn()->parentWidget()->hide();
  }
  
@@ -273,42 +273,40 @@ index d5388e3..3ccb5b8 100644
 -    mAboutWidget->getActivationBtn()->setText(tr("Extend"));
 -}
  
--int About::getMonth(QString month)
--{
--    if (month == "Jan") {
--        return 1;
--    } else if (month == "Feb") {
--        return 2;
--    } else if (month == "Mar") {
--        return 3;
--    } else if (month == "Apr") {
--        return 4;
--    } else if (month == "May") {
--        return 5;
--    } else if (month == "Jun") {
--        return 6;
--    } else if (month == "Jul") {
--        return 7;
--    } else if (month == "Aug") {
--        return 8;
--    } else if (month == "Sep" || month == "Sept") {
--        return 9;
--    } else if (month == "Oct") {
--        return 10;
--    } else if (month == "Nov") {
--        return 11;
--    } else if (month == "Dec") {
--        return 12;
--    }else {
--        return 0;
--    }
--}
-+
-+
+ int About::getMonth(QString month)
+ {
+     if (month == "Jan") {
+         return 1;
+     } else if (month == "Feb") {
+         return 2;
+     } else if (month == "Mar") {
+         return 3;
+     } else if (month == "Apr") {
+         return 4;
+     } else if (month == "May") {
+         return 5;
+     } else if (month == "Jun") {
+         return 6;
+     } else if (month == "Jul") {
+         return 7;
+     } else if (month == "Aug") {
+         return 8;
+     } else if (month == "Sep" || month == "Sept") {
+         return 9;
+     } else if (month == "Oct") {
+         return 10;
+     } else if (month == "Nov") {
+         return 11;
+     } else if (month == "Dec") {
+         return 12;
+     }else {
+         return 0;
+     }
+ }
  
  void About::reboot()
  {
-@@ -664,32 +438,7 @@ void About::reboot()
+@@ -664,32 +466,7 @@ void About::reboot()
      rebootDbus = nullptr;
  }
  
@@ -341,7 +339,7 @@ index d5388e3..3ccb5b8 100644
  
  void About::openHostNameDialog()
  {
-@@ -722,58 +471,7 @@ void About::openHostNameDialog()
+@@ -722,58 +499,7 @@ void About::openHostNameDialog()
  }
  
  /* 处理窗口缩放时的文本显示 */
@@ -400,7 +398,7 @@ index d5388e3..3ccb5b8 100644
  
  
  QStringList About::getUserDefaultLanguage()
-@@ -920,64 +618,12 @@ void About::setEnableBySecurity() {
+@@ -920,64 +646,12 @@ void About::setEnableBySecurity() {
      });
  }
  
@@ -499,12 +497,12 @@ index 39cffe8..1805200 100644
      void setVersionNumCompenent();
      void setupVersionCompenent();
      void setupDesktopComponent();
-@@ -100,20 +95,14 @@ private:
+@@ -100,20 +95,15 @@ private:
      void setupSysInstallComponent();
      void setupUpgradeComponent();
      void securityControl();
 -    void showExtend(QString dateres);
--    int getMonth(QString month);
+     int getMonth(QString month);
      void reboot();
 -    bool eventFilter(QObject *obj, QEvent *event);
      QStringList getUserDefaultLanguage();
@@ -520,7 +518,7 @@ index 39cffe8..1805200 100644
  
  private:
      AboutUi *mAboutWidget;
-@@ -125,20 +114,17 @@ private:
+@@ -125,20 +115,17 @@ private:
  
      bool mFirstLoad;
  
@@ -541,7 +539,7 @@ index 39cffe8..1805200 100644
  
      QDBusInterface *mUkccDbus = nullptr;
      QObject *mAboutDBus = nullptr;
-@@ -146,8 +132,6 @@ private:
+@@ -146,8 +133,6 @@ private:
      int m_currentIndex = 0;
      bool m_isFilled = false;
      QGSettings *m_maintainSettings = nullptr;
@@ -550,7 +548,7 @@ index 39cffe8..1805200 100644
  
  Q_SIGNALS:
      void changeTheme();
-@@ -157,8 +141,6 @@ private Q_SLOTS:
+@@ -157,8 +142,6 @@ private Q_SLOTS:
      void uploadStateChangedSlot(int state);
  
  private slots:

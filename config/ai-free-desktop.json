@@ -59,7 +59,8 @@
     "speech-dispatcher-espeak-ng",
     "libespeak-ng1",
     "espeak-ng-data",
-    "libpcaudio0"
+    "libpcaudio0",
+    "libsonic0"
   ],
   "removals": {
     "libonnxruntime": {

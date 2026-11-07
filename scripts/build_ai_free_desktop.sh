@@ -19,9 +19,19 @@ PY
 )
 [[ ${#lock[@]} == 4 ]]
 git init "$work/source"
-git -C "$work/source" -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=60 fetch --depth=1 "${lock[0]}" "refs/tags/${lock[1]}"
-git -C "$work/source" checkout --detach FETCH_HEAD
 cd "$work/source"
+for attempt in 1 2 3 4; do
+  if git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=120 -c http.postBuffer=524288000 fetch --depth=1 \
+    "${lock[0]}" "refs/tags/${lock[1]}"; then
+    break
+  fi
+  if (( attempt == 4 )); then
+    echo "Gitee source fetch failed after four attempts"
+    exit 1
+  fi
+  sleep "$((attempt * 5))"
+done
+git checkout --detach FETCH_HEAD
 [[ $(git rev-parse HEAD) == "${lock[2]}" ]]
 [[ $(dpkg-parsechangelog -S Version) == "${lock[3]}" ]]
 dpkg-source --before-build .
@@ -42,6 +52,9 @@ Pin-Priority: 1001
 PIN
 apt-get install -y --allow-downgrades --no-install-recommends "$work/quick/"*.deb
 apt-get build-dep -y --no-install-recommends ./
+for pc in /usr/lib/*/pkgconfig/poppler.pc /usr/lib/pkgconfig/poppler.pc; do
+  [[ -f "$pc" ]] && sed -Ei 's/libcurl >= [0-9.]+/libcurl/g' "$pc"
+done
 CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 output="$workspace/desktop-output/$source_package"
 mkdir -p "$output"
@@ -58,6 +71,6 @@ done
 if [[ $source_package == orca ]]; then
   # Offline remaster needs the conventional, non-neural TTS backend as well.
   cd "$output"
-  apt-get download speech-dispatcher-espeak-ng libespeak-ng1 espeak-ng-data libpcaudio0
+  apt-get download speech-dispatcher-espeak-ng libespeak-ng1 espeak-ng-data libpcaudio0 libsonic0
 fi
 python3 "$workspace/scripts/check_desktop_candidates.py" "$output" "$source_package"

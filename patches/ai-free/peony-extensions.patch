@@ -68,4 +68,4 @@ index 01e9db1..89de055 100644
 -    peony-spaceview-plugin              \
      org.ukui.desktop-clock-widget       \
      org.ukui.desktop-image-widget       \
- #    test-computer-view
+     peony-previewhub-hybrid-plugin      \

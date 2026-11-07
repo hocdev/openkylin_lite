@@ -18,7 +18,7 @@ class AiPolicyTests(unittest.TestCase):
 
     def test_shared_desktop_and_audio_libraries_are_not_ai(self):
         for name in ('libukui-search2', 'libukui-file-metadata1', 'libopencv-core406',
-                     'libespeak-ng1', 'speech-dispatcher-espeak-ng', 'libkysdk-qtwidgets'):
+                     'libespeak-ng1', 'speech-dispatcher-espeak-ng', 'libkysdk-qtwidgets', 'libsonic0'):
             self.assertFalse(is_ai_package(name), name)
         for name in REMOVALS:
             self.assertTrue(is_ai_package(name), name)

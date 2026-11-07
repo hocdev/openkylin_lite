@@ -180,7 +180,7 @@ jobs:
     container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
     steps:
       - uses: actions/checkout@v6
-      - name: Build control center with nonblocking About queries
+      - name: Build control center with nonblocking Settings startup
         shell: bash
         run: bash scripts/build_control_center_candidate.sh
       - uses: actions/upload-artifact@v6

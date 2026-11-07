@@ -1,0 +1,663 @@
+diff --git a/libukcc/interface.pri b/libukcc/interface.pri
+index 017d0dd..2ad37ca 100644
+--- a/libukcc/interface.pri
++++ b/libukcc/interface.pri
+@@ -3,7 +3,6 @@ QT += dbus
+ 
+ CONFIG += link_pkgconfig
+ 
+-PKGCONFIG += kysdk-datacollect
+ 
+ SOURCES += \
+         $$PWD/interface/mthread.cpp \
+diff --git a/libukcc/interface/ukcccommon.cpp b/libukcc/interface/ukcccommon.cpp
+index 5951f88..78a5b9a 100644
+--- a/libukcc/interface/ukcccommon.cpp
++++ b/libukcc/interface/ukcccommon.cpp
+@@ -20,6 +20,8 @@
+ #include "ukcccommon.h"
+ 
+ #include <QDebug>
++#include <QSysInfo>
++#include <QCoreApplication>
+ #include <QDir>
+ #include <QSettings>
+ #include <QProcess>
+@@ -56,6 +58,9 @@ void UkccCommon::centerToScreen(QWidget* widget) {
+ }
+ 
+ QVariantMap UkccCommon::getModuleHideStatus() {
++    auto *app = QCoreApplication::instance();
++    if (app && app->property("_ukccPolicyReady").toBool())
++        return app->property("_ukccModulePolicy").toMap();
+     QDBusConnection connection = QDBusConnection::sessionBus();
+     if (!connection.isConnected()) {
+         qWarning() << "getModuleHideStatus: session bus is not connected";
+@@ -115,31 +120,7 @@ QString UkccCommon::getCpuInfo() {
+ 
+ QString UkccCommon::getCpuArchitecture()
+ {
+-    QString cpuArchitecture;
+-    // 设置系统环境变量
+-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+-    env.insert("LANG","en_US");
+-    QProcess *process = new QProcess;
+-    process->setProcessEnvironment(env);
+-    process->start("lscpu");
+-    process->waitForFinished();
+-
+-    QByteArray ba = process->readAllStandardOutput();
+-
+-    delete process;
+-    QString cpuinfo = QString(ba.data());
+-    QStringList cpuinfo_list = cpuinfo.split("\n");
+-    for (int i = 0; i < cpuinfo_list.count(); i++) {
+-        QString mstring = cpuinfo_list.at(i);
+-        if (mstring.contains("Architecture")) {
+-            // 去除空格
+-            mstring = mstring.remove(QRegExp("\\s"));
+-            QStringList list = mstring.split(":");
+-            cpuArchitecture = list.at(1);
+-            break;
+-        }
+-    }
+-    return cpuArchitecture;
++    return QSysInfo::currentCpuArchitecture();
+ }
+ 
+ bool UkccCommon::isExistEffect() {
+@@ -297,22 +278,7 @@ bool UkccCommon::isExitBattery()
+ 
+ QString UkccCommon::getHostName()
+ {
+-    QString hostname;
+-    // 设置系统环境变量
+-    QProcessEnvironment env = QProcessEnvironment::systemEnvironment();
+-    env.insert("LANG","en_US");
+-    QProcess *process = new QProcess;
+-    process->setProcessEnvironment(env);
+-    process->start("hostname");
+-    process->waitForFinished();
+-
+-    QByteArray ba = process->readAllStandardOutput();
+-
+-    delete process;
+-    hostname = ba.data();
+-
+-    hostname.replace(QString("\n"),QString(""));
+-    return hostname;
++    return QSysInfo::machineHostName();
+ }
+ 
+ bool UkccCommon::isZJY()
+diff --git a/registeredSession/ukccsessionserver.cpp b/registeredSession/ukccsessionserver.cpp
+index 3fc1dd2..e1aa478 100644
+--- a/registeredSession/ukccsessionserver.cpp
++++ b/registeredSession/ukccsessionserver.cpp
+@@ -25,6 +25,7 @@
+ #include <QDebug>
+ #include <QDBusInterface>
+ #include <QDBusReply>
++#include <QDBusServiceWatcher>
+ 
+ #ifdef signals
+ #undef signals
+@@ -37,7 +38,17 @@ const QStringList openkylinFilterPathList = {"/Shortcut/Add", "/Shortcut/Customi
+ 
+ ukccSessionServer::ukccSessionServer():UKUI::ServiceObject(nullptr)
+ {
++   m_securityPath = new SecurityPathProvider(this, QString::fromLocal8Bit(g_get_user_name()));
+    monitoFileChanged();
++   auto *watcher = new QDBusServiceWatcher(QStringLiteral("com.kylin.ukui.SettingsDaemon"),
++       QDBusConnection::systemBus(), QDBusServiceWatcher::WatchForOwnerChange, this);
++   connect(watcher, &QDBusServiceWatcher::serviceOwnerChanged, this,
++       [this](const QString &, const QString &, const QString &) { ReloadSecurityConfig(); });
++   m_securityPath->request([this](const QString &path) {
++       mUsdJsonFile = path;
++       if (QFile::exists(path)) m_securityWatcher->addPath(path);
++       Q_EMIT configChanged();
++   });
+ }
+ 
+ QMap<QString, QVariant> ukccSessionServer::getJsonInfo(const QString &configFile)
+@@ -250,28 +261,31 @@ void ukccSessionServer::exitService()
+ 
+ void ukccSessionServer::ReloadSecurityConfig()
+ {
+-    qDebug() << "Reload Security Config";
+-    Q_EMIT configChanged();
++    m_securityPath->invalidate();
++    m_securityPath->request([this](const QString &path) {
++        mUsdJsonFile = path;
++        if (QFile::exists(path)) m_securityWatcher->addPath(path);
++        Q_EMIT configChanged();
++    });
+ }
+ 
+ QVariantMap ukccSessionServer::getModuleHideStatus()
+ {
+-    if (mUsdJsonFile.isEmpty()) {
+-        // usd 管控文件是否存在，若存在使用 usd 管控文件
+-        QDBusInterface usdDbus("com.kylin.ukui.SettingsDaemon",
+-                               "/securityConfig",
+-                               "com.kylin.ukui.SettingsDaemon.interface",
+-                                QDBusConnection::systemBus());
+-
+-        QDBusReply<QString> res = usdDbus.call("GetConfigPath", QString(g_get_user_name()),"ukui-control-center");
+-
+-        QString usdFileName = res;
+-        qDebug() << "get usd file path:" << usdFileName << QString(g_get_user_name());
+-
+-        if (!usdFileName.isEmpty()) {
+-            mUsdJsonFile = usdFileName;
+-        }
++    if (!m_securityPath->ready() && calledFromDBus()) {
++        const auto request = message();
++        const auto bus = connection();
++        setDelayedReply(true);
++        m_securityPath->request([this, request, bus](const QString &path) {
++            mUsdJsonFile = path;
++            bus.send(request.createReply(QVariantList{QVariant(moduleHideStatusFromFiles())}));
++        });
++        return {};
+     }
++    return moduleHideStatusFromFiles();
++}
++
++QVariantMap ukccSessionServer::moduleHideStatusFromFiles()
++{
+     QMap<QString, QVariant> usdConfig = getUSDJsonInfo(mUsdJsonFile);
+     if (!usdConfig.isEmpty()) {
+         return usdConfig;
+@@ -297,19 +311,7 @@ QVariantMap ukccSessionServer::getModuleHideStatus()
+ 
+ QString ukccSessionServer::GetSecurityConfigPath()
+ {
+-    // usd 管控文件是否存在，若存在使用 usd 管控文件
+-    QDBusInterface usdDbus("com.kylin.ukui.SettingsDaemon",
+-                           "/securityConfig",
+-                           "com.kylin.ukui.SettingsDaemon.interface",
+-                            QDBusConnection::systemBus());
+-
+-    QDBusReply<QString> res = usdDbus.call("GetConfigPath", QString(g_get_user_name()),"ukui-control-center");
+-    QString usdFileName = res;
+-    qDebug() << "get usd file:" << usdFileName << QString(g_get_user_name());
+-    if (!usdFileName.isEmpty()) {
+-        mUsdJsonFile = usdFileName;
+-        return mUsdJsonFile;
+-    }
++    if (!mUsdJsonFile.isEmpty()) return mUsdJsonFile;
+ 
+     QString systemFilename = "/usr/share/ukui-control-center/data/ukui-control-center-security-config.json";
+     QFile file(systemFilename);
+@@ -329,14 +331,18 @@ QString ukccSessionServer::GetSecurityConfigPath()
+ 
+ void ukccSessionServer::monitoFileChanged()
+ {
+-    QFileSystemWatcher *m_FileWatcher = new QFileSystemWatcher(this);
+-    m_FileWatcher->addPath(GetSecurityConfigPath());
+-    connect(m_FileWatcher, &QFileSystemWatcher::fileChanged, this, [=](){
++    m_securityWatcher = new QFileSystemWatcher(this);
++    for (const QString &path : {GetSecurityConfigPath(),
++         QDir::homePath() + "/.config/ukui-control-center-security-config.json",
++         QStringLiteral("/usr/share/ukui-control-center/data/ukui-control-center-security-config.json")}) {
++        if (QFile::exists(path)) m_securityWatcher->addPath(path);
++    }
++    connect(m_securityWatcher, &QFileSystemWatcher::fileChanged, this, [this](const QString &path) {
++        if (QFile::exists(path)) m_securityWatcher->addPath(path);
+         Q_EMIT configChanged();
+     });
+-
+-    QDBusConnection::systemBus().connect(QString(), QString("/securityConfig"), "com.kylin.ukui.SettingsDaemon.interface", "configChanged",
+-                                         this, SLOT(ReloadSecurityConfig()));
++    QDBusConnection::systemBus().connect(QString(), QString("/securityConfig"),
++        "com.kylin.ukui.SettingsDaemon.interface", "configChanged", this, SLOT(ReloadSecurityConfig()));
+ }
+ 
+ QVariantMap ukccSessionServer::getSearchItems()
+diff --git a/registeredSession/ukccsessionserver.h b/registeredSession/ukccsessionserver.h
+index bfedd92..ec6a9e7 100644
+--- a/registeredSession/ukccsessionserver.h
++++ b/registeredSession/ukccsessionserver.h
+@@ -28,13 +28,14 @@
+ #include <QVariantMap>
+ #include <QCoreApplication>
+ #include <QDBusContext>
++#include "securitypathprovider.h"
+ #include <QScopedPointer>
+ #include <QDBusVariant>
+ #include <QFileSystemWatcher>
+ #include <QSettings>
+ #include <kysdk/kysdk-system/libkysysinfo.h>
+ 
+-class ukccSessionServer : public UKUI::ServiceObject
++class ukccSessionServer : public UKUI::ServiceObject, protected QDBusContext
+ {
+     Q_OBJECT
+     Q_CLASSINFO("D-Bus Interface", "org.ukui.ukcc.session.interface")
+@@ -50,6 +51,9 @@ private:
+ private:
+     QString mScreenMode;
+     QString mUsdJsonFile = "";
++    SecurityPathProvider *m_securityPath = nullptr;
++    QFileSystemWatcher *m_securityWatcher = nullptr;
++    QVariantMap moduleHideStatusFromFiles();
+ 
+ Q_SIGNALS:
+     void configChanged();
+diff --git a/shell/mainwindow.cpp b/shell/mainwindow.cpp
+index 59d7e21..361421d 100644
+--- a/shell/mainwindow.cpp
++++ b/shell/mainwindow.cpp
+@@ -18,6 +18,8 @@
+  *
+  */
+ #include "mainwindow.h"
++#include "aboutasync.h"
++#include <QDBusServiceWatcher>
+ #include "ui_mainwindow.h"
+ #include "subplugininterface.h"
+ 
+@@ -142,8 +144,8 @@ void MainWindow::initPlugins()
+ 
+     timer = new QTimer(this);
+     connect(timer, &QTimer::timeout, this, [=]() {
+-        closePrescene();
+         timer->stop();
++        requestModulePolicy([this] { closePrescene(); });
+     });
+     timer->start(kPreSceneTime);
+     // 初始化防抖定时器
+@@ -151,6 +153,10 @@ void MainWindow::initPlugins()
+ 
+ void MainWindow::closePrescene()
+ {
++    if (m_isSetUI) {
++        initPageWidget(false);
++        return;
++    }
+     // setupUi 会 setCentralWidget 并 delete 旧中央部件；须先摘掉预览页，
+     // 否则 m_prescene 悬空，后续 hide/二次打开会写坏堆，changeEvent 里 currentIndex 偶现崩。
+     if (m_prescene) {
+@@ -214,7 +220,12 @@ void MainWindow::preInit()
+     m_searchWidget->setHidden(true);
+     connect(m_searchWidget, &SearchWidget::notifyModuleSearch, this, &MainWindow::switchPage);
+     m_searchWidget->setFixedWidth(240);
+-    m_ModuleMap = UkccCommon::getModuleHideStatus();
++    QDBusConnection::sessionBus().connect("org.ukui.ukcc.session", "/",
++        "org.ukui.ukcc.session.interface", "configChanged", this, SLOT(refreshModulePolicy()));
++    auto *policyWatcher = new QDBusServiceWatcher("org.ukui.ukcc.session",
++        QDBusConnection::sessionBus(), QDBusServiceWatcher::WatchForOwnerChange, this);
++    connect(policyWatcher, &QDBusServiceWatcher::serviceOwnerChanged, this,
++        [this](const QString &, const QString &, const QString &) { refreshModulePolicy(); });
+     const QByteArray ukccID(UKCC_SCHEMA);
+     m_ukccSettings = new QGSettings(ukccID, QByteArray(), this);
+ 
+@@ -425,7 +436,37 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
+     }
+ }
+ 
++void MainWindow::requestModulePolicy(std::function<void()> callback)
++{
++    m_policyCallbacks.push_back(std::move(callback));
++    if (m_policyPending) return;
++    m_policyPending = true;
++    queryAbout<QVariantMap>(this, QDBusConnection::sessionBus(), "org.ukui.ukcc.session", "/",
++        "org.ukui.ukcc.session.interface", "getModuleHideStatus", {},
++        [this](bool ok, const QVariantMap &policy) {
++            // Match the former first-call failure fallback, but preserve a
++            // known policy through subsequent backend failures.
++            if (ok || !qApp->property("_ukccPolicyReady").toBool())
++                qApp->setProperty("_ukccModulePolicy", ok ? policy : QVariantMap());
++            qApp->setProperty("_ukccPolicyReady", true);
++            m_ModuleMap = qApp->property("_ukccModulePolicy").toMap();
++            m_policyPending = false;
++            auto callbacks = std::move(m_policyCallbacks);
++            m_policyCallbacks.clear();
++            for (const auto &callback : callbacks) callback();
++        });
++}
++
++void MainWindow::refreshModulePolicy()
++{
++    requestModulePolicy([] {});
++}
++
+ void MainWindow::loadAllModules() {
++    if (!qApp->property("_ukccPolicyReady").toBool()) {
++        requestModulePolicy([this] { loadAllModules(); });
++        return;
++    }
+     ModulesFactory::loadConfig();
+     //加载插件
+     loadPlugins();
+@@ -433,6 +474,11 @@ void MainWindow::loadAllModules() {
+ }
+ 
+ void MainWindow::initPageWidgetSlot() {
++    if (!qApp->property("_ukccPolicyReady").toBool()) {
++        requestModulePolicy([this] { initPageWidgetSlot(); });
++        return;
++    }
++    if (!isLoad) loadAllModules();
+     if (loadWidget) {
+         qDebug() << Q_FUNC_INFO << "Page widget already initialized, skipping...";
+         return;
+@@ -451,16 +497,10 @@ void MainWindow::initPageWidgetSlot() {
+         ui->stackedWidget->addWidget(homepageWidget);
+         ui->stackedWidget->setFocusPolicy(Qt::ClickFocus);
+ 
+-        m_fontInterface = new QDBusInterface("org.ukui.ukcc.session",
+-                                             "/Font",
+-                                             "org.ukui.ukcc.session.Font",
+-                                             QDBusConnection::sessionBus(), this);
+-        if (m_fontInterface->isValid()) {
+-            QTime time;
+-            time.start();
+-            m_fontInterface->asyncCall("updateFontList", true);
+-            qDebug() << Q_FUNC_INFO << "async call updateFontList" << time.elapsed();
+-        }
++        auto fontMessage = QDBusMessage::createMethodCall("org.ukui.ukcc.session", "/Font",
++            "org.ukui.ukcc.session.Font", "updateFontList");
++        fontMessage << true;
++        QDBusConnection::sessionBus().asyncCall(fontMessage, 2000);
+         //加载左侧边栏一级菜单
+         initLeftsideBar();
+ 
+@@ -614,12 +654,9 @@ void MainWindow::initUI()
+         m_isSetUI = true;
+     }
+ 
+-    QDBusInterface ifc("com.control.center.qt.systemdbus",
+-                       "/",
+-                       "com.control.center.interface",
+-                       QDBusConnection::systemBus());
+-    ifc.asyncCall("getDiskInfo");
+-    qDebug() << Q_FUNC_INFO << "async call getDiskInfo";
++    auto diskMessage = QDBusMessage::createMethodCall("com.control.center.qt.systemdbus", "/",
++        "com.control.center.interface", "getDiskInfo");
++    QDBusConnection::systemBus().asyncCall(diskMessage, 2000);
+ 
+     const QByteArray id("org.ukui.style");
+     m_fontSetting = new QGSettings(id, QByteArray(), this);
+@@ -706,18 +743,12 @@ void MainWindow::initUI()
+     });
+ 
+     //监听平板模式切换
+-    m_statusSessionDbus = new QDBusInterface("com.kylin.statusmanager.interface",
+-                                              "/",
+-                                              "com.kylin.statusmanager.interface",
+-                                              QDBusConnection::sessionBus(),this);
+-    if (m_statusSessionDbus->isValid()) {
+-        QDBusReply<bool> tabletmode = m_statusSessionDbus->call("get_current_tabletmode");
+-        m_tabletmode = tabletmode;
+-        connect(m_statusSessionDbus, SIGNAL(mode_change_signal(bool)), this, SLOT(mainWindow_statusDbusSlot(bool)));
+-
+-    } else {
+-        qDebug() << "Create statusmanager Interface Failed When : " << QDBusConnection::systemBus().lastError();
+-    }
++    QDBusConnection::sessionBus().connect("com.kylin.statusmanager.interface", "/",
++        "com.kylin.statusmanager.interface", "mode_change_signal", this,
++        SLOT(mainWindow_statusDbusSlot(bool)));
++    queryAbout<bool>(this, QDBusConnection::sessionBus(), "com.kylin.statusmanager.interface", "/",
++        "com.kylin.statusmanager.interface", "get_current_tabletmode", {},
++        [this](bool ok, bool tablet) { if (ok) mainWindow_statusDbusSlot(tablet); });
+ 
+     mainWindow_statusDbusSlot(m_tabletmode);
+ }
+@@ -1664,6 +1695,10 @@ bool MainWindow::isFontFile(QString path)
+ 
+ void MainWindow::sltMessageReceived(const QString &msg)
+ {
++    if (!qApp->property("_ukccPolicyReady").toBool()) {
++        requestModulePolicy([this, msg] { sltMessageReceived(msg); });
++        return;
++    }
+     QString platform = QGuiApplication::platformName();
+     qDebug() << Q_FUNC_INFO << "Message received" << msg << "platform" << platform;
+ 
+diff --git a/shell/mainwindow.h b/shell/mainwindow.h
+index 126e741..9d7bdb0 100644
+--- a/shell/mainwindow.h
++++ b/shell/mainwindow.h
+@@ -39,6 +39,8 @@
+ #include <QEvent>
+ #include <QFutureWatcher>
+ #include <QPointer>
++#include <functional>
++#include <vector>
+ #include <kysdk/applications/ukuiwindowhelper/ukuiwindowhelper.h>
+ 
+ 
+@@ -141,12 +143,15 @@ private:
+     bool m_sidebarSkipClick = false;
+     QStringList       m_updatePlugins;
+     QVariantMap       m_ModuleMap;
++    bool m_policyPending = false;
++    std::vector<std::function<void()>> m_policyCallbacks;
++    void requestModulePolicy(std::function<void()> callback);
+     QGSettings       *m_fontSetting;
+ 
+     QHBoxLayout     *titleLayout;
+     KNavigationBar *scrollArea = nullptr;
+ 
+-    QDBusInterface *m_statusSessionDbus;
++    QDBusInterface *m_statusSessionDbus = nullptr;
+     bool m_tabletmode = false;
+     bool m_isSetUI = false;
+ 
+@@ -209,6 +214,7 @@ private:
+     void restoreHomepageFocus();
+ 
+ public slots:
++    void refreshModulePolicy();
+     void pluginBtnClicked(QObject * plugin);
+     void functionBtnClicked(QObject * plugin, QString jumpText = "");
+     void sltMessageReceived(const QString &msg);
+diff --git a/shell/searchwidget.cpp b/shell/searchwidget.cpp
+index 7850054..eaadfab 100644
+--- a/shell/searchwidget.cpp
++++ b/shell/searchwidget.cpp
+@@ -18,6 +18,8 @@
+  *
+  */
+ #include "searchwidget.h"
++#include "aboutasync.h"
++#include <memory>
+ #include "pinyin.h"
+ #include "homepagewidget.h"
+ 
+@@ -104,14 +106,7 @@ SearchWidget::SearchWidget(QWidget *parent)
+     qDBusRegisterMetaType<QStringPair>();
+     qRegisterMetaType<QStringPairList>("QStringPairList");
+     qDBusRegisterMetaType<QStringPairList>();
+-    m_shortcutInterface = new QDBusInterface("org.ukui.ukcc.session",
+-                                             "/Shortcut",
+-                                             "org.ukui.ukcc.session.Shortcut",
+-                                             QDBusConnection::sessionBus(), this);
+-    if (!m_shortcutInterface->isValid()) {
+-        qDebug() << Q_FUNC_INFO << "org.ukui.ukcc.session.Shortcut interface invalid";
+-        m_shortcutInterfaceValid = false;
+-    }
++    QTimer::singleShot(0, this, [this] { requestStartupData(); });
+ 
+     connect(this, &QLineEdit::textEdited, this, [ = ] {
+         if (text().isEmpty()) {
+@@ -360,20 +355,46 @@ bool SearchWidget::jumpContentPathWidget(QString path) {
+     return bResult;
+ }
+ 
+-void SearchWidget::loadxml()
++void SearchWidget::requestStartupData()
+ {
+-    QDBusInterface *hostLightStripDbus = new QDBusInterface("com.control.center.qt.systemdbus",
+-                                        "/",
+-                                        "com.control.center.interface",
+-                                        QDBusConnection::systemBus(), this);
+-
+-    bool isSupportHostLight = false;
+-    if (!hostLightStripDbus->isValid()) {
+-        qCritical() << "Create Client Interface Failed:" << QDBusConnection::systemBus().lastError();
++    // Build XML before these probes, then refresh once after the bounded batch.
++    auto remaining = std::make_shared<int>(5);
++    auto done = [this, remaining] {
++        if (--*remaining == 0 && m_searchLoadXml) {
++            mExcludeList.clear();
++            initExcludeSearch();
++            loadxml();
++            count = m_model->rowCount();
++        }
++    };
++    queryAbout<QDBusVariant>(this, QDBusConnection::systemBus(),
++        "com.control.center.qt.systemdbus", "/", "com.control.center.interface",
++        "isSupportHostLightStrip", {}, [this, done](bool ok, const QDBusVariant &v) {
++            m_supportHostLight = ok && v.variant().toBool(); done();
++        });
++    queryAbout<QDBusVariant>(this, QDBusConnection::systemBus(), "org.freedesktop.UPower",
++        "/org/freedesktop/UPower/devices/DisplayDevice", "org.freedesktop.DBus.Properties",
++        "Get", {QStringLiteral("org.freedesktop.UPower.Device"), QStringLiteral("PowerSupply")},
++        [this, done](bool ok, const QDBusVariant &v) { m_hasBattery = ok && v.variant().toBool(); done(); });
++    if (QFile::exists("/usr/sbin/ksc-defender")) {
++        queryAbout<QStringList>(this, QDBusConnection::systemBus(), "com.ksc.defender",
++            "/securitycenter", "com.ksc.defender.securitycenter", "getUnsupportTranslation", {},
++            [this, done](bool ok, const QStringList &v) { if (ok) m_securityFilters = v; done(); });
+     } else {
+-        QDBusReply<QVariant> ret = hostLightStripDbus->call("isSupportHostLightStrip");
+-        isSupportHostLight = ret.value().toBool();
++        done();
+     }
++    queryAbout<QStringPairList>(this, QDBusConnection::sessionBus(), "org.ukui.ukcc.session",
++        "/Shortcut", "org.ukui.ukcc.session.Shortcut", "getSystemShortcut", {},
++        [this, done](bool ok, const QStringPairList &v) { if (ok) m_systemShortcuts = v; done(); });
++    queryAbout<QStringPairList>(this, QDBusConnection::sessionBus(), "org.ukui.ukcc.session",
++        "/Shortcut", "org.ukui.ukcc.session.Shortcut", "getWindowShortcut", {},
++        [this, done](bool ok, const QStringPairList &v) { if (ok) m_windowShortcuts = v; done(); });
++}
++
++void SearchWidget::loadxml()
++{
++    m_TxtList.clear();
++    const bool isSupportHostLight = m_supportHostLight;
+ 
+     bool isSupportRescue = false;
+     QFile file("/etc/default/grub.d/minimalos.cfg");
+@@ -425,22 +446,11 @@ void SearchWidget::loadxml()
+     bool isKylinProxyProcessRunning = UkccCommon::isProcessRunning("kylin-proxy");
+     QString cpu = UkccCommon::getCpuArchitecture();
+ 
+-    QDBusInterface iface("com.ksc.defender",
+-                             "/securitycenter",
+-                             "com.ksc.defender.securitycenter",
+-                             QDBusConnection::systemBus());
+-
+-    QDBusReply<QStringList> reply = iface.call("getUnsupportTranslation");
+-
+-    QStringList securityFilterPathList;
+-    if (reply.isValid()){
+-        securityFilterPathList = reply.value();
+-       qDebug() << "filter value = " << reply.value();
+-    }
++    const QStringList securityFilterPathList = m_securityFilters;
+ 
+     QJsonArray searchItems;
+     QJsonObject rootobj;
+-    bool hasBat = UkccCommon::isExitBattery();
++    const bool hasBat = m_hasBattery;
+     for (const QString i : m_xmlFilePath) {
+ 
+         const QString xmlPath = translationFileForLocale(i);
+@@ -639,12 +649,7 @@ void SearchWidget::loadxml()
+         file.close();
+     }
+ 
+-    if (m_shortcutInterfaceValid) {
+-        QTime timer;
+-        timer.start();
+-        appendShortcutSearch();
+-        qDebug() << Q_FUNC_INFO << "appendShortcutSearch elapsed time:" << timer.elapsed();
+-    }
++    appendShortcutSearch();
+     rootobj.insert("ukcc", searchItems);
+     searchMap = rootobj.toVariantMap();
+ }
+@@ -696,10 +701,9 @@ void SearchWidget::addShortcutSearch() {
+ }
+ 
+ void SearchWidget::appendShortcutSearch() {
+-    QDBusReply<QStringPairList> systemEntryReply = m_shortcutInterface->call("getSystemShortcut");
+-    if (systemEntryReply.isValid()) {
++    {
+         clearSearchData();
+-        QList<QStringPair> systemEntryList = systemEntryReply.value();
++        const auto &systemEntryList = m_systemShortcuts;
+         qDebug() << Q_FUNC_INFO << systemEntryList.size();
+         for (const auto& systemEntry : systemEntryList) {
+             if (!kSystemShortcutAllowList.contains(systemEntry.mediaKey)) {
+@@ -713,11 +717,10 @@ void SearchWidget::appendShortcutSearch() {
+             addShortcutSearch();
+         }
+     }
+-    QDBusReply<QStringPairList> windowEntryReply = m_shortcutInterface->call("getWindowShortcut");
+-    if (windowEntryReply.isValid()) {
++    {
+         clearSearchData();
+         QSet<QString> windowNameSet;
+-        QList<QStringPair> windowEntryList = windowEntryReply.value();
++        const auto &windowEntryList = m_windowShortcuts;
+         qDebug() << Q_FUNC_INFO << windowEntryList.size();
+         for (const auto& windowEntry : windowEntryList) {
+             QString shortcutName = windowEntry.name;
+@@ -978,7 +981,7 @@ void SearchWidget::initExcludeSearch() {
+         mExcludeList << "/Theme/Performance mode" << "/Theme/Transparency";
+     }
+ 
+-    if (!UkccCommon::isExitBattery()) {
++    if (!m_hasBattery) {
+         mExcludeList << "/Power/Battery saving plan";
+     }
+ 
+diff --git a/shell/searchwidget.h b/shell/searchwidget.h
+index 31f00cc..33aaf14 100644
+--- a/shell/searchwidget.h
++++ b/shell/searchwidget.h
+@@ -2,6 +2,7 @@
+ #define SEARCHWIDGET_H
+ 
+ #include "interface/ukcccommon.h"
++#include "type.h"
+ using namespace ukcc;
+ 
+ #include <QWidget>
+@@ -69,6 +70,7 @@ Q_SIGNALS:
+ private:
+     QString translationFileForLocale(const QString &pathTemplate) const;
+     void loadxml();
++    void requestStartupData();
+     SearchBoxStruct getModuleBtnString(QString value);
+     QString getModulesName(QString name, bool state = true);
+     QString removeDigital(QString input);
+@@ -108,8 +110,10 @@ private:
+     QStringList mExcludeList;
+     int count;
+     QVariantMap searchMap;
+-    bool m_shortcutInterfaceValid = true;
+-    QDBusInterface* m_shortcutInterface = nullptr;
++    bool m_hasBattery = false;
++    bool m_supportHostLight = false;
++    QStringList m_securityFilters;
++    QStringPairList m_systemShortcuts, m_windowShortcuts;
+     bool m_searchLoadXml = false;
+ };
+ #endif // SEARCHWIDGET_H
+diff --git a/shell/ukccsearchserver.cpp b/shell/ukccsearchserver.cpp
+index 5de0048..4f98088 100644
+--- a/shell/ukccsearchserver.cpp
++++ b/shell/ukccsearchserver.cpp
+@@ -27,7 +27,6 @@ UkccSearchServer::UkccSearchServer(MainWindow* parent, bool isDbus)
+     // 如果为非Dbus参数启动，则直接跳过
+     if (isDbus) {
+         parent->loadAllModules();
+-        parent->loadSearchXml();
+         m_autoExitTimer->setInterval(2000);
+         m_autoExitTimer->setSingleShot(true);
+         connect(m_autoExitTimer, &QTimer::timeout, this, [=]() {

@@ -13,6 +13,9 @@ Mục tiêu: **3–4 GB thập phân**, tối đa 4.000.000.000 byte (khoảng 3
 
 ## Sửa installer và Properties/About (sau build #45)
 
+- Sửa tiếp luồng khởi động Settings bằng `shell-startup.patch`: constructor/tìm kiếm không chờ UPower, security filter hoặc shortcut; preload disk/font và tablet mode dùng message bất đồng bộ trực tiếp. Chính sách module được lấy trước khi dựng trang, cache dùng chung trong ứng dụng và làm mới khi cấu hình/service owner đổi. Session service lấy đường dẫn chính sách USD bất đồng bộ, gộp yêu cầu đang chờ và giữ đường dẫn hợp lệ qua lỗi tạm thời; thứ tự USD → user → system được giữ. Thay tiến trình `hostname`/`lscpu` bằng API Qt cục bộ.
+- #49 dừng ở qmake vì `libukcc/interface.pri` còn liên kết `kysdk-datacollect` sau khi bỏ build dependency. Bản vá xóa dòng còn sót và build kiểm tra cả `.pro`/`.pri` trước khi biên dịch. Qt test riêng kiểm tra backend chính sách không phản hồi, cache, gộp yêu cầu, giữ chính sách khi backend lỗi và bỏ phản hồi cũ sau invalidation. Chưa thay thế kiểm thử boot/desktop thực tế.
+
 - #45 dừng ở bước biên dịch installer vì Qt chuyển tên tài nguyên Trung Quốc thành `?` trong locale C; chưa tạo ISO. Build installer dùng `C.UTF-8` cho cả Qt resource scanner và qmake.
 - Ngưỡng cài đặt trong bản vá là **30 GiB** (khoảng 32,21 GB thập phân), root tối thiểu 20 GiB. Đây là cùng hệ đơn vị nhị phân mà installer gốc dùng cho ngưỡng 50G. Kiểm tra chạy script chia phân vùng thật với EFI/BIOS, máy thật/VM, swapfile/swap partition và RAM 4/64 GiB trước khi đóng gói.
 - Rebuild đúng `ukui-control-center 4.24.0.0-ok2.8`, xác minh SHA256 tarball. About đọc ngày mạng từ bộ nhớ đệm và thực hiện DNS/NTP bất đồng bộ với thời hạn 2 giây; truy vấn chính sách và ngày cài đặt/cập nhật cũng bất đồng bộ. Qt test kiểm tra phản hồi hợp lệ, bỏ qua gói sai và giao diện tiếp tục xử lý sự kiện khi máy chủ im lặng.

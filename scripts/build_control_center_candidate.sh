@@ -24,9 +24,17 @@ git apply --check "$workspace/patches/control-center/about-startup.patch"
 git apply "$workspace/patches/control-center/about-startup.patch"
 git apply --check "$workspace/patches/control-center/privacy.patch"
 git apply "$workspace/patches/control-center/privacy.patch"
+git apply --check "$workspace/patches/control-center/shell-startup.patch"
+git apply "$workspace/patches/control-center/shell-startup.patch"
 cp "$workspace/patches/control-center/ntpdateprovider.h" registeredSession/plugins/about/
 cp "$workspace/patches/control-center/aboutasync.h" plugins/system/about/
-dch --local +lite --distribution huanghe 'Keep About startup queries off the GUI event loop.'
+cp "$workspace/patches/control-center/aboutasync.h" shell/
+cp "$workspace/patches/control-center/securitypathprovider.h" registeredSession/
+if grep -R -n -E '(^|[[:space:]])kysdk-datacollect([[:space:]\\]|$)' \
+    --include='*.pro' --include='*.pri' .; then
+  echo 'Stale telemetry SDK link in a qmake project/include file'; exit 1
+fi
+dch --local +lite --distribution huanghe 'Keep Settings startup and policy lookups off the GUI event loop.'
 # Match the SDK to the original ISO, rather than the moving archive's latest
 # version. Otherwise shlibdeps raises the runtime minimum beyond the Live root.
 mkdir "$work/build-deps"
@@ -59,6 +67,13 @@ mkdir "$work/startup-test"
   qmake "$workspace/tests/qt/about-startup.pro"
   make -j2
   dbus-run-session -- ./test-about-startup
+)
+mkdir "$work/security-path-test"
+(
+  cd "$work/security-path-test"
+  qmake "$workspace/tests/qt/security-path.pro"
+  make -j2
+  dbus-run-session -- ./test-security-path
 )
 CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 deb=( "$work/ukui-control-center_"*_amd64.deb )

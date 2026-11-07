@@ -17,6 +17,7 @@ Mục tiêu: **3–4 GB thập phân**, tối đa 4.000.000.000 byte (khoảng 3
 - Ngưỡng cài đặt trong bản vá là **30 GiB** (khoảng 32,21 GB thập phân), root tối thiểu 20 GiB. Đây là cùng hệ đơn vị nhị phân mà installer gốc dùng cho ngưỡng 50G. Kiểm tra chạy script chia phân vùng thật với EFI/BIOS, máy thật/VM, swapfile/swap partition và RAM 4/64 GiB trước khi đóng gói.
 - Rebuild đúng `ukui-control-center 4.24.0.0-ok2.8`, xác minh SHA256 tarball. About đọc ngày mạng từ bộ nhớ đệm và thực hiện DNS/NTP bất đồng bộ với thời hạn 2 giây; truy vấn chính sách và ngày cài đặt/cập nhật cũng bất đồng bộ. Qt test kiểm tra phản hồi hợp lệ, bỏ qua gói sai và giao diện tiếp tục xử lý sự kiện khi máy chủ im lặng.
 - Giữ bản ISO chia phần trong draft Release. ISO #44 nguyên vẹn có dung lượng 3.956.604.928 byte, vượt giới hạn 2 GiB/tệp của Releases; ghép phần và xác minh checksum trước khi ghi USB.
+- Sau lỗi dependency ở #47, SDK `libukui-quick-*` được ghim về `4.25.0.0-ok0.2` đúng bản trên ISO; kiểm tra SHA256 bốn gói build và giữ phiên bản qua APT pin. Trước upload, dependency sinh ra của control center được đối chiếu với snapshot phiên bản thư viện trên ISO gốc; gói đòi runtime mới hơn sẽ bị chặn tại job build. Không sửa ép dependency trong gói nhị phân.
 - Các kiểm tra build không thay cho boot và cài thử ISO 30 GiB, hoặc tái hiện Properties/About trong desktop UKUI.
 
 ## Khả năng chạy miễn phí

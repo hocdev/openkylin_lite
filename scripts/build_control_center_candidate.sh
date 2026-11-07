@@ -22,7 +22,25 @@ git apply --check "$workspace/patches/control-center/about-network.patch"
 git apply "$workspace/patches/control-center/about-network.patch"
 cp "$workspace/patches/control-center/ntpdateprovider.h" registeredSession/plugins/about/
 dch --local +lite --distribution huanghe 'Keep About network date lookups off the D-Bus event loop.'
+# Match the SDK to the original ISO, rather than the moving archive's latest
+# version. Otherwise shlibdeps raises the runtime minimum beyond the Live root.
+mkdir "$work/build-deps"
+while read -r digest file; do
+  [[ $digest =~ ^[0-9a-f]{64}$ && $file == libukui-quick-*_4.25.0.0-ok0.2_amd64.deb ]]
+  curl -fL --retry 4 --retry-delay 5 -o "$work/build-deps/$file" \
+    "https://archive.build.openkylin.top/openkylin/pool/main/u/ukui-quick/$file"
+  echo "$digest  $work/build-deps/$file" | sha256sum -c -
+done < "$workspace/config/control-center-build-deps.sha256"
+cat > /etc/apt/preferences.d/openkylin-lite-quick <<'PIN'
+Package: libukui-quick-core1 libukui-quick-dev libukui-quick-framework1 libukui-quick-platform1
+Pin: version 4.25.0.0-ok0.2
+Pin-Priority: 1001
+PIN
+apt-get install -y --allow-downgrades --no-install-recommends "$work/build-deps/"*.deb
 apt-get build-dep -y --no-install-recommends ./
+for package in libukui-quick-core1 libukui-quick-dev libukui-quick-framework1 libukui-quick-platform1; do
+  [[ $(dpkg-query -W '-f=${Version}' "$package") == 4.25.0.0-ok0.2 ]]
+done
 mkdir "$work/network-test"
 (
   cd "$work/network-test"
@@ -33,6 +51,9 @@ mkdir "$work/network-test"
 CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 deb=( "$work/ukui-control-center_"*_amd64.deb )
 [[ ${#deb[@]} == 1 && -f ${deb[0]} ]]
+# Validate generated dependency constraints against the ISO's runtime versions.
+python3 "$workspace/scripts/check_control_center_dependencies.py" "${deb[0]}" \
+  "$workspace/config/control-center-runtime-versions.json"
 dpkg-deb -x "${deb[0]}" "$work/verify"
 find "$work/verify" -name '*ukccSession*.so' -print -quit | grep -q .
 mkdir -p "$workspace/control-center-output"

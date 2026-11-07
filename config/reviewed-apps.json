@@ -73,6 +73,12 @@
     "reason": "User-requested removal of the biometric manager UI and its settings plugin",
     "desktop": "/usr/share/applications/biometric-manager.desktop"
   },
+  "libpam-biometric": {
+    "version": "4.20.0.0-ok2.11update2",
+    "reason": "Remove PAM biometric authentication after password-only UKUI greeter and screensaver candidates are installed",
+    "kind": "biometric-component",
+    "section": "admin"
+  },
   "com.iflytek.iflyime": {
     "version": "15.0.2015",
     "reason": "Remove the optional iFlytek input app while retaining the built-in Fcitx5 stack",

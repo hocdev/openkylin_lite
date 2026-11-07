@@ -1,0 +1,131 @@
+--- a/polkit-agent/src/mainwindow.cpp
++++ b/polkit-agent/src/mainwindow.cpp
+@@ -722,29 +722,9 @@
+ 
+ void MainWindow::switchAuthMode(Mode mode)
+ {
+-    if (isbioSuccess) {
+-        accept(BIOMETRIC_SUCCESS);
+-        return;
+-    }
+-    int uid = getUid(userName);
+-    m_loginOptsWidget->setUser(uid);
+-    int count = m_loginOptsWidget->getLoginOptCount();
+-    if (!hasReviceBiometricPam && mode != BIOMETRIC) {
+-        count = 0; 
+-    }
+-    enableBioAuth = count > 0;
+-    if (count < 1) {
+-        setLoginTypeTip(tr("Input your password to authentication"));
+-        m_loginOptsWidget->hide();
+-    } else {
+-        m_loginOptsWidget->show();
+-        m_loginOptsWidget->setEnabled(true);
+-    }
+-
+-    if (m_loginOptsWidget->getHasUkeyOptions()) {
+-        setLoginTypeTip(tr("Input your password to authentication"));
+-        m_loginOptsWidget->show();
+-    }
++    enableBioAuth = false;
++    m_loginOptsWidget->hide();
++    setLoginTypeTip(tr("Input your password to authentication"));
+ 
+     switch (mode) {
+         case PASSWORD: {
+@@ -785,91 +765,10 @@
+                 ui->cmbUsers->hide();
+             }
+         } break;
+-        case BIOMETRIC: {
+-            if (authMode == PASSWORD) {
+-                emit accept(BIOMETRIC_IGNORE);
+-                isFirstAuth = false;
+-                return;
+-            }
+-            authMode = mode;
+-            hasReviceBiometricPam = true;
+-            qDebug() << "switch to biometric";
+-            unlock_countdown();
+-            if (m_deviceInfo) {
+-                if (!m_loginOptsWidget->findDeviceById(m_deviceInfo->device_id)
+-                    || m_loginOptsWidget->isDeviceDisable(m_deviceInfo->device_id)) {
+-                    m_deviceInfo = DeviceInfoPtr();
+-                }
+-            }
+-
+-            if (!enableBioAuth) {
+-                qDebug() << "It doesn't meet the condition for enabling biometric authentication, switch to password.";
+-                emit accept(BIOMETRIC_IGNORE);
+-                isFirstAuth = false;
+-                return;
+-            } else if (authMode == BIOMETRIC) {
+-                QString strDeviceName;
+-                if (isLoadingUkey) {
+-                    strDeviceName = m_loginOptsWidget->GetDefaultDevice(uid, UniT_General_Ukey);
+-                } else {
+-                    strDeviceName = m_loginOptsWidget->GetDefaultDevice(uid);
+-                }
+-                // 如果默认设备为空的话，第一次不启动生物识别认证
+-                if (strDeviceName.isEmpty() && !m_deviceInfo) {
+-                    qDebug() << "No default device";
+-                    emit accept(BIOMETRIC_IGNORE);
+-                    isFirstAuth = false;
+-                    return;
+-                }
+-
+-                // 第一次，获取默认设备的设备信息，之后使用的则是从设备选择窗口传出的设备信息
+-                if (!m_deviceInfo) {
+-                    m_deviceInfo = m_loginOptsWidget->findDeviceByName(strDeviceName);
+-                }
+-
+-                if (!m_deviceInfo) {
+-                    emit accept(BIOMETRIC_IGNORE);
+-                    isFirstAuth = false;
+-                    return;
+-                }
+-
+-                if (m_failMap.contains(uid) && m_failMap[uid].contains(m_deviceInfo->device_id)
+-                    && m_failMap[uid][m_deviceInfo->device_id] >= maxFailedTimes) {
+-                    emit accept(BIOMETRIC_IGNORE);
+-                    isFirstAuth = false;
+-                    m_deviceInfo = DeviceInfoPtr();
+-                    return;
+-                }
+-
+-                if (m_deviceInfo && m_loginOptsWidget->isDeviceDisable(m_deviceInfo->device_id)) {
+-                    emit accept(BIOMETRIC_IGNORE);
+-                    isFirstAuth = false;
+-                    m_deviceInfo = DeviceInfoPtr();
+-                    return;
+-                }
+-
+-                if (m_deviceInfo->biotype == LOGINOPT_TYPE_GENERAL_UKEY) {
+-                    if (isFirstAuth) {
+-                        isFirstAuth = false;
+-                        m_deviceInfo = nullptr;
+-                        emit accept(BIOMETRIC_IGNORE);
+-                        return;
+-                    }
+-                    switchLoginOptType(LOGINOPT_TYPE_GENERAL_UKEY);
+-                    stopLoadingUkey();
+-                    startBioAuth();
+-                    m_loginOptsWidget->setCurrentDevice(m_deviceInfo);
+-                    m_loginOptsWidget->updateUIStatus(false);
+-                    return;
+-                }
+-
+-                isFirstAuth = false;
+-                switchLoginOptType(m_loginOptsWidget->convertDeviceType(m_deviceInfo->biotype));
+-                startBioAuth();
+-                emit accept(BIOMETRIC_IGNORE);
+-                return;
+-            }
+-        } break;
++        case BIOMETRIC:
++            emit accept(BIOMETRIC_IGNORE);
++            isFirstAuth = false;
++            return;
+         default:
+             break;
+     }

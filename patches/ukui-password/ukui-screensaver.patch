@@ -1,0 +1,71 @@
+--- a/src/widgets/authdialog.cpp
++++ b/src/widgets/authdialog.cpp
+@@ -1311,36 +1311,7 @@
+     }
+ 
+     if (strPrompt == BIOMETRIC_PAM || strPrompt == BIOMETRIC_PAM_DOUBLE || strPrompt == BIOMETRIC_PAM_QRCODE) {
+-        if (m_bDirectLogin) {
+-            onRespond(BIOMETRIC_SUCCESS);
+-            return;
+-        }
+-        if (authMode == PASSWORD) {
+-            skipBiometricAuth();
+-            if (m_loginOpts) {
+-                if (m_loginOpts->getLoginOptCount() < 1) {
+-                    m_loginOpts->hide();
+-                } else {
+-                    m_loginOpts->show();
+-                }
+-
+-                if (m_loginOpts->getHasUkeyOptions() && m_loginOpts->getLoginOptCount() < 1) {
+-                    m_loginOpts->show();
+-                }
+-            }
+-        } else {
+-            skipBiometricAuth();
+-            //            if(isPowerup  && m_configuration->getIs990()) {
+-            //                QTimer::singleShot(1500, [&]{
+-            //                    performBiometricAuth();
+-            //                });
+-            //                isPowerup = false;
+-            //            } else {
+-            syslog(LOG_INFO, "[ukui-screensaver-dialog] check bio auth begin!!");
+-            performBiometricAuth();
+-            syslog(LOG_INFO, "[ukui-screensaver-dialog] check bio auth done!!");
+-            //            }
+-        }
++        skipBiometricAuth();
+     } else {
+         syslog(LOG_INFO, "[ukui-screensaver-dialog] auth alraedy!!");
+         m_isNameLogin = false;
+--- a/src/lock-backend/dbusupperinterface.cpp
++++ b/src/lock-backend/dbusupperinterface.cpp
+@@ -91,7 +91,6 @@
+     m_login1Helper = QSharedPointer<Login1Helper>(new Login1Helper(this));
+     m_gsettingsHelper = QSharedPointer<GSettingsHelper>(new GSettingsHelper(this));
+ #ifdef ENABLE_BIO_BACKEND
+-    m_bioAuth = QSharedPointer<BioAuthenticate>(new BioAuthenticate(this));
+ #endif
+     m_pamAuth = QSharedPointer<PamAuthenticate>(new PamAuthenticate(m_lightDmHelper, this));
+     m_sessionHelper = QSharedPointer<SessionHelper>(new SessionHelper(m_login1Helper, m_isLockStartupMode, this));
+--- a/debian/ukui-screensaver.postinst
++++ b/debian/ukui-screensaver.postinst
+@@ -4,17 +4,7 @@
+ 
+ glib-compile-schemas /usr/share/glib-2.0/schemas/
+ 
+-path_conf="/usr/share/lightdm/lightdm.conf.d/95-ukui-greeter.conf"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_conf".old
+-path_sh="/usr/lib/lightdm/lightdm-session-setup.sh "
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_sh".old
+-path_desktop="/usr/share/xgreeters/ukui-greeter.desktop"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_desktop".old
+-
+-path_sl_plugin="/usr/lib/`/usr/bin/dpkg-architecture -qDEB_TARGET_MULTIARCH`/ukui-control-center/libscreenlock.so"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_sl_plugin".old
+-path_ss_plugin="/usr/lib/`/usr/bin/dpkg-architecture -qDEB_TARGET_MULTIARCH`/ukui-control-center/libscreensaver.so"
+-dpkg-divert --package ukui-screensaver --rename --remove "$path_ss_plugin".old
++# Keep the preinst diversions while this package is installed.
+ 
+ if [ -x /usr/share/kylin-system-updater/kylin-reboot-required ]; then
+     #执行请求重启提示

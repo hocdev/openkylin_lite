@@ -6,6 +6,7 @@ com.iflytek.iflyime
 kylin-ipmsg
 kylin-camera
 ukui-biometric-manager
+libpam-biometric
 biometric-auth
 biometric-driver-community-multidevice
 biometric-driver-fido

@@ -4,6 +4,7 @@ import json
 import os
 import pathlib
 import subprocess
+import time
 
 
 def verify(entry):
@@ -14,9 +15,16 @@ def verify(entry):
     result = {'source': entry['source'], 'version': entry['version'],
               'tag': entry['tag'], 'expected_commit': entry['commit']}
     try:
-        output = subprocess.check_output(command, text=True, stderr=subprocess.PIPE,
-                                         timeout=90,
-                                         env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'})
+        for attempt in range(4):
+            try:
+                output = subprocess.check_output(command, text=True, stderr=subprocess.PIPE,
+                                                 timeout=90,
+                                                 env={**os.environ, 'GIT_TERMINAL_PROMPT': '0'})
+                break
+            except (subprocess.CalledProcessError, subprocess.TimeoutExpired):
+                if attempt == 3:
+                    raise
+                time.sleep(5 * (attempt + 1))
         refs = dict(line.split()[::-1] for line in output.splitlines())
         actual = refs.get(tag + '^{}', refs.get(tag))
         result.update(actual_commit=actual, passed=actual == entry['commit'])

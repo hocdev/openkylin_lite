@@ -170,7 +170,7 @@ for deb in "$ukui_deb_dir"/*.deb; do
   if [[ ${desktop_allowed[$package]+present} ]]; then
     status=$(chroot "$root" dpkg-query -W '-f=${Status}' "$package" 2>/dev/null || true)
     case $package in
-      speech-dispatcher-espeak-ng|libespeak-ng1|espeak-ng-data|libpcaudio0) ;;
+      speech-dispatcher-espeak-ng|libespeak-ng1|espeak-ng-data|libpcaudio0|libsonic0) ;;
       *) [[ $status == 'install ok installed' ]] || continue ;;
     esac
   fi

@@ -295,6 +295,9 @@ cp "$ukui_deb_dir/legacy-diagnostics-disabled.so" "$root/tmp/legacy-diagnostics-
 cp scripts/apply_privacy_image.py "$root/tmp/apply_privacy_image.py"
 chroot "$root" python3 /tmp/apply_privacy_image.py > "$report_dir/privacy-local-patches.txt"
 rm "$root/tmp/legacy-diagnostics-disabled.so" "$root/tmp/apply_privacy_image.py"
+cp scripts/clean_privacy_activation.py "$root/tmp/clean_privacy_activation.py"
+chroot "$root" python3 /tmp/clean_privacy_activation.py / > "$report_dir/privacy-activation-cleanup.txt"
+rm "$root/tmp/clean_privacy_activation.py"
 python3 scripts/check_privacy_image.py "$root" > "$report_dir/privacy-audit.txt"
 chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"

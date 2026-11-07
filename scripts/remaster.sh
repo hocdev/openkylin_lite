@@ -142,6 +142,7 @@ comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
 while read -r p; do
   case "$p" in
     ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.
+    biometric-driver-community-multidevice|biometric-driver-fido|biometric-driver-wechat|biometric-driver-wechat-common) ;; # Exact biometric drivers reviewed above.
     linux-*|grub*|shim*|systemd*|udev*|apt*|dpkg*|*ukui*|*installer*|calamares*|live-*|network*|lightdm*|sddm*|xserver-*|dbus*|*firmware*|*driver*|*desktop*|*session*|*settings*|*control-center*|*security*|*keyring*|*polkit*|*pam*|*sudo*|*initramfs*|*cryptsetup*|*lvm*|kylin-core*|*font*|*locale*|*language*|*input*|*ibus*|*fcitx*|*pipewire*|*pulseaudio*|*alsa*|*cups*|*bluetooth*|*bluez*|*mesa*|*wayland*|*xorg*)
       echo "Protected system package: $p"; exit 1 ;;
   esac

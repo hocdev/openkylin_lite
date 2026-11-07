@@ -1,0 +1,459 @@
+diff --git a/debian/control b/debian/control
+index c51b61b..65f639c 100644
+--- a/debian/control
++++ b/debian/control
+@@ -37,7 +37,6 @@ Build-Depends: debhelper-compat (= 12),
+                libkysdk-qtwidgets-dev(>=1.0.0kylin12+0429),
+                libkysdk-sysinfo-dev,
+                libkysdk-waylandhelper-dev,
+-               libkysdk-datacollect-dev,
+                libkf5service-dev,
+                libkysdk-systime-dev,
+                libkysdk-conf2-dev,
+@@ -91,7 +90,6 @@ Architecture: any
+ Depends: ${misc:Depends},
+          ${shlibs:Depends},
+          libukcc3(= ${binary:Version}),
+-         libkysdk-datacollect-dev,
+ Description:  The UKUI control center contains configuration applets for the UKUI desktop,
+  allowing to set accessibility configuration, desktop fonts, keyboard
+  and mouse properties, sound setup, desktop theme and background, user
+diff --git a/libukcc/interface/common.cpp b/libukcc/interface/common.cpp
+index fcdf5aa..d63f297 100644
+--- a/libukcc/interface/common.cpp
++++ b/libukcc/interface/common.cpp
+@@ -291,32 +291,11 @@ bool Common::isZJY()
+ 
+ bool Common::buriedSettings(QString pluginName, QString settingsName, QString action, QString value)
+ {
+-#ifdef SP2
+-    // 埋点数据
+-    char appName[] = "ukui-control-center";
+-    QByteArray actiontr = action.toLocal8Bit();  // toLocal8Bit 支持中文
+-    char *messageType = actiontr.data();
+-
+-    KBuriedPoint pt[3];
+-    pt[0].key = "pluginName";
+-    std::string pluginStr = pluginName.toStdString();
+-    pt[0].value = pluginStr.c_str();
+-
+-    pt[1].key = "settingsName";
+-    std::string settingStr = settingsName.toStdString();
+-    pt[1].value = settingStr.c_str();
+-
+-    pt[2].key = "value";
+-    std::string valueStr = value.toStdString();
+-    pt[2].value = valueStr.c_str();
+-
+-    if (kdk_buried_point(appName , messageType , pt , 3) == -1) {
+-        qDebug() << __FUNCTION__ << "messageType:" << action << "pluginName:" << pluginName
+-                 << "settingsName:" << settingsName << "value:" << value << "buried point fail !" << __LINE__;
+-        return false;
+-    }
+-#endif
+-
++    // Keep the public ABI for plugins, with no collection or upload.
++    Q_UNUSED(pluginName);
++    Q_UNUSED(settingsName);
++    Q_UNUSED(action);
++    Q_UNUSED(value);
+     return true;
+ }
+ 
+diff --git a/libukcc/interface/common.h b/libukcc/interface/common.h
+index f8983c9..08eb32a 100644
+--- a/libukcc/interface/common.h
++++ b/libukcc/interface/common.h
+@@ -33,7 +33,6 @@
+ #include <QtDBus/QDBusInterface>
+ #include <QtDBus/QDBusReply>
+ #include <QtDBus/QDBusConnection>
+-#include <kysdk/kysdk-base/libkydiagnostics.h>
+ 
+ #include "libukcc_global.h"
+ 
+diff --git a/libukcc/interface/mthread.cpp b/libukcc/interface/mthread.cpp
+index 0d631a8..26757d4 100644
+--- a/libukcc/interface/mthread.cpp
++++ b/libukcc/interface/mthread.cpp
+@@ -34,25 +34,7 @@ MThread::~MThread()
+ 
+ void MThread::run()
+ {
+-    qDebug() << QThread::currentThreadId();
+-    QTime timedebuge;//声明一个时钟对象
+-    timedebuge.start();//开始计时
+-    m_cloudInterface = new QDBusInterface("org.kylinssoclient.dbus",
+-                                          "/org/kylinssoclient/path",
+-                                          "org.freedesktop.kylinssoclient.interface",
+-                                          QDBusConnection::sessionBus());
+-    if (!m_cloudInterface->isValid()) {
+-        qDebug() << "fail to connect to service";
+-        qDebug() << qPrintable(QDBusConnection::systemBus().lastError().message());
+-        return;
+-    }
+-    QDBusConnection::sessionBus().connect(QString(), QString("/org/kylinssoclient/path"),
+-                                          QString(
+-                                              "org.freedesktop.kylinssoclient.interface"), "keyChanged", this,
+-                                          SLOT(keychanged(QString)));
+-    // 将以后所有DBus调用的超时设置为 milliseconds
+-    m_cloudInterface->setTimeout(2147483647); // -1 为默认的25s超时
+-     qDebug()<<"NetWorkAcount"<<"  线程耗时: "<<timedebuge.elapsed()<<"ms";
++    // Cloud account synchronisation is absent in the Lite image.
+ }
+ 
+ void MThread::keychanged(QString str)
+diff --git a/libukcc/interface/ukcccommon.cpp b/libukcc/interface/ukcccommon.cpp
+index 2589ca2..5951f88 100644
+--- a/libukcc/interface/ukcccommon.cpp
++++ b/libukcc/interface/ukcccommon.cpp
+@@ -350,29 +350,11 @@ static char* toHeap(const QString& s)
+ bool UkccCommon::buriedSettings(QString pluginName, QString settingsName,
+                                 QString action, QString value)
+ {
+-    KTrackData *trackData = kdk_dia_data_init(KEVENTSOURCE_DESKTOP, KEVENT_CUSTOM);
+-
+-    kdk_dia_upload_default(trackData, "openfile", "mainwindow");
+-
+-    trackData->eventCode  = strdup("");
+-    trackData->pageName   = toHeap(pluginName);
+-
+-    // 如果 kdk_dia_data_free 会释放 customProperty 数组本身，这里也要用 malloc/new[]
+-    KCustomProperty* pt = (KCustomProperty*)malloc(sizeof(KCustomProperty) * 3);
+-    pt[0].key   = strdup("messageType");
+-    pt[0].value = toHeap(action);
+-    pt[1].key   = strdup("settingsName");
+-    pt[1].value = toHeap(settingsName);
+-    pt[2].key   = strdup("value");
+-    pt[2].value = toHeap(value);
+-
+-    trackData->customProperty = pt;
+-    trackData->customPropertyLength = 3;
+-
+-    kdk_dia_upload_default(trackData, trackData->eventCode, trackData->pageName);
+-
+-    kdk_dia_data_free(trackData);  // 现在可以安全地释放所有堆内存
+-
++    // Keep the public ABI for plugins, with no collection or upload.
++    Q_UNUSED(pluginName);
++    Q_UNUSED(settingsName);
++    Q_UNUSED(action);
++    Q_UNUSED(value);
+     return true;
+ }
+ QString UkccCommon::boolToString(bool b)
+diff --git a/libukcc/interface/ukcccommon.h b/libukcc/interface/ukcccommon.h
+index 4165761..be6979d 100644
+--- a/libukcc/interface/ukcccommon.h
++++ b/libukcc/interface/ukcccommon.h
+@@ -33,7 +33,6 @@
+ #include <QtDBus/QDBusInterface>
+ #include <QtDBus/QDBusReply>
+ #include <QtDBus/QDBusConnection>
+-#include <kysdk/diagnosetest/libkydatacollect.h>
+ 
+ #include "libukcc_global.h"
+ 
+diff --git a/libukcc/libukcc.pro b/libukcc/libukcc.pro
+index 54ec63e..edbf023 100644
+--- a/libukcc/libukcc.pro
++++ b/libukcc/libukcc.pro
+@@ -10,7 +10,6 @@ CONFIG += link_pkgconfig \
+ PKGCONFIG += gio-2.0 \
+              gio-unix-2.0 \
+              kysdk-qtwidgets \
+-             kysdk-datacollect \
+              kysdk-sysinfo \
+ 
+ include(interface.pri)
+diff --git a/plugins/account/userinfo/userinfo.pro b/plugins/account/userinfo/userinfo.pro
+index 40b4a1e..567d0f4 100644
+--- a/plugins/account/userinfo/userinfo.pro
++++ b/plugins/account/userinfo/userinfo.pro
+@@ -36,7 +36,6 @@ PKGCONFIG     += gio-2.0 \
+                  gsettings-qt \
+                  kysdk-qtwidgets \
+                  kysdk-sysinfo \
+-                 kysdk-datacollect \
+ 
+ 
+ #DEFINES += QT_DEPRECATED_WARNINGS
+diff --git a/plugins/application/autoboot/autoboot.pro b/plugins/application/autoboot/autoboot.pro
+index e29b105..1198d35 100644
+--- a/plugins/application/autoboot/autoboot.pro
++++ b/plugins/application/autoboot/autoboot.pro
+@@ -29,7 +29,6 @@ PKGCONFIG     += gio-2.0 \
+                  gio-unix-2.0 \
+                  gsettings-qt \
+                  kysdk-qtwidgets \
+-                 kysdk-datacollect \
+ 
+ #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
+ 
+diff --git a/plugins/application/defaultapp/defaultapp.pro b/plugins/application/defaultapp/defaultapp.pro
+index efedad9..2d1d10c 100644
+--- a/plugins/application/defaultapp/defaultapp.pro
++++ b/plugins/application/defaultapp/defaultapp.pro
+@@ -25,7 +25,6 @@ CONFIG        += link_pkgconfig \
+ PKGCONFIG     += gio-2.0 \
+                  gio-unix-2.0 \
+                  gsettings-qt \
+-                 kysdk-datacollect \
+ 
+ INCLUDEPATH   +=  \
+                  $$PROJECT_ROOTDIR \
+diff --git a/plugins/devices/keyboard/keyboard.pro b/plugins/devices/keyboard/keyboard.pro
+index 8420437..b0c01f5 100644
+--- a/plugins/devices/keyboard/keyboard.pro
++++ b/plugins/devices/keyboard/keyboard.pro
+@@ -27,7 +27,6 @@ CONFIG        += link_pkgconfig \
+                  C++11
+ PKGCONFIG     += gsettings-qt \
+                  kysdk-qtwidgets \
+-                 kysdk-datacollect \
+                  ukui-quick-platform \
+                  ukui-quick-framework \
+                  ukui-quick-core
+diff --git a/plugins/devices/mouse/mouse.pro b/plugins/devices/mouse/mouse.pro
+index 6262519..cf7e9e5 100644
+--- a/plugins/devices/mouse/mouse.pro
++++ b/plugins/devices/mouse/mouse.pro
+@@ -32,7 +32,6 @@ PKGCONFIG     += gio-2.0 \
+                  gsettings-qt \
+                  x11 \
+                  kysdk-qtwidgets \
+-                 kysdk-datacollect \
+ 
+ #DEFINES += QT_DEPRECATED_WARNINGS
+ 
+diff --git a/plugins/devices/printer/printer.pro b/plugins/devices/printer/printer.pro
+index 9bc914f..af81a46 100644
+--- a/plugins/devices/printer/printer.pro
++++ b/plugins/devices/printer/printer.pro
+@@ -21,7 +21,6 @@ CONFIG += plugin \
+           link_pkgconfig
+ 
+ PKGCONFIG += gsettings-qt \
+-             kysdk-datacollect \
+ 
+ TARGET = $$qtLibraryTarget(printer)
+ DESTDIR = ../..
+diff --git a/plugins/devices/shortcut/shortcut.pro b/plugins/devices/shortcut/shortcut.pro
+index 1e11122..4b376f6 100644
+--- a/plugins/devices/shortcut/shortcut.pro
++++ b/plugins/devices/shortcut/shortcut.pro
+@@ -27,7 +27,6 @@ CONFIG += link_pkgconfig c++11
+ PKGCONFIG += gio-2.0 \
+              gio-unix-2.0 \
+              gsettings-qt \
+-             kysdk-datacollect \
+ 
+ DEFINES += QT_DEPRECATED_WARNINGS
+ 
+diff --git a/plugins/personalized/wallpaper/wallpaper.pro b/plugins/personalized/wallpaper/wallpaper.pro
+index accb77d..739e8ed 100644
+--- a/plugins/personalized/wallpaper/wallpaper.pro
++++ b/plugins/personalized/wallpaper/wallpaper.pro
+@@ -33,7 +33,6 @@ CONFIG        += link_pkgconfig \
+ PKGCONFIG     += gio-2.0 \
+                  gio-unix-2.0 \
+                  gsettings-qt \
+-                 kysdk-datacollect \
+ 
+ #DEFINES += QT_DEPRECATED_WARNINGS
+ 
+diff --git a/plugins/security-updates/backup/backup.pro b/plugins/security-updates/backup/backup.pro
+index 62f1426..b40cf69 100644
+--- a/plugins/security-updates/backup/backup.pro
++++ b/plugins/security-updates/backup/backup.pro
+@@ -28,7 +28,6 @@ PKGCONFIG     += gio-2.0 \
+                  gio-unix-2.0 \
+                  gsettings-qt \
+                  kysdk-sysinfo \
+-                 kysdk-datacollect \
+ 
+ 
+ 
+diff --git a/plugins/system/about/about.cpp b/plugins/system/about/about.cpp
+index fd04d25..d5388e3 100644
+--- a/plugins/system/about/about.cpp
++++ b/plugins/system/about/about.cpp
+@@ -609,26 +609,8 @@ void About::uploadStateChangedSlot(int state) {
+ 
+ void About::setPrivacyCompent()
+ {
+-    QDBusConnection::systemBus().connect("com.kylin.daq", "/com/kylin/daq",
+-        "com.kylin.daq.interface", "UploadStateChanged", this,
+-        SLOT(uploadStateChangedSlot(int)));
+-    mAboutWidget->getPriBtn()->setEnabled(false);
+-    queryAbout<int>(this, QDBusConnection::systemBus(),
+-        "com.kylin.daq", "/com/kylin/daq", "com.kylin.daq.interface",
+-        "GetUploadState", {}, [this](bool ok, int state) {
+-            if (!ok)
+-                return;
+-            uploadStateChangedSlot(state);
+-            mAboutWidget->getPriBtn()->setEnabled(true);
+-        });
+-    connect(mAboutWidget->getPriBtn(), &KSwitchButton::stateChanged, this,
+-        [this](bool status) {
+-            queryAbout<int>(this, QDBusConnection::systemBus(),
+-                "com.kylin.daq", "/com/kylin/daq", "com.kylin.daq.interface",
+-                "SetUploadState", {status ? 1 : 0}, [](bool, int) {});
+-            UkccCommon::buriedSettings(name(), "Send optional diagnostic data",
+-                                      QString("settings"), status ? "true" : "false");
+-        });
++    // Remove the upload toggle as well as every call to com.kylin.daq.
++    mAboutWidget->getPriBtn()->parentWidget()->hide();
+ }
+ 
+ void About::showExtend(QString dateres)
+diff --git a/plugins/system/about/about.pro b/plugins/system/about/about.pro
+index e99710f..9544245 100644
+--- a/plugins/system/about/about.pro
++++ b/plugins/system/about/about.pro
+@@ -11,7 +11,6 @@ CONFIG += plugin \
+ PKGCONFIG     += gsettings-qt \
+                  kysdk-qtwidgets \
+                  kysdk-sysinfo \
+-                 kysdk-datacollect \
+                  kysdk-hardware \
+ 
+ TARGET = $$qtLibraryTarget(about)
+diff --git a/plugins/system/display/display.pro b/plugins/system/display/display.pro
+index 8020610..fa71f30 100644
+--- a/plugins/system/display/display.pro
++++ b/plugins/system/display/display.pro
+@@ -26,7 +26,6 @@ PKGCONFIG += gsettings-qt     \
+              kysdk-qtwidgets \
+              kysdk-sysinfo \
+              kscreen2 \
+-             kysdk-datacollect \
+              kysdk-waylandhelper \
+ 
+ SOURCES += \
+diff --git a/plugins/time-language/area/area.pro b/plugins/time-language/area/area.pro
+index 5caffb5..978e194 100644
+--- a/plugins/time-language/area/area.pro
++++ b/plugins/time-language/area/area.pro
+@@ -30,7 +30,6 @@ CONFIG        += link_pkgconfig \
+ PKGCONFIG     += gio-2.0 \
+                  gio-unix-2.0 \
+                  kysdk-qtwidgets \
+-                 kysdk-datacollect \
+                  kysdk-systime \
+                  kysdk-package
+ 
+diff --git a/plugins/time-language/datetime/datetime.pro b/plugins/time-language/datetime/datetime.pro
+index e3b6795..0bc26b4 100644
+--- a/plugins/time-language/datetime/datetime.pro
++++ b/plugins/time-language/datetime/datetime.pro
+@@ -37,7 +37,6 @@ PKGCONFIG     += gio-2.0 \
+                  gio-unix-2.0 \
+                  gsettings-qt \
+                  kysdk-qtwidgets \
+-                 kysdk-datacollect \
+                  kysdk-systime
+ 
+ #DEFINES += QT_DEPRECATED_WARNINGS
+diff --git a/registeredSession/plugins/about/aboutinterface.cpp b/registeredSession/plugins/about/aboutinterface.cpp
+index 7128c57..a90f848 100644
+--- a/registeredSession/plugins/about/aboutinterface.cpp
++++ b/registeredSession/plugins/about/aboutinterface.cpp
+@@ -49,30 +49,6 @@ QMutex AboutInterface::ipListMutex;
+ AboutInterface::AboutInterface():UKUI::ServiceObject(nullptr)
+ {
+     mStyleGsettings = UniversalInterface::self()->ukuiStyleGsettings();
+-    mNtphostNameList.append(QString("0.cn.pool.ntp.org"));
+-    mNtphostNameList.append(QString("1.cn.pool.ntp.org"));
+-    mNtphostNameList.append(QString("2.cn.pool.ntp.org"));
+-    mNtphostNameList.append(QString("3.cn.pool.ntp.org"));
+-    mNtphostNameList.append(QString("cn.pool.ntp.org"));
+-    mNtphostNameList.append(QString("0.tw.pool.ntp.org"));
+-    mNtphostNameList.append(QString("1.tw.pool.ntp.org"));
+-    mNtphostNameList.append(QString("2.tw.pool.ntp.org"));
+-    mNtphostNameList.append(QString("3.tw.pool.ntp.org"));
+-    mNtphostNameList.append(QString("tw.pool.ntp.org"));
+-    mNtphostNameList.append(QString("pool.ntp.org"));
+-    mNtphostNameList.append(QString("time.windows.com"));
+-    mNtphostNameList.append(QString("time.nist.gov"));
+-    mNtphostNameList.append(QString("time-nw.nist.gov"));
+-    mNtphostNameList.append(QString("asia.pool.ntp.org"));
+-    mNtphostNameList.append(QString("europe.pool.ntp.org"));
+-    mNtphostNameList.append(QString("oceania.pool.ntp.org"));
+-    mNtphostNameList.append(QString("north-america.pool.ntp.org"));
+-    mNtphostNameList.append(QString("south-america.pool.ntp.org"));
+-    mNtphostNameList.append(QString("africa.pool.ntp.org"));
+-    mNtphostNameList.append(QString("ca.pool.ntp.org"));
+-    mNtphostNameList.append(QString("uk.pool.ntp.org"));
+-    mNtphostNameList.append(QString("us.pool.ntp.org"));
+-    mNtphostNameList.append(QString("au.pool.ntp.org"));
+ 
+     getSystemVersionList();
+     getBuildList();
+diff --git a/shell/mainwindow.cpp b/shell/mainwindow.cpp
+index 8786682..59d7e21 100644
+--- a/shell/mainwindow.cpp
++++ b/shell/mainwindow.cpp
+@@ -1398,19 +1398,6 @@ QGSettings *MainWindow::setGsettingsPath(const QList<char *> &list, const QStrin
+ }
+ 
+ bool MainWindow::isExitsCloudAccount() {
+-    QProcess *wifiPro = new QProcess();
+-    QString shellOutput = "";
+-    wifiPro->start("dpkg -l  | grep kylin-sso-client");
+-    wifiPro->waitForFinished();
+-    QString output = wifiPro->readAll();
+-    shellOutput += output;
+-    QStringList slist = shellOutput.split("\n");
+-
+-    for (QString res : slist) {
+-        if (res.contains("kylin-sso-client")) {
+-            return true;
+-        }
+-    }
+     return false;
+ }
+ 
+diff --git a/shell/shell.pro b/shell/shell.pro
+index 36a961e..6e5a0ef 100644
+--- a/shell/shell.pro
++++ b/shell/shell.pro
+@@ -35,7 +35,6 @@ PKGCONFIG     += gio-2.0 \
+                  gio-unix-2.0 \
+                  gsettings-qt \
+                  kysdk-waylandhelper \
+-                 kysdk-datacollect \
+                  kysdk-sysinfo \
+                  kysdk-qtwidgets \
+                  kysdk-waylandhelper \
+diff --git a/shell/utils/mthread.cpp b/shell/utils/mthread.cpp
+index 2aa58ed..a280969 100644
+--- a/shell/utils/mthread.cpp
++++ b/shell/utils/mthread.cpp
+@@ -33,25 +33,7 @@ MThread::~MThread()
+ 
+ void MThread::run()
+ {
+-    qDebug()<<QThread::currentThreadId();
+-    QTime timedebuge;//声明一个时钟对象
+-    timedebuge.start();//开始计时
+-    m_cloudInterface = new QDBusInterface("org.kylinssoclient.dbus",
+-                                          "/org/kylinssoclient/path",
+-                                          "org.freedesktop.kylinssoclient.interface",
+-                                          QDBusConnection::sessionBus());
+-    if (!m_cloudInterface->isValid()) {
+-        qDebug() << "fail to connect to service";
+-        qDebug() << qPrintable(QDBusConnection::systemBus().lastError().message());
+-        return;
+-    }
+-    QDBusConnection::sessionBus().connect(QString(), QString("/org/kylinssoclient/path"),
+-                                          QString(
+-                                              "org.freedesktop.kylinssoclient.interface"), "keyChanged", this,
+-                                          SLOT(keychanged(QString)));
+-    // 将以后所有DBus调用的超时设置为 milliseconds
+-    m_cloudInterface->setTimeout(2147483647); // -1 为默认的25s超时
+-     qDebug()<<"NetWorkAcount"<<"  线程耗时: "<<timedebuge.elapsed()<<"ms";
++    // Cloud account synchronisation is absent in the Lite image.
+ }
+ 
+ void MThread::keychanged(QString str)

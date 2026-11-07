@@ -109,6 +109,16 @@ LIBPAM_BIOMETRIC_INTEGRATION_FILES = {
     '/usr/share/polkit-1/actions/org.freedesktop.plicykit.pkexec.biorestart.policy',
     '/usr/share/polkit-1/actions/org.ukui.biometric.policy',
 }
+PRIVACY_COMPONENTS = {
+    'kylin-daq': ('1.2.9.2-ok2.2', 'universe/admin'),
+    'kylin-sso-client': ('2.2.11.2-0k1.18', 'misc'),
+    'kylin-cloud-sync': ('2.2.11.2-0k1.18', 'misc'),
+    'libsync-plugin': ('2.2.11.2-0k1.18', 'misc'),
+}
+PRIVACY_INTEGRATION_FILES = {
+    '/lib/systemd/system/kylin-daq.service',
+    '/usr/lib/systemd/system/kylin-daq.service',
+}
 
 
 def read_status(text):
@@ -130,7 +140,10 @@ def check_app(name, fields, review, owned_files):
     ai_component = review.get('kind') == 'ai-component' and name in AI_COMPONENTS
     biometric_component = review.get('kind') == 'biometric-component' and name in BIOMETRIC_COMPONENTS
     manual_data = review.get('kind') == 'manual-data' and name == 'kylin-user-guide-common'
-    component = ai_component or biometric_component or manual_data
+    privacy_component = review.get('kind') == 'privacy-component' and name in PRIVACY_COMPONENTS
+    component = ai_component or biometric_component or manual_data or privacy_component
+    if privacy_component and (fields.get('Version'), fields.get('Section')) != PRIVACY_COMPONENTS[name]:
+        raise ValueError(f'{name}: privacy component metadata differs from the reviewed package')
     if name.startswith('lib') and not component:
         raise ValueError(f'{name}: shared libraries cannot be removed as desktop apps')
     for key in (('version', 'reason') if component else ('version', 'reason', 'desktop')):
@@ -167,6 +180,7 @@ def check_app(name, fields, review, owned_files):
         and not (biometric_component and name == 'biometric-auth' and path in BIOMETRIC_AUTH_INTEGRATION_FILES)
         and not (biometric_component and name == 'libpam-biometric' and path in LIBPAM_BIOMETRIC_INTEGRATION_FILES)
         and not (biometric_manager and path == BIOMETRIC_MANAGER_POLICY)
+        and not (privacy_component and name == 'kylin-daq' and path in PRIVACY_INTEGRATION_FILES)
     ]
     if protected_files:
         raise ValueError(f'{name}: owns protected system integration files: {", ".join(protected_files)}')

@@ -12,7 +12,7 @@
 class NtpDateProvider : public QObject
 {
 public:
-    explicit NtpDateProvider(QObject *parent, const QString &host = QStringLiteral("pool.ntp.org"),
+    explicit NtpDateProvider(QObject *parent, const QString &host = QStringLiteral("time.cloudflare.com"),
                              quint16 port = 123) : QObject(parent), m_host(host), m_port(port)
     {
         m_timer.setSingleShot(true);

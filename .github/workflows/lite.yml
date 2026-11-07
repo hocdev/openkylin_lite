@@ -95,7 +95,7 @@ jobs:
       - name: Install ISO tools
         run: |
           sudo apt-get update
-          sudo apt-get install -y xorriso squashfs-tools shellcheck aria2 ostree
+          sudo apt-get install -y xorriso squashfs-tools shellcheck aria2 ostree binutils
           shellcheck scripts/*.sh
           python3 -m unittest discover -s tests -v
       - name: Restore original ISO cache

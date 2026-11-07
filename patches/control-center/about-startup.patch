@@ -1,0 +1,343 @@
+diff --git a/plugins/system/about/about.cpp b/plugins/system/about/about.cpp
+index e1e99bd..fd04d25 100644
+--- a/plugins/system/about/about.cpp
++++ b/plugins/system/about/about.cpp
+@@ -32,6 +32,8 @@
+ #include <QDBusPendingCallWatcher>
+ #include <QDBusPendingReply>
+ #include <functional>
++#include <memory>
++#include "aboutasync.h"
+ 
+ namespace {
+ void queryAboutPolicy(QObject *context, std::function<void(const QVariantMap &)> callback)
+@@ -108,12 +110,29 @@ int About::pluginTypes()
+ }
+ 
+ void About::preInitialize() {
+-    mAboutDBus = new QDBusInterface("org.ukui.ukcc.session",
+-                                    "/About",
+-                                    "org.ukui.ukcc.session.About",
+-                                    QDBusConnection::sessionBus(), this);
+-    if (!mAboutDBus->isValid()) {
+-        qCritical() << "org.ukui.ukcc.session.About DBus error:" << mAboutDBus->lastError();
++    mAboutDBus = new QObject(this); // Local cache; property() never performs I/O.
++    mAboutWidget->getActivaFrame()->hide();
++    const QStringList keys = {"build", "versionInfo", "themeMode", "desktop",
++                              "availableMemory", "memory", "netDate"};
++    auto remaining = std::make_shared<int>(keys.size());
++    for (const QString &key : keys) {
++        queryAbout<QDBusVariant>(this, QDBusConnection::sessionBus(),
++            "org.ukui.ukcc.session", "/About", "org.freedesktop.DBus.Properties",
++            "Get", {QStringLiteral("org.ukui.ukcc.session.About"), key},
++            [this, key, remaining](bool ok, const QDBusVariant &value) {
++                if (ok) {
++                    const QVariant cached = (key == "build" || key == "versionInfo")
++                        ? QVariant(qdbus_cast<QStringList>(value.variant())) : value.variant();
++                    mAboutDBus->setProperty(key.toLatin1().constData(), cached);
++                }
++                if (--*remaining != 0)
++                    return;
++                setupVersionCompenent();
++                setVersionNumCompenent();
++                setupDesktopComponent();
++                setupKernelCompenent();
++                setupSerialComponent();
++            });
+     }
+ }
+ 
+@@ -127,13 +146,8 @@ QWidget *About::pluginUi()
+         mAboutWidget->getSequenceContent()->installEventFilter(this);
+         preInitialize();
+         setConnect();
+-        setupVersionCompenent();
+-        setVersionNumCompenent();
+-        setupDesktopComponent();
+         setHostNameCompenet();
+-        setupKernelCompenent();
+         initActiveDbus();
+-        setupSerialComponent();
+         setPrivacyCompent();
+         setupDiskComponent();
+         securityControl();
+@@ -186,14 +200,6 @@ void About::setConnect()
+                                           "changed",
+                                           this,
+                                           SLOT(keyChangedSlot(QString)));
+-    activeInterface = QSharedPointer<QDBusInterface>(
+-        new QDBusInterface("org.freedesktop.activation",
+-                           "/org/freedesktop/activation",
+-                           "org.freedesktop.activation.interface",
+-                           QDBusConnection::systemBus()));
+-    if (activeInterface.get()->isValid()) {
+-        connect(activeInterface.get(), SIGNAL(activation_result(int)), this, SLOT(activeSlot(int)));
+-    }
+     QString pluginName = "MaintainMode";
+     QByteArray ba = (QString("%1%2").arg(pluginName).arg("/")).toUtf8();
+     char* path = ba.data();
+@@ -315,6 +321,20 @@ int About::loadLibrary() {
+ /* 获取激活信息 */
+ void About::setupSerialComponent()
+ {
++    // openKylin does not show commercial activation. Do not probe that service.
++    if (mAboutWidget->getActivaFrame()->isHidden())
++        return;
++    if (!activeInterface) {
++        activeInterface = QSharedPointer<QDBusInterface>(
++        new QDBusInterface("org.freedesktop.activation",
++                           "/org/freedesktop/activation",
++                           "org.freedesktop.activation.interface",
++                           QDBusConnection::systemBus()));
++    if (activeInterface.get()->isValid()) {
++        connect(activeInterface.get(), SIGNAL(activation_result(int)), this, SLOT(activeSlot(int)));
++    }
++    }
++
+     if (!activeInterface.get()->isValid()) {
+         qDebug() << "Create active Interface Failed When Get active info: " <<
+             QDBusConnection::systemBus().lastError();
+@@ -499,6 +519,8 @@ void About::setupVersionCompenent()
+         !versionID.compare(vFour, Qt::CaseInsensitive) ||
+         !versionID.compare(v11, Qt::CaseInsensitive)) {
+ 
++        mAboutWidget->getActivaFrame()->show();
++
+         if (mAboutDBus->property("themeMode").toString() == UKUI_DARK) {
+             mThemePixmap = loadSvg("://img/plugins/about/logo-dark.svg", 130, 50);
+         } else {
+@@ -527,37 +549,17 @@ void About::setupDesktopComponent()
+ /* 获取CPU信息 */
+ void About::setupKernelCompenent()
+ {
+-    QString memorySize("0GB");
+-    QString cpuType;
+-    QString kernal = QSysInfo::kernelType() + " " + QSysInfo::kernelVersion();
+-    mUkccDbus = new QDBusInterface("com.control.center.qt.systemdbus",
+-                                   "/",
+-                                   "com.control.center.interface",
+-                                   QDBusConnection::systemBus(), this);
+-    QString availableMemory = mAboutDBus->property("availableMemory").toString();
+-    qDebug() << Q_FUNC_INFO << "property availableMemory" << availableMemory;
+-    availableMemory = QString("%1%2%3%4%5").arg("(").arg(availableMemory).arg("GB").arg(tr("Available")).arg(")");
+-    qDebug() << Q_FUNC_INFO << "format availableMemory" << availableMemory;
+-    if (mUkccDbus->isValid()) {
+-       QDBusReply<QString>  result = mUkccDbus->call("getMemory");
+-       qDebug()<<"memory :"<<result;
+-       if (result != "0") {
+-            memorySize.clear();
+-            memorySize.append(result + "GB" + availableMemory);
+-            qDebug() << Q_FUNC_INFO << "memorySize" << memorySize << "availableMemory" << availableMemory;
+-       }
+-   }
+-   if (memorySize == "0GB") {
+-       memorySize = mAboutDBus->property("memory").toString() + availableMemory;
+-       qDebug() << Q_FUNC_INFO << "memorySize from memory" << memorySize;
+-   }
+-
+-    mAboutWidget->getKerner()->setText(kernal);
+-    mAboutWidget->getMemeory()->setText(memorySize);
+-
+-    cpuType = kdk_cpu_get_model();
+-    qDebug() << Q_FUNC_INFO << "cpu info" << cpuType;
+-    mAboutWidget->getCpuInfo()->setText(cpuType);
++    const QString available = QString("(%1GB%2)")
++        .arg(mAboutDBus->property("availableMemory").toString()).arg(tr("Available"));
++    mAboutWidget->getKerner()->setText(QSysInfo::kernelType() + " " + QSysInfo::kernelVersion());
++    mAboutWidget->getMemeory()->setText(mAboutDBus->property("memory").toString() + available);
++    mAboutWidget->getCpuInfo()->setText(kdk_cpu_get_model());
++    queryAbout<QString>(this, QDBusConnection::systemBus(),
++        "com.control.center.qt.systemdbus", "/", "com.control.center.interface",
++        "getMemory", {}, [this, available](bool ok, const QString &memory) {
++            if (ok && memory.toDouble() > 0)
++                mAboutWidget->getMemeory()->setText(memory + "GB" + available);
++        });
+ }
+ 
+ void About::diskInfoReadySlot(QString diskInfo) {
+@@ -574,34 +576,16 @@ void About::diskInfoReadySlot(QString diskInfo) {
+ /* 获取硬盘信息 */
+ void About::setupDiskComponent()
+ {
+-    if (mAboutWidget->getDiskFrame()->isHidden()) {
+-        qDebug() << Q_FUNC_INFO << "diskFrame hidden, skip";
++    if (mAboutWidget->getDiskFrame()->isHidden())
+         return;
+-    }
+-    QDBusConnection::systemBus().connect("com.control.center.qt.systemdbus",
+-                                         "/",
+-                                         "com.control.center.interface",
+-                                         "diskInfoReady",
+-                                         this,
+-                                         SLOT(diskInfoReadySlot(QString)));
+-    QDBusInterface ifc("com.control.center.qt.systemdbus",
+-                       "/",
+-                       "com.control.center.interface",
+-                       QDBusConnection::systemBus());
+-    QDBusReply<QString> res = ifc.call("getDiskInfo");
+-    if (!res.isValid()) {
+-        qDebug() << Q_FUNC_INFO << "getDiskInfo is invalid";
+-        mAboutWidget->getDiskFrame()->setVisible(false);
+-        return;
+-    }
+-    QString diskInfo = res.value().trimmed();
+-    if (diskInfo.isEmpty()) {
+-        qDebug() << Q_FUNC_INFO << "getDiskInfo is empty";
+-        mAboutWidget->getDiskFrame()->setVisible(false);
+-        return;
+-    }
+-    mAboutWidget->getDiskContent()->setText(diskInfo);
+-    qDebug() << Q_FUNC_INFO << "get disk size suc" << diskInfo;
++    QDBusConnection::systemBus().connect("com.control.center.qt.systemdbus", "/",
++        "com.control.center.interface", "diskInfoReady", this,
++        SLOT(diskInfoReadySlot(QString)));
++    queryAbout<QString>(this, QDBusConnection::systemBus(),
++        "com.control.center.qt.systemdbus", "/", "com.control.center.interface",
++        "getDiskInfo", {}, [this](bool ok, const QString &disk) {
++            diskInfoReadySlot(ok ? disk.trimmed() : QString());
++        });
+ }
+ 
+ void About::setHostNameCompenet()
+@@ -625,33 +609,26 @@ void About::uploadStateChangedSlot(int state) {
+ 
+ void About::setPrivacyCompent()
+ {
+-    QDBusInterface *PriDBus = new QDBusInterface("com.kylin.daq",
+-                                                 "/com/kylin/daq",
+-                                                 "com.kylin.daq.interface",
+-                                                 QDBusConnection::systemBus(), this);
+-    QDBusConnection::systemBus().connect("com.kylin.daq",
+-                                         "/com/kylin/daq",
+-                                         "com.kylin.daq.interface",
+-                                         "UploadStateChanged",
+-                                         this,
+-                                         SLOT(uploadStateChangedSlot(int)));
+-    if (!PriDBus->isValid()) {
+-        return;
+-    }
+-    QDBusReply<int> reply = PriDBus->call("GetUploadState");
+-    mAboutWidget->getPriBtn()->blockSignals(true);
+-    mAboutWidget->getPriBtn()->setChecked(reply == 0 ? false : true);
+-    mAboutWidget->getPriBtn()->blockSignals(false);
+-
+-    connect(mAboutWidget->getPriBtn(),&KSwitchButton::stateChanged ,this ,[=](bool status){
+-        if (status) {
+-             PriDBus->call("SetUploadState" , (status ? 1 : 0));
+-             UkccCommon::buriedSettings(name(), "Send optional diagnostic data", QString("settings"), status ? "true": "false");
+-         } else {
+-             UkccCommon::buriedSettings(name(), "Send optional diagnostic data", QString("settings"), status ? "true": "false");
+-             PriDBus->call("SetUploadState" , (status ? 1 : 0));
+-         }
+-    } );
++    QDBusConnection::systemBus().connect("com.kylin.daq", "/com/kylin/daq",
++        "com.kylin.daq.interface", "UploadStateChanged", this,
++        SLOT(uploadStateChangedSlot(int)));
++    mAboutWidget->getPriBtn()->setEnabled(false);
++    queryAbout<int>(this, QDBusConnection::systemBus(),
++        "com.kylin.daq", "/com/kylin/daq", "com.kylin.daq.interface",
++        "GetUploadState", {}, [this](bool ok, int state) {
++            if (!ok)
++                return;
++            uploadStateChangedSlot(state);
++            mAboutWidget->getPriBtn()->setEnabled(true);
++        });
++    connect(mAboutWidget->getPriBtn(), &KSwitchButton::stateChanged, this,
++        [this](bool status) {
++            queryAbout<int>(this, QDBusConnection::systemBus(),
++                "com.kylin.daq", "/com/kylin/daq", "com.kylin.daq.interface",
++                "SetUploadState", {status ? 1 : 0}, [](bool, int) {});
++            UkccCommon::buriedSettings(name(), "Send optional diagnostic data",
++                                      QString("settings"), status ? "true" : "false");
++        });
+ }
+ 
+ void About::showExtend(QString dateres)
+@@ -1015,38 +992,24 @@ void About::activeSlot(int activeSignal)
+ void About::runActiveWindow()
+ {
+     UkccCommon::buriedSettings(name(), "Activate the system or extend the service", QString("settings"));
+-    mAboutDBus->call("openActivation");
++    auto message = QDBusMessage::createMethodCall("org.ukui.ukcc.session", "/About",
++        "org.ukui.ukcc.session.About", "openActivation");
++    QDBusConnection::sessionBus().asyncCall(message, 2000);
+ }
+ 
+ /* 获取用户昵称 */
+ void About::changedSlot()
+ {
+-    QString userName;
+-    qlonglong uid = getuid();
+-    QDBusInterface user("org.freedesktop.Accounts",
+-                        "/org/freedesktop/Accounts",
+-                        "org.freedesktop.Accounts",
+-                        QDBusConnection::systemBus());
+-
+-    if (user.isValid()) {
+-        QDBusMessage result = user.call("FindUserById", uid);
+-        QString userpath = result.arguments().value(0).value<QDBusObjectPath>().path();
+-        QDBusInterface *userInterface = new QDBusInterface ("org.freedesktop.Accounts",
+-                                                            userpath,
+-                                                            "org.freedesktop.Accounts.User",
+-                                                            QDBusConnection::systemBus());
+-        userName = userInterface->property("RealName").value<QString>();
+-
+-    }
+-
+-    if (userName.isEmpty()) {
+-        mAboutWidget->getUserNameFrame()->setVisible(false);
+-        qDebug() << Q_FUNC_INFO << "userName is empty, hidden";
+-    } else {
+-        if (mAboutWidget && mAboutWidget->getUserName()) {
+-            mAboutWidget->getUserName()->setText(userName);
+-        }
+-    }
++    queryAbout<QDBusVariant>(this, QDBusConnection::systemBus(),
++        "org.freedesktop.Accounts",
++        "/org/freedesktop/Accounts/User" + QString::number(getuid()),
++        "org.freedesktop.DBus.Properties", "Get",
++        {QStringLiteral("org.freedesktop.Accounts.User"), QStringLiteral("RealName")},
++        [this](bool ok, const QDBusVariant &value) {
++            const QString name = ok ? value.variant().toString() : QString();
++            mAboutWidget->getUserNameFrame()->setVisible(!name.isEmpty());
++            mAboutWidget->getUserName()->setText(name);
++        });
+ }
+ 
+ void About::openIntelSlot(const QString &desktopFile)
+@@ -1061,13 +1024,21 @@ void About::openIntelSlot(const QString &desktopFile)
+ void About::keyChangedSlot(const QString &key)
+ {
+     if (key == "styleName") {
+-        if (mAboutDBus->property("themeMode").toString() == UKUI_DARK) {
++        queryAbout<QDBusVariant>(this, QDBusConnection::sessionBus(),
++            "org.ukui.ukcc.session", "/About", "org.freedesktop.DBus.Properties", "Get",
++            {QStringLiteral("org.ukui.ukcc.session.About"), QStringLiteral("themeMode")},
++            [this](bool ok, const QDBusVariant &value) {
++        if (!ok)
++            return;
++        mAboutDBus->setProperty("themeMode", value.variant());
++        if (value.variant().toString() == UKUI_DARK) {
+             mThemePixmap = loadSvg("://img/plugins/about/logo-dark.svg", 130, 50);
+         } else {
+             mThemePixmap = loadSvg("://img/plugins/about/logo-light.svg", 130, 50);
+         }
+         mAboutWidget->getLogo()->setPixmap(mThemePixmap);
+         emit changeTheme();
++        });
+     }
+ }
+ 
+diff --git a/plugins/system/about/about.h b/plugins/system/about/about.h
+index 125f2c9..39cffe8 100644
+--- a/plugins/system/about/about.h
++++ b/plugins/system/about/about.h
+@@ -141,7 +141,7 @@ private:
+     bool activestatus = true;
+ 
+     QDBusInterface *mUkccDbus = nullptr;
+-    QDBusInterface *mAboutDBus = nullptr;
++    QObject *mAboutDBus = nullptr;
+     qint64 m_clickTimes[5] = {0};
+     int m_currentIndex = 0;
+     bool m_isFilled = false;

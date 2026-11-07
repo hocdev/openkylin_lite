@@ -2,6 +2,8 @@
 
 Đã được người dùng chấp thuận: bỏ WPS, nhóm AI và đặc biệt `kylin-aiassistant`.
 
+Bổ sung theo yêu cầu: bỏ telemetry/chẩn đoán gửi dữ liệu và SSO/đồng bộ đám mây. `prepare_privacy_removals.py` thêm các gói đã cài trong danh sách chính xác `kylin-daq`, `kylin-sso-client`, `kylin-cloud-sync`, `libsync-plugin`, sau khi kiểm tra phiên bản/section đã đọc từ gói upstream. Danh sách hợp nhất được lưu trong báo cáo của từng Live root/OSTree. SDK telemetry còn được ứng dụng liên kết sẽ dùng triển khai tương thích không thu thập dữ liệu; Settings bỏ hoàn toàn lời gọi và UI tương ứng. Store và cập nhật hệ thống vẫn được giữ.
+
 Danh sách thực thi là `remove-packages.txt` (69 gói); phiên bản và lý do của từng gói nằm trong `reviewed-apps.json`, lấy từ artifact kiểm kê thành công của chính ISO nguồn.
 
 - Gỡ `wps-office`, `kylin-aiassistant`, `kylin-bot`.

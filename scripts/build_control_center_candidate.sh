@@ -20,8 +20,13 @@ cd "$work/source"
 dpkg-source --before-build .
 git apply --check "$workspace/patches/control-center/about-network.patch"
 git apply "$workspace/patches/control-center/about-network.patch"
+git apply --check "$workspace/patches/control-center/about-startup.patch"
+git apply "$workspace/patches/control-center/about-startup.patch"
+git apply --check "$workspace/patches/control-center/privacy.patch"
+git apply "$workspace/patches/control-center/privacy.patch"
 cp "$workspace/patches/control-center/ntpdateprovider.h" registeredSession/plugins/about/
-dch --local +lite --distribution huanghe 'Keep About network date lookups off the D-Bus event loop.'
+cp "$workspace/patches/control-center/aboutasync.h" plugins/system/about/
+dch --local +lite --distribution huanghe 'Keep About startup queries off the GUI event loop.'
 # Match the SDK to the original ISO, rather than the moving archive's latest
 # version. Otherwise shlibdeps raises the runtime minimum beyond the Live root.
 mkdir "$work/build-deps"
@@ -48,6 +53,13 @@ mkdir "$work/network-test"
   make -j2
   ./test-about-network
 )
+mkdir "$work/startup-test"
+(
+  cd "$work/startup-test"
+  qmake "$workspace/tests/qt/about-startup.pro"
+  make -j2
+  dbus-run-session -- ./test-about-startup
+)
 CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 deb=( "$work/ukui-control-center_"*_amd64.deb )
 [[ ${#deb[@]} == 1 && -f ${deb[0]} ]]
@@ -58,3 +70,10 @@ dpkg-deb -x "${deb[0]}" "$work/verify"
 find "$work/verify" -name '*ukccSession*.so' -print -quit | grep -q .
 mkdir -p "$workspace/control-center-output"
 cp -- "${deb[0]}" "$workspace/control-center-output/"
+library_deb=( "$work/libukcc3_"*_amd64.deb )
+[[ ${#library_deb[@]} == 1 && -f ${library_deb[0]} ]]
+python3 "$workspace/scripts/check_control_center_dependencies.py" "${library_deb[0]}" \
+  "$workspace/config/control-center-runtime-versions.json"
+cp -- "${library_deb[0]}" "$workspace/control-center-output/"
+cd "$workspace"
+bash scripts/build_privacy_sdk.sh

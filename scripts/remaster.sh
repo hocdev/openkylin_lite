@@ -12,12 +12,13 @@ ukui_deb_dir=${UKUI_DEB_DIR:-}
 declare -A ukui_versions=()
 if [[ $MODE != inspect ]]; then
   [[ -n $ukui_deb_dir && -d $ukui_deb_dir ]] || { echo 'Candidate packages are required'; exit 1; }
+  [[ -f "$ukui_deb_dir/legacy-diagnostics-disabled.so" ]] || { echo 'Legacy telemetry replacement is required'; exit 1; }
   shopt -s nullglob
   for deb in "$ukui_deb_dir"/*.deb; do
     package=$(dpkg-deb -f "$deb" Package)
     version=$(dpkg-deb -f "$deb" Version)
     case $package in
-      ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer|ukui-control-center) ;;
+      ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer|ukui-control-center|libukcc3|libkysdk-datacollect|libkysdk-datacollect-dev|libkysdk-diagnosetest|libkysdk-diagnosetest-dev|libkysdk-diagnosetest-doc) ;;
       *) echo "Unexpected candidate package: $package"; exit 1 ;;
     esac
     [[ ! ${ukui_versions[$package]+present} ]] || { echo "Duplicate candidate: $package"; exit 1; }
@@ -26,8 +27,8 @@ if [[ $MODE != inspect ]]; then
       echo "$package still depends on biometric authentication"; exit 1
     fi
   done
-  [[ ${#ukui_versions[@]} == 5 ]] || { echo 'Expected three password-only UKUI packages, installer and control center'; exit 1; }
-  for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer ukui-control-center; do
+  [[ ${#ukui_versions[@]} == 11 ]] || { echo 'Expected password, installer, control center and disabled telemetry SDK candidates'; exit 1; }
+  for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer ukui-control-center libukcc3 libkysdk-datacollect libkysdk-datacollect-dev libkysdk-diagnosetest libkysdk-diagnosetest-dev libkysdk-diagnosetest-doc; do
     [[ -n ${ukui_versions[$package]+present} ]] || { echo "Missing candidate: $package"; exit 1; }
   done
 fi
@@ -139,11 +140,13 @@ mount -t overlay overlay -o "lowerdir=$work/lower,upperdir=$work/upper,workdir=$
 disk_stage overlay-mounted
 purge_packages() {
 local root=$1 baseline=$2 report_dir=$3 p essential guard purge_status=0 status actual
-local -a apt_options=(-o Dpkg::Use-Pty=0) candidate_debs=() candidate_packages=()
+local -a apt_options=(-o Dpkg::Use-Pty=0) candidate_debs=() candidate_packages=() packages=()
 local candidate_dir=/tmp/openkylin-ukui-candidates deb candidate_count=0
 local -A expected_versions=()
 mkdir -p "$report_dir"
-python3 scripts/check_apps.py "$root" config/remove-packages.txt config/reviewed-apps.json > "$report_dir/reviewed-apps.txt"
+python3 scripts/prepare_privacy_removals.py "$root" config/remove-packages.txt config/reviewed-apps.json "$report_dir"
+mapfile -t packages < "$report_dir/remove-packages.txt"
+python3 scripts/check_apps.py "$root" "$report_dir/remove-packages.txt" "$report_dir/reviewed-apps.json" > "$report_dir/reviewed-apps.txt"
 mount --bind /dev "$root/dev"
 mount -t proc proc "$root/proc"
 # The OSTree checkout can lack the deployment's runtime user database.
@@ -158,7 +161,7 @@ chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifes
 mkdir -p "$root$candidate_dir"
 for deb in "$ukui_deb_dir"/*.deb; do
   package=$(dpkg-deb -f "$deb" Package)
-  if [[ $package == kylin-os-installer ]]; then
+  if [[ $package == kylin-os-installer || $package == libkysdk-* ]]; then
     status=$(chroot "$root" dpkg-query -W '-f=${Status}' "$package" 2>/dev/null || true)
     [[ $status == 'install ok installed' ]] || continue
   fi
@@ -169,7 +172,7 @@ for deb in "$ukui_deb_dir"/*.deb; do
   ((candidate_count+=1))
 done
 (( candidate_count >= 4 )) || { echo 'Candidate package staging is incomplete'; return 1; }
-for package in ukui-greeter ukui-screensaver ukui-polkit ukui-control-center; do
+for package in ukui-greeter ukui-screensaver ukui-polkit ukui-control-center libukcc3 libkysdk-datacollect; do
   [[ -n ${expected_versions[$package]+present} ]] || { echo "Missing required UKUI candidate: $package"; return 1; }
 done
 for p in "${packages[@]}"; do
@@ -278,6 +281,13 @@ if grep -qx biometric-auth "$work/planned"; then
     fi
   done
 fi
+# This database is generated at runtime and is not removed by dpkg purge.
+chroot "$root" rm -rf -- /var/cache/kylin-daq
+cp "$ukui_deb_dir/legacy-diagnostics-disabled.so" "$root/tmp/legacy-diagnostics-disabled.so"
+cp scripts/apply_privacy_image.py "$root/tmp/apply_privacy_image.py"
+chroot "$root" python3 /tmp/apply_privacy_image.py > "$report_dir/privacy-local-patches.txt"
+rm "$root/tmp/legacy-diagnostics-disabled.so" "$root/tmp/apply_privacy_image.py"
+python3 scripts/check_privacy_image.py "$root" > "$report_dir/privacy-audit.txt"
 chroot "$root" apt-get "${apt_options[@]}" check
 chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
 [[ ! -s "$report_dir/dpkg-audit.txt" ]] || { echo 'dpkg audit failed'; exit 1; }

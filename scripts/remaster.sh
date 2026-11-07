@@ -151,13 +151,14 @@ while read -r p; do
 done < "$work/planned"
 # Clear generated files in these package directories before dpkg tries to
 # remove them. Keep package-owned files available to the removal scripts.
-python3 - "$root" "$work/planned" <<'PY'
+# Resolve the ISO's absolute symlinks inside its own filesystem.
+chroot "$root" python3 - "$(cat "$work/planned")" <<'PY'
 import os
 from pathlib import Path
 import sys
 
-root, plan = map(Path, sys.argv[1:])
-planned = set(plan.read_text().splitlines())
+root = Path('/')
+planned = set(sys.argv[1].splitlines())
 owned = set()
 for listing in (root / 'var/lib/dpkg/info').glob('*.list'):
     owned.update(listing.read_text(errors='surrogateescape').splitlines())
@@ -169,8 +170,6 @@ for package, relative in (
     if package not in planned:
         continue
     directory = root / relative
-    if directory.resolve() != root.resolve() / relative:
-        raise SystemExit(f'Unexpected symlink in purge cleanup path: {directory}')
     if not directory.is_dir():
         continue
     for parent, dirs, files in os.walk(directory, topdown=False):

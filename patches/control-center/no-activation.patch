@@ -1,0 +1,852 @@
+diff --git a/plugins/system/about/about.cpp b/plugins/system/about/about.cpp
+index d5388e3..3ccb5b8 100644
+--- a/plugins/system/about/about.cpp
++++ b/plugins/system/about/about.cpp
+@@ -111,9 +111,8 @@ int About::pluginTypes()
+ 
+ void About::preInitialize() {
+     mAboutDBus = new QObject(this); // Local cache; property() never performs I/O.
+-    mAboutWidget->getActivaFrame()->hide();
+     const QStringList keys = {"build", "versionInfo", "themeMode", "desktop",
+-                              "availableMemory", "memory", "netDate"};
++                              "availableMemory", "memory"};
+     auto remaining = std::make_shared<int>(keys.size());
+     for (const QString &key : keys) {
+         queryAbout<QDBusVariant>(this, QDBusConnection::sessionBus(),
+@@ -131,7 +130,6 @@ void About::preInitialize() {
+                 setVersionNumCompenent();
+                 setupDesktopComponent();
+                 setupKernelCompenent();
+-                setupSerialComponent();
+             });
+     }
+ }
+@@ -143,11 +141,9 @@ QWidget *About::pluginUi()
+ 
+         mAboutWidget = new AboutUi;
+         // 重命名弹窗改由 clicked 触发（见 setConnect），不再依赖鼠标 Press 过滤
+-        mAboutWidget->getSequenceContent()->installEventFilter(this);
+         preInitialize();
+         setConnect();
+         setHostNameCompenet();
+-        initActiveDbus();
+         setPrivacyCompent();
+         setupDiskComponent();
+         securityControl();
+@@ -180,17 +176,7 @@ bool About::isEnable() const
+ }
+ 
+ /* 初始化DBus对象 */
+-void About::initActiveDbus()
+-{
+-    /*activeInterface = QSharedPointer<QDBusInterface>(
+-        new QDBusInterface("org.freedesktop.activation",
+-                           "/org/freedesktop/activation",
+-                           "org.freedesktop.activation.interface",
+-                           QDBusConnection::systemBus()));
+-    if (activeInterface.get()->isValid()) {
+-        connect(activeInterface.get(), SIGNAL(activation_result(int)), this, SLOT(activeSlot(int)));
+-    }*/
+-}
++
+ 
+ void About::setConnect()
+ {
+@@ -216,7 +202,6 @@ void About::setConnect()
+         openIntelSlot(kAboutFile);
+     });
+ 
+-    connect(mAboutWidget->getActivationBtn(), &QPushButton::clicked, this, &About::runActiveWindow);
+ 
+     connect(mAboutWidget->getEditHost(), &QPushButton::clicked, this, &About::openHostNameDialog);
+ 
+@@ -289,184 +274,10 @@ void About::logoClickSlot() {
+     }
+ }
+ 
+-int About::loadLibrary() {
+-    // 设置库路径
+-    m_library.setFileName(LIB_KYLIN_ACTIVATION_PATH);
+-
+-    // 尝试加载库
+-    bool libraryLoaded = m_library.load();
+-
+-    if (!libraryLoaded) {
+-        qDebug() << Q_FUNC_INFO << "Failed to load library:" << LIB_KYLIN_ACTIVATION_PATH
+-                    << "Error:" << m_library.errorString();
+-        return -2;
+-    }
+ 
+-    qDebug() << Q_FUNC_INFO << "Successfully loaded library:" << LIB_KYLIN_ACTIVATION_PATH;
+-
+-    // 解析函数符号
+-    m_rsaCheckFunc = reinterpret_cast<KylinActivationRsaCheckFunc>(
+-        m_library.resolve("kylin_activation_rsa_check")
+-    );
+-
+-    if (!m_rsaCheckFunc) {
+-        qDebug() << Q_FUNC_INFO << "Failed to resolve function: kylin_activation_rsa_check";
+-        return 1;
+-    } else {
+-        qDebug() << Q_FUNC_INFO << "Successfully resolved function: kylin_activation_rsa_check";
+-        return 0;
+-    }
+-}
+ 
+ /* 获取激活信息 */
+-void About::setupSerialComponent()
+-{
+-    // openKylin does not show commercial activation. Do not probe that service.
+-    if (mAboutWidget->getActivaFrame()->isHidden())
+-        return;
+-    if (!activeInterface) {
+-        activeInterface = QSharedPointer<QDBusInterface>(
+-        new QDBusInterface("org.freedesktop.activation",
+-                           "/org/freedesktop/activation",
+-                           "org.freedesktop.activation.interface",
+-                           QDBusConnection::systemBus()));
+-    if (activeInterface.get()->isValid()) {
+-        connect(activeInterface.get(), SIGNAL(activation_result(int)), this, SLOT(activeSlot(int)));
+-    }
+-    }
+-
+-    if (!activeInterface.get()->isValid()) {
+-        qDebug() << "Create active Interface Failed When Get active info: " <<
+-            QDBusConnection::systemBus().lastError();
+-        return;
+-    }
+-
+-    QString serial;
+-    QDBusReply<QString> serialReply;
+-    serialReply = activeInterface.get()->call("serial_number");
+-    if (!serialReply.isValid()) {
+-        qDebug()<<"serialReply is invalid"<<endl;
+-    } else {
+-        serial = serialReply.value();
+-    }
+-
+-    bool isActive = false;
+-    int libStatus = loadLibrary();
+-    qDebug() << Q_FUNC_INFO << "libStatus" << libStatus << "dateRes" << dateRes;
+-    if (libStatus == 1) { // 没有rsa函数
+-        //直接用date的返回值即可
+-        QDBusMessage dateReply = activeInterface.get()->call("date");
+-        if (dateReply.type() == QDBusMessage::ReplyMessage) {
+-            dateRes = dateReply.arguments().at(0).toString();
+-        }
+-        isActive = !dateRes.isEmpty();
+-        qDebug() << Q_FUNC_INFO << "use date" << dateRes << "isActive" << isActive;
+-    } else if (libStatus == 0) {
+-        int random = QRandomGenerator::global()->bounded(1000);
+-        QString randomStr = QString::number(random);
+-        qDebug() << Q_FUNC_INFO << "random" << random << "randomStr" << randomStr;
+-        QDBusMessage dateAuthReply = activeInterface.get()->call("date_auth", randomStr);
+-        QString randomRet;
+-        if (dateAuthReply.type() == QDBusMessage::ReplyMessage) {
+-            if (dateAuthReply.arguments().size() == 3) {
+-                randomRet = dateAuthReply.arguments().at(0).toString();
+-                dateRes = dateAuthReply.arguments().at(1).toString();
+-            }
+-            qDebug() << Q_FUNC_INFO << "date_auth result size" << dateAuthReply.arguments().size() << "dateRes" << dateRes;
+-        }
+-        bool rsaRet = m_rsaCheckFunc(randomStr.toStdString().c_str(), randomRet.toStdString().c_str());
+-        isActive = (rsaRet && !dateRes.isEmpty());
+-        qDebug() << Q_FUNC_INFO << "use date_auth" << dateRes << "rsaRet" << rsaRet << "isActive" << isActive;
+-    }
+-
+-    QDBusMessage trial_dateReply = activeInterface.get()->call("trial_date");
+-    QString trial_dateRes;
+-    if (trial_dateReply.type() == QDBusMessage::ReplyMessage) {
+-        trial_dateRes = trial_dateReply.arguments().at(0).toString();
+-    }
+-    QString customerInfo;
+-    QDBusReply<QString> customerInfoReply;
+-    customerInfoReply = activeInterface.get()->call("get_license_to_info");
+-    if (!customerInfoReply.isValid()) {
+-        mAboutWidget->getCustomerInfoLabel()->hide();
+-        mAboutWidget->getCustomerInfoValueLabel()->hide();
+-        qDebug() << Q_FUNC_INFO << "get_license_to_info interface invalid";
+-    } else {
+-        customerInfo = customerInfoReply.value();
+-        if (customerInfo.isEmpty()) {
+-            mAboutWidget->getCustomerInfoLabel()->hide();
+-            mAboutWidget->getCustomerInfoValueLabel()->hide();
+-            qDebug() << Q_FUNC_INFO << "get_license_to_info is empty";
+-        } else {
+-            mAboutWidget->getCustomerInfoLabel()->setVisible(true);
+-            mAboutWidget->getCustomerInfoValueLabel()->setVisible(true);
+-            mAboutWidget->getCustomerInfoValueLabel()->setText(customerInfo);
+-            qDebug() << Q_FUNC_INFO << "get customerInfo" << customerInfo;
+-        }
+-    }
+-    mAboutWidget->getSequenceContent()->setText(serial);
+-    // 未激活时序列号为空：无点击内容，勿进 Tab 链，避免空焦点框
+-    mAboutWidget->getSequenceContent()->setFocusPolicy(
+-        serial.isEmpty() ? Qt::NoFocus : Qt::StrongFocus);
+-    mTimeText = tr("DateRes");
+-    if (!isActive) {  //未激活
+-         if (!trial_dateRes.isEmpty()) {  //试用期
+-            mAboutWidget->getActiveStatus()->setText(tr("Inactivated"));
+-            mAboutWidget->getActiveStatus()->setFontColor(Qt::red);
+-            mTimeText = tr("Trial expiration time");
+-            mAboutWidget->getActivationBtn()->setText(tr("Active"));
+-        } else {
+-             mAboutWidget->getActiveStatus()->setText(tr("Inactivated"));
+-             mAboutWidget->getActiveStatus()->setFontColor(Qt::red);
+-             mAboutWidget->getActivationBtn()->setText(tr("Active"));
+-         }
+-         mAboutWidget->getActivationBtn()->setVisible(true);
+-         activestatus = false;
+-    }  else {    //已激活
+-        mAboutWidget->getActivationBtn()->hide();
+-        mAboutWidget->getTrialBtn()->hide();
+-        mAboutWidget->getAndLabel()->hide();
+-        mAboutWidget->getActiveStatus()->setFontColor(Qt::gray);
+-        mAboutWidget->getActiveStatus()->setText(tr("Activated"));
+-        mAboutWidget->getActivationBtn()->setText(tr("Extend"));
+-        activestatus = true;
+-    }
+ 
+-    for (QObject* obj : mAboutWidget->children()) {
+-        if (obj->objectName() != "StatusDialog") {
+-            continue;
+-        }
+-        StatusDialog *statusDialog = static_cast<StatusDialog*>(obj);
+-        if (nullptr == statusDialog) {
+-            continue;
+-        }
+-        statusDialog->mTimeLabel_1->setText(mTimeText);
+-        statusDialog->mVersionLabel_2->setText(mAboutWidget->getVersion()->text());
+-        statusDialog->mStatusLabel_2->setText(mAboutWidget->getActiveStatus()->text());
+-        statusDialog->mSerialLabel_2->setText(mAboutWidget->getSequenceContent()->text());
+-        statusDialog->mTimeLabel_2->setText(dateRes);
+-        if (statusDialog->mTimeLabel_2->text().contains(tr("expired"))) {
+-            statusDialog->mTimeLabel_2->setFontColor(Qt::red);
+-        }
+-
+-        if (!activestatus) {
+-            statusDialog->mTimeLabel_1->parentWidget()->hide();
+-            qDebug() << Q_FUNC_INFO << "activestatus is" << activestatus << statusDialog->mTimeLabel_2->text();
+-        } else {
+-            statusDialog->mTimeLabel_1->parentWidget()->setVisible(true);
+-            qDebug() << Q_FUNC_INFO << "activestatus is" << activestatus << statusDialog->mTimeLabel_2->text();
+-        }
+-        if (!activestatus && UkccCommon::isCloudVirtualDesktop()) {
+-            statusDialog->mExtentBtn->hide();
+-        }
+-        statusDialog->mExtentBtn->setText(mAboutWidget->getActivationBtn()->text());
+-        statusDialog->getActivationCode();
+-        statusDialog->update();
+-        qDebug() << Q_FUNC_INFO << "set serial" << statusDialog->mSerialLabel_2->text() << statusDialog->mActivationCodeLabel_2->text() << mTimeText;
+-        break;
+-    }
+-
+-}
+ 
+ /* 获取内部版本号 */
+ void About::setVersionNumCompenent()
+@@ -519,7 +330,6 @@ void About::setupVersionCompenent()
+         !versionID.compare(vFour, Qt::CaseInsensitive) ||
+         !versionID.compare(v11, Qt::CaseInsensitive)) {
+ 
+-        mAboutWidget->getActivaFrame()->show();
+ 
+         if (mAboutDBus->property("themeMode").toString() == UKUI_DARK) {
+             mThemePixmap = loadSvg("://img/plugins/about/logo-dark.svg", 130, 50);
+@@ -527,7 +337,6 @@ void About::setupVersionCompenent()
+             mThemePixmap = loadSvg("://img/plugins/about/logo-light.svg", 130, 50);
+         }
+     } else {
+-        mAboutWidget->getActivaFrame()->setVisible(false);
+         mAboutWidget->getTrialBtn()->setVisible(false);
+         mAboutWidget->getAndLabel()->setVisible(false);
+         mThemePixmap = loadSvg("://img/plugins/about/logoukui.svg", 130, 50);
+@@ -613,44 +422,9 @@ void About::setPrivacyCompent()
+     mAboutWidget->getPriBtn()->parentWidget()->hide();
+ }
+ 
+-void About::showExtend(QString dateres)
+-{
+-    if (!dateRes.contains(tr("expired"))) {
+-        dateRes = dateres + QString("(%1)").arg(tr("expired"));
+-    }
+-    mAboutWidget->getActivationBtn()->setText(tr("Extend"));
+-}
+ 
+-int About::getMonth(QString month)
+-{
+-    if (month == "Jan") {
+-        return 1;
+-    } else if (month == "Feb") {
+-        return 2;
+-    } else if (month == "Mar") {
+-        return 3;
+-    } else if (month == "Apr") {
+-        return 4;
+-    } else if (month == "May") {
+-        return 5;
+-    } else if (month == "Jun") {
+-        return 6;
+-    } else if (month == "Jul") {
+-        return 7;
+-    } else if (month == "Aug") {
+-        return 8;
+-    } else if (month == "Sep" || month == "Sept") {
+-        return 9;
+-    } else if (month == "Oct") {
+-        return 10;
+-    } else if (month == "Nov") {
+-        return 11;
+-    } else if (month == "Dec") {
+-        return 12;
+-    }else {
+-        return 0;
+-    }
+-}
++
++
+ 
+ void About::reboot()
+ {
+@@ -664,32 +438,7 @@ void About::reboot()
+     rebootDbus = nullptr;
+ }
+ 
+-bool About::isActivationVersionAtLeast(const QString &requiredVersion) {
+-    QProcess versionProcess;
+-    versionProcess.start("dpkg-query", QStringList() << "--showformat=${Version}" << "--show" << "kylin-activation");
+-    versionProcess.waitForFinished();
+-
+-    if (versionProcess.exitCode() != 0) {
+-        qDebug() << "kylin-activation not find";
+-        return false;
+-    }
+-
+-    QString installedVersion = versionProcess.readAllStandardOutput().trimmed();
+-    if (installedVersion.isEmpty()) {
+-        qDebug() << "kylin-activation not find";
+-        return false;
+-    }
+ 
+-    qDebug() << "install version" << installedVersion << "required version" << requiredVersion;
+-    QProcess compareProcess;
+-    compareProcess.start("dpkg", QStringList() << "--compare-versions" << installedVersion << ">=" << requiredVersion);
+-    compareProcess.waitForFinished();
+-
+-    bool satisfied = (compareProcess.exitCode() == 0);
+-    qDebug() << "version satisfied" << satisfied;
+-
+-    return satisfied;
+-}
+ 
+ void About::openHostNameDialog()
+ {
+@@ -722,58 +471,7 @@ void About::openHostNameDialog()
+ }
+ 
+ /* 处理窗口缩放时的文本显示 */
+-bool About::eventFilter(QObject *obj, QEvent *event)
+-{
+-    if ( obj == mAboutWidget->getSequenceContent()) {
+-        if (event->type() == QEvent::MouseButtonPress){
+-            if (isActivationVersionAtLeast("1.3.11.2-0k5.0")) {
+-                qDebug() << "kylin-activation version >= 1.3.11.2-0k5.0";
+-                runActiveWindow();
+-                return true;
+-            }
+-            qDebug() << "kylin-activation version not satisfied >= 1.3.11.2-0k5.0";
+-            QMouseEvent * mouseEvent = static_cast<QMouseEvent *>(event);
+-            if (mouseEvent->button() == Qt::LeftButton  && !mAboutWidget->getSequenceContent()->text().isEmpty()
+-                    && mAboutWidget->getSequenceContent()->isEnabled()){
+-                UkccCommon::buriedSettings(name(), "show activation info", QString("clicked"));
+-                if (!dateRes.isEmpty()) {
+-                    activestatus = true;
+-                    compareTime(dateRes);
+-                }
+-                StatusDialog *dialog = new StatusDialog(mAboutWidget);
+-                dialog->setObjectName("StatusDialog");
+-                dialog->mLogoLabel->setPixmap(mThemePixmap);
+-                connect(this,&About::changeTheme,[=](){
+-                    dialog->mLogoLabel->setPixmap(mThemePixmap);
+-                });
+-                dialog->mVersionLabel_1->setText(tr("Version"));
+-                dialog->mVersionLabel_2->setText(mAboutWidget->getVersion()->text());
+-                dialog->mStatusLabel_1->setText(tr("Status"));
+-                dialog->mStatusLabel_2->setText(mAboutWidget->getActiveStatus()->text());
+-                dialog->mSerialLabel_1->setText(tr("Serial"));
+-                dialog->mSerialLabel_2->setText(mAboutWidget->getSequenceContent()->text());
+-                dialog->mTimeLabel_1->setText(mTimeText);
+-                dialog->mTimeLabel_2->setText(dateRes);
+-                if (dialog->mTimeLabel_2->text().contains(tr("expired"))) {
+-                    dialog->mTimeLabel_2->setFontColor(Qt::red);
+-                }
+ 
+-                if (!activestatus && UkccCommon::isCloudVirtualDesktop()) {
+-                    dialog->mTimeLabel_1->parentWidget()->hide();
+-                }
+-                if (!activestatus) {
+-                    dialog->mTimeLabel_1->parentWidget()->hide();
+-                }
+-                qDebug() << Q_FUNC_INFO << "activestatus" << activestatus << "dateRes" << dateRes;
+-                dialog->mExtentBtn->setText(mAboutWidget->getActivationBtn()->text());
+-                connect(dialog->mExtentBtn, &QPushButton::clicked, this, &About::runActiveWindow);
+-                dialog->exec();
+-                return true;
+-            }
+-        }
+-    }
+-    return QObject::eventFilter(obj, event);
+-}
+ 
+ 
+ QStringList About::getUserDefaultLanguage()
+@@ -920,64 +618,12 @@ void About::setEnableBySecurity() {
+     });
+ }
+ 
+-void About::compareTime(QString date)
+-{
+-    QElapsedTimer timer;
+-    timer.start();
+-    QString s1 = mAboutDBus->property("netDate").toString();
+-    qDebug() << Q_FUNC_INFO << " ntpTime:" << s1 << timer.elapsed();
+-    QStringList list_1;
+-    QStringList list_2 = date.split("-");
+-    int year;
+-    int mouth;
+-    int day;
+-    if (s1.isEmpty()) {    //未连接上网络, 和系统时间作对比
+-        QString currenttime =  QDateTime::currentDateTime().toString("yyyy-MM-dd");
+-        qDebug() << currenttime;
+-         list_1 = currenttime.split("-");
+-         year = QString(list_1.at(0)).toInt();
+-         mouth = QString(list_1.at(1)).toInt();
+-         day = QString(list_1.at(2)).toInt();
+-    } else {    //获取到网络时间
+-        s1.remove(QChar('\n'), Qt::CaseInsensitive);
+-        s1.replace(QRegExp("[\\s]+"), " ");   //把所有的多余的空格转为一个空格
+-        qDebug()<<"网络时间 : "<<s1;
+-        list_1 = s1.split(" ");
+-        year = QString(list_1.at(list_1.count() -1)).toInt();
+-        mouth = getMonth(list_1.at(1));
+-        day = QString(list_1.at(2)).toInt();
+-    }
+-    if (QString(list_2.at(0)).toInt() > year) { //未到服务到期时间
+-    } else if (QString(list_2.at(0)).toInt() == year) {
+-        if (QString(list_2.at(1)).toInt() > mouth) {
+-        } else if (QString(list_2.at(1)).toInt() == mouth) {
+-            if (QString(list_2.at(2)).toInt() > day) {
+-            } else {   // 已过服务到期时间
+-                showExtend(date);
+-            }
+-        } else {
+-            showExtend(date);
+-        }
+-    } else {
+-        showExtend(date);
+-    }
+-}
+ 
+-void About::activeSlot(int activeSignal)
+-{
+-    if (!activeSignal) {
+-        setupSerialComponent();
+-    }
+-}
++
++
+ 
+ /* 打开激活窗口 */
+-void About::runActiveWindow()
+-{
+-    UkccCommon::buriedSettings(name(), "Activate the system or extend the service", QString("settings"));
+-    auto message = QDBusMessage::createMethodCall("org.ukui.ukcc.session", "/About",
+-        "org.ukui.ukcc.session.About", "openActivation");
+-    QDBusConnection::sessionBus().asyncCall(message, 2000);
+-}
++
+ 
+ /* 获取用户昵称 */
+ void About::changedSlot()
+diff --git a/plugins/system/about/about.h b/plugins/system/about/about.h
+index 39cffe8..1805200 100644
+--- a/plugins/system/about/about.h
++++ b/plugins/system/about/about.h
+@@ -44,7 +44,6 @@
+ using namespace ukcc;
+ #include "hostnamedialog.h"
+ #include "privacydialog.h"
+-#include "statusdialog.h"
+ 
+ #include "shell/interface.h"
+ #include "lightlabel.h"
+@@ -65,8 +64,6 @@ namespace Ui {
+ class About;
+ }
+ 
+-typedef bool (*KylinActivationRsaCheckFunc)(const char* randstr, const char* rsa_sig);
+-static constexpr const char* LIB_KYLIN_ACTIVATION_PATH = "/usr/lib/libkylin-activation.so";
+ 
+ class About : public QObject, CommonInterface
+ {
+@@ -87,9 +84,7 @@ public:
+     bool isEnable() const Q_DECL_OVERRIDE;
+ 
+ private:
+-    void initActiveDbus();
+     void setConnect();
+-    void setupSerialComponent();
+     void setVersionNumCompenent();
+     void setupVersionCompenent();
+     void setupDesktopComponent();
+@@ -100,20 +95,14 @@ private:
+     void setupSysInstallComponent();
+     void setupUpgradeComponent();
+     void securityControl();
+-    void showExtend(QString dateres);
+-    int getMonth(QString month);
+     void reboot();
+-    bool eventFilter(QObject *obj, QEvent *event);
+     QStringList getUserDefaultLanguage();
+-    void compareTime(QString date);
+ 
+     QPixmap loadSvg(const QString &path, int width, int height);
+     void preInitialize();
+     void logoClickSlot();
+     // 主机名重命名：走 clicked（空格/回车/鼠标均可），勿仅监听 MouseButtonPress
+     void openHostNameDialog();
+-    int loadLibrary();
+-    bool isActivationVersionAtLeast(const QString &requiredVersion);
+ 
+ private:
+     AboutUi *mAboutWidget;
+@@ -125,20 +114,17 @@ private:
+ 
+     bool mFirstLoad;
+ 
+-    QSharedPointer<QDBusInterface> activeInterface;
+     hp::QRCodeInterface *app; //hp插件
+ 
+     QString mMemtotal;
+     QString mMemAvaliable;
+ 
+-    QString dateRes = "";
+ 
+     QStringList mNtphostName;
+     QStringList mDiskParts;
+     QString mTimeText;
+ 
+     QPixmap mThemePixmap;
+-    bool activestatus = true;
+ 
+     QDBusInterface *mUkccDbus = nullptr;
+     QObject *mAboutDBus = nullptr;
+@@ -146,8 +132,6 @@ private:
+     int m_currentIndex = 0;
+     bool m_isFilled = false;
+     QGSettings *m_maintainSettings = nullptr;
+-    KylinActivationRsaCheckFunc m_rsaCheckFunc = nullptr;
+-    QLibrary m_library;
+ 
+ Q_SIGNALS:
+     void changeTheme();
+@@ -157,8 +141,6 @@ private Q_SLOTS:
+     void uploadStateChangedSlot(int state);
+ 
+ private slots:
+-    void activeSlot(int activeSignal);
+-    void runActiveWindow();
+     void changedSlot();
+     void openIntelSlot(const QString &desktopFile);
+     void keyChangedSlot(const QString &key);
+diff --git a/plugins/system/about/about.pro b/plugins/system/about/about.pro
+index 9544245..2153679 100644
+--- a/plugins/system/about/about.pro
++++ b/plugins/system/about/about.pro
+@@ -35,7 +35,6 @@ HEADERS += \
+     aboutui.h \
+     hostnamedialog.h \
+     privacydialog.h \
+-    statusdialog.h \
+     trialdialog.h
+ 
+ SOURCES += \
+@@ -43,7 +42,6 @@ SOURCES += \
+     aboutui.cpp \
+     hostnamedialog.cpp \
+     privacydialog.cpp \
+-    statusdialog.cpp \
+     trialdialog.cpp
+ 
+ FORMS +=
+diff --git a/plugins/system/about/aboutui.cpp b/plugins/system/about/aboutui.cpp
+index 6caf461..8731510 100644
+--- a/plugins/system/about/aboutui.cpp
++++ b/plugins/system/about/aboutui.cpp
+@@ -238,7 +238,6 @@ void AboutUi::initUi()
+     mUsernameFrame = createFrame(mUsernameLabel_1, mUsernameLabel_2);
+ 
+     /* 激活信息 */
+-    mActivationFrame = initActiveUi();
+ 
+     /* 版权所有 */
+     mTipLabel = new KLabel(Aboutwidget);
+@@ -276,7 +275,6 @@ void AboutUi::initUi()
+     AboutLayout->addWidget(mTitleLabel);
+     AboutLayout->addWidget(m_hostNameRenameFrame);
+     AboutLayout->addWidget(mInformationFrame);
+-    AboutLayout->addWidget(mActivationFrame);
+     AboutLayout->addWidget(mTipLabel);
+     AboutLayout->addSpacerItem(item);
+     AboutLayout->addWidget(mPriTitleLabel);
+@@ -433,71 +431,7 @@ QFrame *AboutUi::initHoldUi()
+     return frame;
+ }
+ 
+-QFrame *AboutUi::initActiveUi()
+-{
+-    QFrame *frame = new QFrame;
+-    setShape(frame, QFrame::Box);
+ 
+-    QHBoxLayout *mActivationLayout_1 = new QHBoxLayout(frame);
+-    mActivationLayout_1->setContentsMargins(16, 16, 16, 16);
+-    mActivationLayout_1->setSpacing(8);
+-
+-    QGridLayout *mActivationLayout = new QGridLayout();
+-    mActivationLayout->setVerticalSpacing(8);
+-
+-    mStatusLabel_1 = new KLabel(this);
+-    KDK_EXTEND_ALL_INFO_FORMAT(mStatusLabel_1, "About", "", "");
+-    mStatusLabel_1->setFixedSize(196, 30);
+-    mStatusLabel_2 = new KLabel(this);
+-    KDK_EXTEND_ALL_INFO_FORMAT(mStatusLabel_2, "About", "", "");
+-    mSequenceLabel_1 = new KLabel(this);
+-    KDK_EXTEND_ALL_INFO_FORMAT(mSequenceLabel_1, "About", "", "");
+-    mSequenceLabel_1->setFixedSize(196, 30);
+-    mSequenceLabel_2 = new KBorderlessButton(this);
+-    KDK_EXTEND_ALL_INFO_FORMAT(mSequenceLabel_2, "About", "", "");
+-    mSequenceLabel_2->setObjectName("sequence");
+-    mSequenceLabel_2->installEventFilter(this);
+-    mActivationBtn = new QPushButton(this);
+-    KDK_EXTEND_ALL_INFO_FORMAT(mActivationBtn, "About", "", "");
+-    mActivationBtn->setObjectName("acivation");
+-
+-    mActivationBtn->setFixedWidth(120);
+-
+-    m_customerInfoLabel = new KLabel(frame);
+-    KDK_EXTEND_ALL_INFO_FORMAT(m_customerInfoLabel, "About", "", "");
+-    //~ contents_path /About/Customer Info
+-    m_customerInfoLabel->setText(tr("Customer Info"));
+-    m_customerInfoLabel->setAccessibleName(tr("Customer Info"));
+-    m_customerInfoLabel->setAccessibleDescription(QString());
+-    m_customerInfoLabel->setFixedSize(196,30);
+-    m_customerInfoValueLabel = new LightLabel(frame);
+-    KDK_EXTEND_ALL_INFO_FORMAT(m_customerInfoValueLabel, "About", "", "");
+-
+-    m_serviceSupportLabel = new KLabel(frame);
+-    KDK_EXTEND_ALL_INFO_FORMAT(m_serviceSupportLabel, "About", "", "");
+-    //~ contents_path /About/Service And Support
+-    m_serviceSupportLabel->setText(tr("Service And Support"));
+-    m_serviceSupportLabel->setAccessibleName(tr("Service And Support"));
+-    m_serviceSupportLabel->setAccessibleDescription(QString());
+-    m_serviceSupportLabel->setFixedSize(196, 30);
+-    m_serviceSupportValueLabel = new LightLabel(frame);
+-    KDK_EXTEND_ALL_INFO_FORMAT(m_serviceSupportValueLabel, "About", "", "");
+-    m_serviceSupportValueLabel->setText("400-089-1870");
+-
+-    mActivationLayout->addWidget(mStatusLabel_1, 0, 0, 1, 1);
+-    mActivationLayout->addWidget(mStatusLabel_2, 0, 1, 1, 3,Qt::AlignLeft);
+-    mActivationLayout->addWidget(mSequenceLabel_1, 1, 0, 1, 1);
+-    mActivationLayout->addWidget(mSequenceLabel_2, 1, 1, 1, 3,Qt::AlignLeft);
+-    mActivationLayout->addWidget(m_customerInfoLabel, 2, 0, 1, 1);
+-    mActivationLayout->addWidget(m_customerInfoValueLabel, 2, 1, 1, 3, Qt::AlignLeft);
+-    mActivationLayout->addWidget(m_serviceSupportLabel, 3, 0, 1, 1);
+-    mActivationLayout->addWidget(m_serviceSupportValueLabel, 3, 1, 1, 3, Qt::AlignLeft);
+-
+-    mActivationLayout_1->addLayout(mActivationLayout);
+-    mActivationLayout_1->addWidget(mActivationBtn);
+-
+-    return frame;
+-}
+ 
+ QFrame *AboutUi::initPrivacyUi()
+ {
+@@ -590,21 +524,10 @@ void AboutUi::initSearchText()
+     mUsernameLabel_1->setText(tr("User"));
+     mUsernameLabel_1->setAccessibleName(tr("User"));
+     mUsernameLabel_1->setAccessibleDescription(QString());
+-    //~ contents_path /About/Status
+-    mStatusLabel_1->setText(tr("Status"));
+-    mStatusLabel_1->setAccessibleName(tr("Status"));
+-    mStatusLabel_1->setAccessibleDescription(QString());
+-    //~ contents_path /About/Active
+-    mActivationBtn->setText(tr("Active"));
+-    //~ contents_path /About/Serial
+-    mSequenceLabel_1->setText(tr("Serial"));
+-    mSequenceLabel_1->setAccessibleName(tr("Serial"));
+-    mSequenceLabel_1->setAccessibleDescription(QString());
+ 
+     m_hostNameRenameLabel->setAccessibleName(tr("HostName:"));
+     m_hostNameRenameLabel->setBuddy(m_hostNameRenameButton);
+     refreshHostNameRenameAccessibleName();
+-    mActivationBtn->setAccessibleName(tr("Active"));
+     mTrialBtn->setAccessibleName(tr("<<Protocol>>"));
+     mAgreeBtn->setAccessibleName(tr("<<Privacy>>"));
+     if (mHpBtn) {
+@@ -613,7 +536,6 @@ void AboutUi::initSearchText()
+     if (mEducateBtn) {
+         mEducateBtn->setAccessibleName(tr("See user manual>>"));
+     }
+-    mSequenceLabel_2->setAccessibleName(tr("Serial"));
+ }
+ 
+ void AboutUi::setComponent()
+@@ -628,7 +550,6 @@ void AboutUi::setComponent()
+         mPriTitleLabel->hide();
+         mAndLabel->hide();
+         mAgreeBtn->hide();
+-        mActivationFrame->hide();
+         mTipLabel->hide();
+         mTrialBtn->hide();
+         mPatchVersionFrame->hide();
+diff --git a/plugins/system/about/aboutui.h b/plugins/system/about/aboutui.h
+index 675047f..f9cfd47 100644
+--- a/plugins/system/about/aboutui.h
++++ b/plugins/system/about/aboutui.h
+@@ -49,13 +49,11 @@ public:
+     void initUi();
+     void initCopyRightName();
+     QFrame *initHoldUi();
+-    QFrame *initActiveUi();
+     QFrame *initPrivacyUi();
+     QFrame *initInfoBtnUi();
+     void initSearchText();
+     void setComponent();
+ 
+-    QPushButton *getActivationBtn() {return mActivationBtn;}
+     QPushButton *getHpBtn() {return mHpBtn;}
+     QPushButton *getEducateBtn() {return mEducateBtn;}
+ 
+@@ -77,7 +75,6 @@ public:
+     KLabel *getHostName() {return m_hostNameRenameValueLabel;}
+     LightLabel *getShowHostName() {return mHostNameLabel_2;}
+     LightLabel *getMemeory() {return mMemoryLabel_2;}
+-    KLabel *getActiveStatus() {return mStatusLabel_2;}
+     LightLabel *getDiskContent() {return mDiskLabel_2;}
+     LightLabel *getInstallDate() {return mInstallDateLabel_2;}
+     LightLabel *getUpgradeDate() {return mUpgradeDateLabel_2;}
+@@ -85,13 +82,10 @@ public:
+     // 主机名变更后刷新重命名按钮读屏名（「主机名 重命名」，行标题由 buddy 提供）
+     void refreshHostNameRenameAccessibleName();
+ 
+-    KLabel *getSequence() {return mSequenceLabel_1;}
+-    KBorderlessButton *getSequenceContent() {return mSequenceLabel_2;}
+     KLabel *getDiskLabel() {return mDiskLabel_1;}
+ 
+     QFrame *getBuildFrame() {return mVersionNumberFrame;}
+     QFrame *getPatchFrame() {return mPatchVersionFrame;}
+-    QFrame *getActivaFrame() {return mActivationFrame;}
+     QFrame *getDiskFrame() {return mDiskFrame;}
+     QFrame *getInstallDateFrame() {return mInstallDateFrame;}
+     QFrame *getUpgradeDateFrame() {return mUpgradeDateFrame;}
+@@ -99,8 +93,6 @@ public:
+     KLabel* getHostNameLabel1() {return mHostNameLabel_1;}
+ 
+     QHBoxLayout *getDiskLayout() {return mDiskLayout;}
+-    KLabel *getCustomerInfoLabel() {return m_customerInfoLabel;}
+-    LightLabel *getCustomerInfoValueLabel() {return m_customerInfoValueLabel;}
+ 
+     bool isDomain() {return m_isHostNameEdit;}
+ 
+@@ -124,7 +116,6 @@ private:
+     KLabel *mHoldTitleLabel;
+ 
+     QFrame *mInformationFrame;
+-    QFrame *mActivationFrame;
+     QFrame *mVersionFrame;
+     QFrame *mVersionNumFrame;
+     QFrame *mVersionNumberFrame;
+@@ -180,10 +171,6 @@ private:
+     LightLabel *mUsernameLabel_2;
+ 
+ 
+-    KLabel *mStatusLabel_1;
+-    KLabel *mStatusLabel_2;
+-    KLabel *mSequenceLabel_1;
+-    KBorderlessButton *mSequenceLabel_2;
+     KLabel *mTrialLabel;
+     KLabel *mAndLabel;
+     KLabel *mAgreeLabel;
+@@ -191,12 +178,7 @@ private:
+     KLabel *mEducateIconLabel;
+     QLabel *mEducateLabel;
+     KLabel *mTipLabel;
+-    KLabel* m_customerInfoLabel = nullptr;
+-    LightLabel* m_customerInfoValueLabel = nullptr;
+-    KLabel* m_serviceSupportLabel = nullptr;
+-    LightLabel* m_serviceSupportValueLabel = nullptr;
+ 
+-    QPushButton *mActivationBtn;
+     QPushButton *mHpBtn;
+     QPushButton *mEducateBtn;
+     KSwitchButton *mPriBtn;
+diff --git a/registeredSession/plugins/about/aboutinterface.cpp b/registeredSession/plugins/about/aboutinterface.cpp
+index a90f848..c4cf79d 100644
+--- a/registeredSession/plugins/about/aboutinterface.cpp
++++ b/registeredSession/plugins/about/aboutinterface.cpp
+@@ -18,7 +18,6 @@
+  *
+  */
+ #include "aboutinterface.h"
+-#include "ntpdateprovider.h"
+ 
+ #include <QFile>
+ #include <QTextStream>
+@@ -279,21 +278,9 @@ QString AboutInterface::getUpgradeDate()
+     return QString();
+ }
+ 
+-QString AboutInterface::getNtpTime()
+-{
+-    // Property reads run on the session service's event loop. Never join DNS
+-    // threads or wait for network packets here (including Properties.GetAll).
+-    static auto *provider = new NtpDateProvider(QCoreApplication::instance());
+-    return provider->value();
+-}
+ 
+-bool AboutInterface::openActivation()
+-{
+-    QString cmd = "kylin-activation";
+-    QProcess process(this);
+-    process.startDetached(cmd);
+-    return true;
+-}
++
++
+ 
+ QStringList AboutInterface::readFile(QString filepath)
+ {
+diff --git a/registeredSession/plugins/about/aboutinterface.h b/registeredSession/plugins/about/aboutinterface.h
+index 8851578..9abe876 100644
+--- a/registeredSession/plugins/about/aboutinterface.h
++++ b/registeredSession/plugins/about/aboutinterface.h
+@@ -47,7 +47,6 @@ class AboutInterface : public UKUI::ServiceObject
+     Q_PROPERTY(QString blockInfo READ getBlockInfo)
+     Q_PROPERTY(QString diskInfo READ getDiskInfo)
+     Q_PROPERTY(QString upgradeDate READ getUpgradeDate)
+-    Q_PROPERTY(QString netDate READ getNtpTime)
+     Q_PROPERTY(QString availableMemory READ getAvailableMemory)
+ public:
+     AboutInterface();
+@@ -61,11 +60,9 @@ protected:
+     QString getBlockInfo();
+     QString getDiskInfo();
+     QString getUpgradeDate();
+-    QString getNtpTime();
+     QString getAvailableMemory();
+ 
+ public Q_SLOTS:
+-    bool openActivation();
+     void setThemeMode(QString styleName);
+ 
+ Q_SIGNALS:

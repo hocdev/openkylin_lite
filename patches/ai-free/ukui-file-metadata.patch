@@ -1,0 +1,201 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index be65da3..d33d36e 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -51,7 +51,7 @@ endif ()
+ find_package(PkgConfig REQUIRED)
+ find_package(ZLIB REQUIRED)
+ 
+-set(UKUI_FILE_METADATA_PC_PKGS uchardet libavcodec libavformat libavutil libswscale taglib minizip tesseract lept)
++set(UKUI_FILE_METADATA_PC_PKGS uchardet libavcodec libavformat libavutil libswscale taglib minizip)
+ foreach(PC_LIB IN LISTS UKUI_FILE_METADATA_PC_PKGS)
+     string(TOUPPER "${PC_LIB}" PC_PREFIX)
+     # Normalize libav* package names to the shorter imported-target prefixes
+diff --git a/autotests/CMakeLists.txt b/autotests/CMakeLists.txt
+index d53410f..65e6a09 100644
+--- a/autotests/CMakeLists.txt
++++ b/autotests/CMakeLists.txt
+@@ -133,8 +133,6 @@ target_link_libraries(PngExtractorTest PUBLIC
+         Qt${QT_VERSION_MAJOR}::Core
+         Qt${QT_VERSION_MAJOR}::Test
+         ukui-file-metadata
+-        PkgConfig::TESSERACT
+-        PkgConfig::LEPT
+ )
+ add_test(PngExtractortest ${CMAKE_BINARY_DIR}/autotests/PngExtractorTest)
+ 
+diff --git a/debian/control b/debian/control
+index 86c2afe..45f4285 100644
+--- a/debian/control
++++ b/debian/control
+@@ -14,8 +14,6 @@ Build-Depends: debhelper-compat (= 12),
+                libavformat-dev,
+                libavutil-dev,
+                libswscale-dev,
+-               libtesseract-dev,
+-               libleptonica-dev,
+                libminizip-dev,
+                cmake,
+                qttools5-dev,
+@@ -30,7 +28,6 @@ Package: libukui-file-metadata1
+ Section: libs
+ Architecture: any
+ Depends: libukui-file-metadata-bin (= ${binary:Version}),
+-         tesseract-ocr-chi-sim,
+          ${misc:Depends},
+          ${shlibs:Depends},
+ Description: The file metadata utils of UKUI desktop environment.
+diff --git a/src/CMakeLists.txt b/src/CMakeLists.txt
+index 5e8f5ec..f226b00 100644
+--- a/src/CMakeLists.txt
++++ b/src/CMakeLists.txt
+@@ -72,8 +72,6 @@ target_link_libraries(ukui-file-metadata  PUBLIC
+         Qt${QT_VERSION_MAJOR}::Xml
+         Qt${QT_VERSION_MAJOR}::Widgets
+         PRIVATE
+-        PkgConfig::TESSERACT
+-        PkgConfig::LEPT
+         PkgConfig::MINIZIP
+         ZLIB::ZLIB)
+ 
+diff --git a/src/extractors/image-extractor.cpp b/src/extractors/image-extractor.cpp
+index b817c18..e3938fe 100644
+--- a/src/extractors/image-extractor.cpp
++++ b/src/extractors/image-extractor.cpp
+@@ -22,7 +22,6 @@
+ 
+ #include "image-extractor.h"
+ #include "thumbnail-utils.h"
+-#include "ocr-utils.h"
+ #include <QImage>
+ 
+ using namespace UkuiFileMetadata;
+@@ -65,7 +64,5 @@ void ImageExtractor::extract(ExtractionResult *result) {
+         }
+     }
+ 
+-    if (result->inputFlags() & ExtractionResult::ExtractPlainText) {
+-        result->append(OcrUtils::getTextInPicture(result->inputUrl()));
+-    }
++    
+ }
+diff --git a/src/extractors/png-extractor.cpp b/src/extractors/png-extractor.cpp
+index 6f42e7a..997d04a 100644
+--- a/src/extractors/png-extractor.cpp
++++ b/src/extractors/png-extractor.cpp
+@@ -6,7 +6,6 @@
+  */
+ 
+ #include "png-extractor.h"
+-#include "ocr-utils.h"
+ #include "thumbnail-utils.h"
+ #include <QImageReader>
+ 
+diff --git a/src/ocr-utils.cpp b/src/ocr-utils.cpp
+index 74973ae..48b5fe1 100644
+--- a/src/ocr-utils.cpp
++++ b/src/ocr-utils.cpp
+@@ -5,97 +5,11 @@
+ */
+ 
+ #include "ocr-utils.h"
+-#include <QDebug>
+-#include <tesseract/baseapi.h>
+-#include <leptonica/allheaders.h>
+-#include <QStandardPaths>
+-#include <QUrl>
+-#include <QCryptographicHash>
+-#include <QFile>
+-#include <QDir>
+-#include <QFileInfo>
+-#include <QDateTime>
+ 
+-using namespace UkuiFileMetadata;
+-
+-static const QString VERSION = "0.0";
+-
+-QString ocrFailedDir() {
+-    return QStandardPaths::writableLocation(QStandardPaths::GenericCacheLocation) + QString("/OcrCache-%0/fail/").arg(VERSION);
+-}
+-
+-void handleFailure(const QString &path) {
+-    if (!QFile::exists(ocrFailedDir())) {
+-        QDir failedDir(ocrFailedDir());
+-        failedDir.mkpath(ocrFailedDir());
+-    }
+-
+-    QString md5 = QCryptographicHash::hash(QUrl::fromLocalFile(path).toString().toUtf8(), QCryptographicHash::Md5).toHex();
+-    QByteArray modifiedTime = QString::number(QFileInfo(path).lastModified().toSecsSinceEpoch()).toUtf8();
+-    QFile failedFile(ocrFailedDir() + md5 + ".txt");
+-    if (failedFile.exists()) {
+-        failedFile.open(QIODevice::ReadOnly);
+-        QByteArray lastModifiedTime = failedFile.readAll();
+-        failedFile.close();
+-        if (lastModifiedTime == modifiedTime) {
+-            return;
+-        }
+-    }
+-    failedFile.open(QIODevice::WriteOnly | QIODevice::Text);
+-    failedFile.write(modifiedTime);
+-    failedFile.close();
+-}
+-
+-QString OcrUtils::getTextInPicture(const QString &path) {
+-    QString content;
+-    QString md5 = QCryptographicHash::hash(QUrl::fromLocalFile(path).toString().toUtf8(), QCryptographicHash::Md5).toHex();
+-    QFile failedFile(ocrFailedDir() + md5 + ".txt");
+-    if (failedFile.exists()) {
+-        failedFile.open(QIODevice::ReadOnly);
+-        if (failedFile.readAll() == QString::number(QFileInfo(path).lastModified().toSecsSinceEpoch()).toUtf8()) {
+-            qWarning() << "Ocr failed because failed record detected" << path;
+-            return content;
+-        }
+-    }
+-
+-    auto *api = new tesseract::TessBaseAPI();
+-    if (api->Init(nullptr, "chi_sim")) {
+-        qWarning() << "Could not initialize tesseract.";
+-        if (api) {
+-            api->End();
+-            delete api;
+-            api = nullptr;
+-        }
+-        return content;
+-    }
+-    api->SetVariable("user_defined_dpi", "1080");//图片中未标明分辨率的默认设置为1080
+-
+-    Pix *image = pixRead(path.toStdString().data());
+-    if (!image) {
+-        handleFailure(path);
+-        if (api) {
+-            api->End();
+-            delete api;
+-            api = nullptr;
+-        }
+-        return content;
+-    }
+-    api->SetImage(image);
+-    char *tmp = api->GetUTF8Text();
+-    content = QString::fromLocal8Bit(tmp);
+-    delete [] tmp;
+-    pixDestroy(&image);
+-    api->Clear();
+-
+-    if (api) {
+-        api->End();
+-        delete api;
+-        api = nullptr;
+-    }
+-    if(content.isEmpty()) {
+-        handleFailure(path);
+-    }
+-    return content;
++// Preserve the public metadata ABI for existing desktop clients. This edition
++// has no OCR backend: image metadata/thumbnails remain available separately.
++QString UkuiFileMetadata::OcrUtils::getTextInPicture(const QString &path)
++{
++    Q_UNUSED(path)
++    return QString();
+ }
+-
+-

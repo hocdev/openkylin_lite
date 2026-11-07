@@ -1,0 +1,691 @@
+diff --git a/debian/control b/debian/control
+index 83b32bf..1d4abce 100644
+--- a/debian/control
++++ b/debian/control
+@@ -27,12 +27,9 @@ Build-Depends: debhelper-compat (=12),
+                libkysdk-systime-dev,
+                libkysdk-datacollect-dev,
+                libukui-file-metadata-dev,
+-               libkylin-ai-base-dev,
+                libukui-quick-dev(>=4.20.8.0-ok3.0),
+                libkf5wayland-dev,
+                libukui-service-interface-dev,
+-               libkyai-data-management-client-dev,
+-               libkysdk-ai-common-dev,
+                libkysdk-proc-dev,
+                libsqlite3-dev
+ Standards-Version: 4.5.0
+diff --git a/libsearch/CMakeLists.txt b/libsearch/CMakeLists.txt
+index 7d501ab..c7f1a50 100644
+--- a/libsearch/CMakeLists.txt
++++ b/libsearch/CMakeLists.txt
+@@ -18,7 +18,6 @@ find_package(qt${QT_VERSION_MAJOR}xdg)
+ find_package(ukui-file-metadata)
+ find_package(xapian)
+ find_package(ukui-quick COMPONENTS platform REQUIRED)
+-find_package(KysdkAiCommon)
+ 
+ set(GSETTINGS_PKG gsettings-qt)
+ if (QT_VERSION_MAJOR EQUAL 6)
+@@ -34,7 +33,7 @@ set(LIBUKUI_SEARCH_PC_PKGS
+         kysdk-qtwidgets
+         kysdk-systime
+         kysdk-datacollect
+-        kyai-data-management-client
++        
+         )
+ 
+ foreach(PC_LIB IN ITEMS ${LIBUKUI_SEARCH_PC_PKGS})
+@@ -66,7 +65,6 @@ set(LIBUKUI_SEARCH_SRC
+         gobject-template.cpp gobject-template.h
+         index/basic-indexer.cpp index/basic-indexer.h
+         index/batch-indexer.cpp index/batch-indexer.h
+-        index/ai-indexer.cpp index/ai-indexer.h
+         index/compatible-define.h
+         index/database.cpp index/database.h
+         index/document.cpp index/document.h
+@@ -110,7 +108,6 @@ set(LIBUKUI_SEARCH_SRC
+         searchinterface/ukui-search-task.cpp searchinterface/ukui-search-task.h
+         settingsearch/settings-search-plugin.cpp settingsearch/settings-search-plugin.h
+         websearch/web-search-plugin.cpp websearch/web-search-plugin.h
+-        aisearch/ai-search-plugin.cpp aisearch/ai-search-plugin.h
+         thumbnail-creator.cpp thumbnail-creator.h
+         icon-loader.cpp icon-loader.h
+         data-collecter.cpp
+@@ -207,7 +204,6 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
+         xapian
+         ukui-file-metadata
+         ukui-quick::platform
+-        kysdk-ai-common
+         ${LIBUKUI_SEARCH_EXTERNAL_LIBS}
+         )
+ 
+diff --git a/libsearch/index/batch-indexer.cpp b/libsearch/index/batch-indexer.cpp
+index 485f146..7c50c11 100644
+--- a/libsearch/index/batch-indexer.cpp
++++ b/libsearch/index/batch-indexer.cpp
+@@ -33,7 +33,6 @@
+ #include "file-content-indexer.h"
+ #include "writable-database.h"
+ #include "compatible-define.h"
+-#include "ai-indexer.h"
+ using namespace UkuiSearch;
+ BatchIndexer::BatchIndexer(const QStringList &folders, const QStringList &blackList,
+                            QAtomicInt& indexStop,
+@@ -83,7 +82,6 @@ void BatchIndexer::run()
+     }
+     if(m_target & Target::Ai) {
+         Q_EMIT aiIndexStart(m_mode);
+-        aiIndex();
+         Q_EMIT aiIndexDone(m_mode);
+     }
+     m_cache.clear();
+@@ -413,130 +411,4 @@ void BatchIndexer::ocrIndex()
+ 
+ }
+ 
+-void BatchIndexer::aiIndex()
+-{
+-    qDebug() << "Begin ai index";
+-    if (m_aiIndexStop->LOAD) {
+-        qDebug() << "Index stopped, abort ai index.";
+-        return;
+-    }
+-    AiIndexer indexer;
+-    if(!indexer.createSession()) {
+-        qWarning() << "Creat session failed, fail to run ai index!";
+-        return;
+-    }
+-    if (m_mode == WorkMode::Rebuild) {
+-        //暂不支持重建
+-        return;
+-    }
+-    QJsonObject filesNeedAiIndex;
+-    QJsonObject imagesNeedAiIndex;
+-    QJsonObject filesNeedUpdate;
+-    QFileInfo info;
+-    if (m_mode == WorkMode::Add) {
+-        for (const QString &path: m_cache) {
+-            info.setFile(path);
+-            if(!info.isFile()) {
+-                continue;
+-            }
+-            QString type;
+-
+-            if (FileIndexerConfig::getInstance()->aiIndexFileTarget()[info.suffix()]) {
+-                if(indexer.checkFileSupported(path, type)) { //这个检查可能会读文件，不要每个文件都执行一遍
+-                    filesNeedAiIndex.insert(path, type);
+-                }
+-            }
+-            if (FileIndexerConfig::getInstance()->aiIndexImageTarget()[info.suffix()]) {
+-                if(indexer.checkFileSupported(path, type)) {
+-                    imagesNeedAiIndex.insert(path, type);
+-                }
+-            }
+-
+-        }
+-    } else {
+-        QJsonObject indexTimes; //校验完整性
+-        if(indexer.getAllIndexedFiles(indexTimes)) {
+-            qDebug() << indexTimes.size() << "documents recorded";
+-            for (const QString &path: m_cache) {
+-                info.setFile(path);
+-                if(!info.isFile()) {
+-                    continue;
+-                }
+-                QString type;
+-                if (FileIndexerConfig::getInstance()->aiIndexFileTarget()[info.suffix()]) {
+-                    int modifiedTime = indexTimes.value(path).toInt(0);
+-                    if(modifiedTime != info.lastModified().toSecsSinceEpoch()) {
+-                        if(indexer.checkFileSupported(path, type)) {
+-                            if(modifiedTime) {
+-                                filesNeedUpdate.insert(path, type); //修改时间不为空时执行更新
+-                            } else {
+-                                filesNeedAiIndex.insert(path, type);
+-                            }
+-                            indexTimes.remove(path);
+-                        }
+-                    } else {
+-                        indexTimes.remove(path);
+-                    }
+-                } else if (FileIndexerConfig::getInstance()->aiIndexImageTarget()[info.suffix()]) {
+-                    int modifiedTime = indexTimes.value(path).toInt(0);
+-                    if(modifiedTime != info.lastModified().toSecsSinceEpoch()) {
+-                        if(indexer.checkFileSupported(path, type)) {
+-                            if(modifiedTime) {
+-                                filesNeedUpdate.insert(path, type); //修改时间不为空时执行更新
+-                            } else {
+-                                imagesNeedAiIndex.insert(path, type);
+-                            }
+-                            indexTimes.remove(path);
+-                        }
+-                    } else {
+-                        indexTimes.remove(path);
+-                    }
+-                }
+-            }
+-            if(!indexTimes.isEmpty()) {
+-                qDebug() << indexTimes.size() << "documents need remove";
+-                indexer.deleteFileIndex(indexTimes.keys());
+-            }
+-        }
+-
+-    }
+-    uint allSize = filesNeedAiIndex.size() + imagesNeedAiIndex.size() + filesNeedUpdate.size();
+-    qDebug() << allSize << "files need ai index.";
+-    Q_EMIT progress(IndexType::Ai, allSize, 0);
+-
+-    uint finishNum = 0;
+-    uint batchSize = 0;
+-    QJsonArray tmpArray;
+-    QJsonObject::const_iterator iter;
+-    auto creatIndex = [&](bool(AiIndexer::*creat)(const QJsonArray &), const QJsonObject &files){
+-        for(iter = files.begin(); iter != files.end(); ++iter) {
+-            if(m_aiIndexStop->LOAD) {
+-                qDebug() << "Index stopped, interrupt ai index.";
+-                return;
+-            }
+-            QJsonObject oneFile;
+-            oneFile.insert(QStringLiteral("filepath"), iter.key());
+-            oneFile.insert(QStringLiteral("fileformat"), iter.value());
+-            tmpArray.append(oneFile);
+-            ++batchSize;
+-            ++finishNum;
+-            if(batchSize >= 10) {
+-                (indexer.*creat)(tmpArray);
+-                qDebug() << finishNum << "of" << allSize <<"finished.";
+-                Q_EMIT progress(IndexType::Ai, allSize, finishNum);
+-                batchSize = 0;
+-                tmpArray = QJsonArray();
+-            }
+-        }
+-        if(!tmpArray.isEmpty()) {
+-            (indexer.*creat)(tmpArray);
+-            qDebug() << finishNum << "of" << allSize <<"finished.";
+-            Q_EMIT progress(IndexType::Ai, allSize, finishNum);
+-            tmpArray = QJsonArray();
+-        }
+-    };
+-    creatIndex(&AiIndexer::addImageFileIndex, imagesNeedAiIndex);
+-    creatIndex(&AiIndexer::addTextFileIndex, filesNeedAiIndex);
+-    creatIndex(&AiIndexer::update, filesNeedUpdate);
+ 
+-}
+diff --git a/libsearch/index/batch-indexer.h b/libsearch/index/batch-indexer.h
+index 9978739..16a374b 100644
+--- a/libsearch/index/batch-indexer.h
++++ b/libsearch/index/batch-indexer.h
+@@ -88,7 +88,6 @@ private:
+     void basicIndex();
+     void contentIndex();
+     void ocrIndex();
+-    void aiIndex();
+     bool isOrUnderExtraDir(const QString& path);
+ 
+     QStringList m_folders;
+diff --git a/libsearch/index/file-indexer-config.cpp b/libsearch/index/file-indexer-config.cpp
+index 58faeb7..6af72a6 100644
+--- a/libsearch/index/file-indexer-config.cpp
++++ b/libsearch/index/file-indexer-config.cpp
+@@ -18,13 +18,11 @@
+  *
+  */
+ #include "file-indexer-config.h"
+-#include "ai-indexer.h"
+ 
+ #include <mutex>
+ #include <QDebug>
+ #include <QDir>
+ #include <QMutexLocker>
+-#include <kylin-ai/common/common.h>
+ #include <dbus-connector.h>
+ 
+ static const QString INDEX_SETTINGS = QDir::homePath() + "/.config/org.ukui/ukui-search/ukui-search-service.conf";
+@@ -117,21 +115,8 @@ FileIndexerConfig::FileIndexerConfig(QObject *parent)
+             } else if (key == CONTENT_INDEX_ENABLE_OCR_KEY) {
+                 Q_EMIT contentIndexEnableOcrStatusChanged(m_gsettings->get(CONTENT_INDEX_ENABLE_OCR_KEY).toBool());
+             } else if (key == AI_INDEX_ENABLE_KEY) {
+-                bool aiEnable = m_gsettings->get(AI_INDEX_ENABLE_KEY).toBool();
+-                if (aiEnable) {
+-                    if (is_ai_subsystem_inited() && AiIndexer::aiIsReady()) {
+-                        Q_EMIT aiIndexEnableStatusChanged(aiEnable);
+-                        if (m_underCtrl) {
+-                            m_underCtrl = false;
+-                            qDebug() << "Exit power control.";
+-                            if (m_gsettings->keys().contains(EXIT_POWER_CONTROL_KEY)) {
+-                                m_gsettings->set(EXIT_POWER_CONTROL_KEY, true);
+-                            }
+-                        }
+-                    } else {
+-                        m_gsettings->set(AI_INDEX_ENABLE_KEY, false);
+-                    }
+-                }
++                if (m_gsettings->get(AI_INDEX_ENABLE_KEY).toBool())
++                    m_gsettings->set(AI_INDEX_ENABLE_KEY, false);
+             }
+         });
+     } else {
+@@ -309,18 +294,7 @@ bool FileIndexerConfig::isFuzzySearchEnable()
+ 
+ bool FileIndexerConfig::isOCREnable()
+ {
+-    QMutexLocker locker(&m_mutex);
+-    if(m_gsettings) {
+-        if(m_gsettings->keys().contains(CONTENT_INDEX_ENABLE_OCR_KEY)) {
+-            return m_gsettings->get(CONTENT_INDEX_ENABLE_OCR_KEY).toBool();
+-        } else {
+-            qWarning() << "FileIndexerConfig: Can not find key:" << CONTENT_INDEX_ENABLE_OCR_KEY << "in" << UKUI_SEARCH_SCHEMAS;
+-            return false;
+-        }
+-    } else {
+-        qWarning() << "FileIndexerConfig:" << UKUI_SEARCH_SCHEMAS << " is not found!";
+-        return false;
+-    }
++    return false; // Do not invoke OCR extractors from file metadata plugins.
+ }
+ 
+ bool FileIndexerConfig::isMetaDataIndexEnable()
+@@ -330,18 +304,7 @@ bool FileIndexerConfig::isMetaDataIndexEnable()
+ 
+ bool FileIndexerConfig::isAiIndexEnable()
+ {
+-    QMutexLocker locker(&m_mutex);
+-    if(m_gsettings) {
+-        if(m_gsettings->keys().contains(AI_INDEX_ENABLE_KEY)) {
+-            return m_gsettings->get(AI_INDEX_ENABLE_KEY).toBool();
+-        } else {
+-            qWarning() << "FileIndexerConfig: Can not find key:" << AI_INDEX_ENABLE_KEY << "in" << UKUI_SEARCH_SCHEMAS;
+-            return false;
+-        }
+-    } else {
+-        qWarning() << "FileIndexerConfig:" << UKUI_SEARCH_SCHEMAS << " is not found!";
+-        return false;
+-    }
++    return false; // Semantic indexing is not built in this edition.
+ }
+ 
+ QMap<QString, bool> FileIndexerConfig::contentIndexTarget()
+diff --git a/libsearch/index/index-scheduler.cpp b/libsearch/index/index-scheduler.cpp
+index c9c06e9..18194d0 100644
+--- a/libsearch/index/index-scheduler.cpp
++++ b/libsearch/index/index-scheduler.cpp
+@@ -22,7 +22,6 @@
+ #include <QMetaEnum>
+ #include "index-updater.h"
+ #include "compatible-define.h"
+-#include "ai-indexer.h"
+ 
+ using namespace UkuiSearch;
+ IndexScheduler::IndexScheduler(QObject *parent) :
+diff --git a/libsearch/index/index-updater.cpp b/libsearch/index/index-updater.cpp
+index ab5b91d..86af7b8 100644
+--- a/libsearch/index/index-updater.cpp
++++ b/libsearch/index/index-updater.cpp
+@@ -28,7 +28,6 @@
+ #include "file-utils.h"
+ #include "compatible-define.h"
+ #include "index-status-recorder.h"
+-#include "ai-indexer.h"
+ #include "pending-file-queue.h"
+ using namespace UkuiSearch;
+ IndexUpdater::IndexUpdater(const QVector<PendingFile>& files,
+@@ -97,7 +96,6 @@ void IndexUpdater::run()
+     if(IndexStatusRecorder::getInstance()->getStatus(OCR_CONTENT_INDEX_DATABASE_STATE_KEY) == IndexStatusRecorder::State::RealTimeUpdating) {
+         IndexStatusRecorder::getInstance()->setStatus(OCR_CONTENT_INDEX_DATABASE_STATE_KEY, IndexStatusRecorder::State::Ready);
+     }
+-    updateAiIndex();
+     if(IndexStatusRecorder::getInstance()->getStatus(AI_INDEX_DATABASE_STATE_KEY) == IndexStatusRecorder::State::RealTimeUpdating) {
+         IndexStatusRecorder::getInstance()->setStatus(AI_INDEX_DATABASE_STATE_KEY, IndexStatusRecorder::State::Ready);
+     }
+@@ -211,52 +209,4 @@ void IndexUpdater::updateOcrContentIndex()
+     }
+ }
+ 
+-void IndexUpdater::updateAiIndex()
+-{
+-    if(FileIndexerConfig::getInstance()->isAiIndexEnable() && !m_aiIndexStop->LOAD) {
+-        IndexStatusRecorder::getInstance()->setStatus(AI_INDEX_DATABASE_STATE_KEY, IndexStatusRecorder::State::RealTimeUpdating);
+-        AiIndexer indexer;
+-        if(!indexer.createSession()) {
+-            qWarning() << "Creat session failed, fail to update ai index";
+-            return;
+-        }
+-        qDebug() << "===update ai index===";
+-        for(PendingFile file : m_cache) {
+-            if(m_aiIndexStop->LOAD) {
+-                qDebug() << "Ai index update interrupted";
+-                return;
+-            }
+ 
+-            auto update = [&](bool(AiIndexer::*creat)(const QJsonArray &)){
+-                QString type;
+-                if(!indexer.checkFileSupported(file.path(), type)) {
+-                    return;
+-                }
+-                qDebug() << "| index:" <<file.path();
+-                if(!(indexer.*creat)(QJsonArray{
+-                        QJsonObject{
+-                                {QStringLiteral("filepath"), file.path()},
+-                                {QStringLiteral("fileformat"), type}
+-                        }})){
+-                    qWarning() << "Ai index failed for" << file.path();
+-                }
+-            };
+-
+-            QString suffix = QFileInfo(file.path()).suffix();
+-            if(file.shouldRemoveIndex()) {
+-                if(file.isDir() || (FileIndexerConfig::getInstance()->aiIndexFileTarget()[suffix] || FileIndexerConfig::getInstance()->aiIndexImageTarget()[suffix])) {
+-                    qDebug() << "| remove:" <<file.path();
+-                    indexer.deleteFileIndex({file.path()});
+-                }
+-            } else if(file.isModified() || file.isMoveTo()) {
+-                qDebug() << file.path() << "Modified.";
+-                update(&AiIndexer::update);
+-            } else if(FileIndexerConfig::getInstance()->aiIndexFileTarget()[suffix] && !file.isDir()) {
+-                update(&AiIndexer::addTextFileIndex);
+-            } else if (FileIndexerConfig::getInstance()->aiIndexImageTarget()[suffix] && !file.isDir()) {
+-                update(&AiIndexer::addImageFileIndex);
+-            }
+-        }
+-        qDebug() << "===finish update ai content index===";
+-    }
+-}
+diff --git a/libsearch/index/index-updater.h b/libsearch/index/index-updater.h
+index 1f3c881..0def89e 100644
+--- a/libsearch/index/index-updater.h
++++ b/libsearch/index/index-updater.h
+@@ -46,7 +46,6 @@ private:
+     void updateIndex();
+     void updateContentIndex();
+     void updateOcrContentIndex();
+-    void updateAiIndex();
+ 
+     QVector<PendingFile> m_cache;
+     QAtomicInt *m_contentIndexStop = nullptr;
+diff --git a/libsearch/pluginmanage/search-plugin-manager.cpp b/libsearch/pluginmanage/search-plugin-manager.cpp
+index 597989c..eb10ede 100644
+--- a/libsearch/pluginmanage/search-plugin-manager.cpp
++++ b/libsearch/pluginmanage/search-plugin-manager.cpp
+@@ -24,7 +24,6 @@
+ #include "settings-search-plugin.h"
+ #include "note-search-plugin.h"
+ #include "web-search-plugin.h"
+-#include "ai-search-plugin.h"
+ 
+ #define PLUGIN_ORDER_SETTINGS QDir::homePath() + "/.config/org.ukui/ukui-search/ukui-search-plugin-order.conf"
+ #define PLUGINS_INFO_GROUP "PluginsInfo"
+@@ -45,7 +44,6 @@ SearchPluginManager::SearchPluginManager(QObject *parent)
+ {
+     Q_UNUSED(parent)
+     initOrderSettings();
+-    registerPlugin(new AiSearchPlugin);
+     registerPlugin(new AppSearchPlugin);
+     registerPlugin(new NoteSearchPlugin);
+     registerPlugin(new SettingsSearchPlugin);
+diff --git a/search-ukcc-plugin/CMakeLists.txt b/search-ukcc-plugin/CMakeLists.txt
+index c2a09c6..df11a8a 100644
+--- a/search-ukcc-plugin/CMakeLists.txt
++++ b/search-ukcc-plugin/CMakeLists.txt
+@@ -4,7 +4,6 @@ set(CMAKE_AUTORCC ON)
+ 
+ find_package(QT NAMES Qt6 Qt5 COMPONENTS Core DBus Widgets LinguistTools REQUIRED)
+ find_package(Qt${QT_VERSION_MAJOR} COMPONENTS Core DBus Widgets LinguistTools REQUIRED)
+-find_package(KysdkAiCommon)
+ find_package(PkgConfig REQUIRED)
+ 
+ set(GSETTINGS_PKG gsettings-qt)
+@@ -13,7 +12,7 @@ if (QT_VERSION_MAJOR EQUAL 6)
+ endif ()
+ 
+ set(UKCC_PLUGIN_EXTERNAL_LIBS "")
+-set(UKCC_PLUGIN_PC_PKGS ${GSETTINGS_PKG} kysdk-qtwidgets kyai-data-management-client kysdk-proc)
++set(UKCC_PLUGIN_PC_PKGS ${GSETTINGS_PKG} kysdk-qtwidgets  kysdk-proc)
+ 
+ foreach(PC_LIB IN ITEMS ${UKCC_PLUGIN_PC_PKGS})
+     pkg_check_modules(${PC_LIB} REQUIRED IMPORTED_TARGET ${PC_LIB})
+@@ -42,7 +41,6 @@ target_link_libraries(search-ukcc-plugin PRIVATE
+         Qt${QT_VERSION_MAJOR}::Gui
+         Qt${QT_VERSION_MAJOR}::Widgets
+         ukcc
+-        kysdk-ai-common
+         ${UKCC_PLUGIN_EXTERNAL_LIBS}
+         )
+ 
+diff --git a/search-ukcc-plugin/search.cpp b/search-ukcc-plugin/search.cpp
+index b5a1089..23d0f7c 100644
+--- a/search-ukcc-plugin/search.cpp
++++ b/search-ukcc-plugin/search.cpp
+@@ -23,7 +23,6 @@
+ #include <QApplication>
+ #include <QString>
+ #include <QProcess>
+-#include <kylin-ai/common/common.h>
+ #include <libkyrtinfo.h>
+ #include <klineframe.h>
+ 
+@@ -36,7 +35,6 @@ static const QString CONTENT_INDEX_ENABLE_OCR_KEY = QStringLiteral("contentIndex
+ static const QString AI_INDEX_ENABLE_KEY = QStringLiteral("aiIndexEnable");
+ 
+ bool Search::s_failed = false;
+-DataManagementSession* Search::s_session = nullptr;
+ 
+ Search::Search()
+ {
+@@ -87,13 +85,11 @@ int Search::pluginTypes()
+ 
+ QWidget *Search::pluginUi()
+ {
+-    initAiSettings();
+     initUi();
+     initSearchDirs();
+     initBlockDirsList();
+     connect(m_addSearchDirBtn, &QPushButton::clicked, this, &Search::onAddSearchDirBtnClicked);
+     connect(m_addBlockDirWidget, &QPushButton::clicked, this, &Search::onBtnAddBlockFolderClicked);
+-//    connect(m_getModelBtn, &QPushButton::clicked, this, &Search::onGetAiModelBtnClicked);
+ 
+     if (m_gsettings) {
+         //按钮状态初始化
+@@ -121,14 +117,7 @@ QWidget *Search::pluginUi()
+             m_ocrSwitchBtn->setEnabled(false);
+         }
+ 
+-        if (is_ai_subsystem_inited() && !m_aiNotSupported && m_isModelReady) {
+-            if (m_gsettings->keys().contains(AI_INDEX_ENABLE_KEY)) {
+-                bool aiIndexOn = m_gsettings->get(AI_INDEX_ENABLE_KEY).toBool();
+-                m_aiIndexBtn->setChecked(aiIndexOn);
+-            } else {
+-                m_aiIndexBtn->setEnabled(false);
+-            }
+-        }
++        
+ 
+ 
+         if (m_gsettings->keys().contains(WEB_ENGINE_KEY)) {
+@@ -209,35 +198,7 @@ QWidget *Search::pluginUi()
+             }
+         });
+ 
+-        if (is_ai_subsystem_inited() && !m_aiNotSupported && m_isModelReady) {
+-            connect(m_aiIndexBtn, &kdk::KSwitchButton::stateChanged, this, [ = ](bool checked) {
+-                if (m_gsettings && m_gsettings->keys().contains(AI_INDEX_ENABLE_KEY)) {
+-                    m_gsettings->set(AI_INDEX_ENABLE_KEY, checked);
+-                    ukcc::UkccCommon::buriedSettings(this->name(), "Create AI index", "settings", checked ? "true" : "false");
+-                }
+-            });
+-            connect(m_aiIndexBtn, &kdk::KSwitchButton::pressed, this, [ & ] {
+-            if (!m_aiIndexBtn->isChecked()) {
+-                QMessageBox msgBox(m_pluginWidget);
+-                msgBox.setModal(true);
+-                msgBox.setIcon(QMessageBox::Warning);
+-                if (kdk_rti_get_mem_res_total_KiB() <= 8 * 1024 *1024) {
+-                    msgBox.setText(tr("Devices with 8GB RAM or lower are not recommended to create AI index, as it may result in system instability (such as failure to wake from sleep or other issues)."));
+-                } else {
+-                    msgBox.setText(tr("Create AI index on low-performance machines may cause the system lagging, do you still want to open it?"));
+-                }
+-                const auto confirmButton = msgBox.addButton(tr("OK"),QMessageBox::AcceptRole);
+-                msgBox.setDefaultButton(confirmButton);
+-                setAutoTestAttribute(confirmButton, "QPushButton", "confirmButton","the confirm button of the ai index button's message box");
+-                const auto cancelButton = msgBox.addButton(tr("Cancel"), QMessageBox::RejectRole);
+-                setAutoTestAttribute(cancelButton, "QPushButton", "cancelButton","the cancel button of the content index button's message box");
+-                msgBox.exec();
+-                if (msgBox.clickedButton() == confirmButton) {
+-                    m_aiIndexBtn->setChecked(true);
+-                }
+-            }
+-        });
+-        }
++        
+ 
+         connect(m_webEngineFrame->mCombox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=] {
+             if (m_gsettings && m_gsettings->keys().contains(WEB_ENGINE_KEY)) {
+@@ -464,36 +425,7 @@ void Search::initUi()
+     m_mainLyt->addWidget(m_setFrame);
+ 
+     //Ai索引开关
+-    if (is_ai_subsystem_inited() && !m_aiNotSupported && m_isModelReady) {
+-        m_aiIndexFrame = new QFrame(m_pluginWidget);
+-        setAutoTestAttribute(m_aiIndexFrame, "QFrame", "aiIndexFrame", "the ai index frame");
+-        m_aiIndexFrame->setFrameShape(QFrame::Shape::Box);
+-        m_aiIndexFrame->setFixedHeight(64);
+-        m_aiIndexLyt = new QHBoxLayout(m_aiIndexFrame);
+-        m_aiIndexLyt->setContentsMargins(16, 20, 16, 20);
+-        m_aiIndexFrame->setLayout(m_aiIndexLyt);
+-
+-        m_aiIndexLabel = new QLabel(m_aiIndexFrame);
+-        setAutoTestAttribute(m_aiIndexLabel, "QLabel", "aiIndexLabel", "create AI index label");
+-        //~ contents_path /Search/Create AI index
+-        m_aiIndexLabel->setText(tr("Create AI index"));
+-        m_aiIndexLabel->setContentsMargins(0, 0, 0, 0);
+-        //    m_getModelBtn = new kdk::KBorderlessButton(m_aiIndexFrame);
+-        //    if (isModelReady) {
+-        //        m_getModelBtn->setText(tr("AI model is ready"));
+-        //    } else {
+-        //        m_getModelBtn->setText(tr("AI model is not ready"));
+-        //    }
+-        //
+-        //    m_getModelBtn->setCursor(QCursor(Qt::PointingHandCursor));
+-        m_aiIndexBtn = new kdk::KSwitchButton(m_aiIndexFrame);
+-        setAutoTestAttribute(m_aiIndexBtn, "KSwitchBtn", "aiSwitchBtn", "ai index switch");
+-        m_aiIndexLyt->addWidget(m_aiIndexLabel);
+-        m_aiIndexLyt->addStretch();
+-        //    m_aiIndexLyt->addWidget(m_getModelBtn);
+-        m_aiIndexLyt->addWidget(m_aiIndexBtn);
+-        m_mainLyt->addWidget(m_aiIndexFrame);
+-    }
++    
+ 
+ 
+     //添加搜索目录部分ui
+@@ -612,12 +544,7 @@ void Search::onGSettingsValueChanged(const QString& key)
+         m_ocrSwitchBtn->blockSignals(false);
+     } else if (key == AI_INDEX_ENABLE_KEY) {
+         qWarning() << "====set ai button state===";
+-        if (is_ai_subsystem_inited() && !m_aiNotSupported && m_isModelReady) {
+-            bool isAiIndexOn = m_gsettings->get(AI_INDEX_ENABLE_KEY).toBool();
+-            m_aiIndexBtn->blockSignals(true);
+-            m_aiIndexBtn->setChecked(isAiIndexOn);
+-            m_aiIndexBtn->blockSignals(false);
+-        }
++        
+     } else if (key == WEB_ENGINE_KEY) {
+         QString engine = m_gsettings->get(WEB_ENGINE_KEY).toString();
+         m_webEngineFrame->mCombox->blockSignals(true);
+@@ -1092,65 +1019,9 @@ void Search::onAddSearchDirBtnClicked()
+     }
+ }
+ 
+-void Search::initAiSettings() {
+-    if (!is_ai_subsystem_inited()) {
+-        return;
+-    }
+ 
+-    if (!s_session || s_failed) {
+-        s_session  = data_management_create_session();
+-        if (!s_session) {
+-            s_failed = true;
+-            qWarning() << "===Create data management session failed!===" << s_session;
+-            return;
+-        }
+-    }
+ 
+-    if (data_management_is_feature_supported()) {
+-        m_aiNotSupported = false;
+-    } else {
+-        qWarning() << "===AI is not supported";
+-    }
+ 
+-    FeatureStatus status = FeatureStatus::UNKNOWN;
+-    DataManagementStatus result = data_management_get_feature_status(s_session, &status);
+-    if (result.success) {
+-        if (status == FeatureStatus::AVAILABLE) {
+-            m_isModelReady = true;
+-        } else {
+-            qWarning() << "===AI model is not available";
+-        }
+-    } else {
+-        qWarning() << "===Get feature status failed, result is" << result.errorCode << result.errorMsg;
+-    }
+-}
+-
+-void Search::onGetAiModelBtnClicked() {
+-    bool res(false);
+-    auto appLaunchInterface = new QDBusInterface(QStringLiteral("com.kylin.ProcessManager"),
+-                                                 QStringLiteral("/com/kylin/ProcessManager/AppLauncher"),
+-                                                 QStringLiteral("com.kylin.ProcessManager.AppLauncher"),
+-                                                 QDBusConnection::sessionBus());
+-    if(!appLaunchInterface->isValid()) {
+-        qWarning() << qPrintable(QDBusConnection::sessionBus().lastError().message());
+-        res = false;
+-    } else {
+-        appLaunchInterface->setTimeout(10000);
+-        QDBusReply<void> reply = appLaunchInterface->call("LaunchApp", "/usr/share/applications/kylin-ai-model-manager.desktop");
+-        if(reply.isValid()) {
+-            res = true;
+-        } else {
+-            qWarning() << "ProcessManager dbus called failed!" << reply.error();
+-            res = false;
+-        }
+-    }
+-    delete appLaunchInterface;
+-    appLaunchInterface = nullptr;
+-
+-    if (!res) {
+-        QProcess::startDetached("kylin-ai-model-manager", {});
+-    }
+-}
+ 
+ void Search::setAutoTestAttribute(QWidget *widget, const QString &widgetType, const QString &widgetName, const QString &desc) {
+     QString name = "ukui-search_search_" + widgetType + "_" + widgetName;
+diff --git a/search-ukcc-plugin/search.h b/search-ukcc-plugin/search.h
+index ab8a446..48bd042 100644
+--- a/search-ukcc-plugin/search.h
++++ b/search-ukcc-plugin/search.h
+@@ -48,7 +48,6 @@
+ #include <ukcc/widgets/comboxframe.h>
+ #include <ukcc/widgets/addbtn.h>
+ 
+-#include <kylin-ai/business/data-management/datamanagement.h>
+ 
+ //TODO
+ #define CONFIG_FILE "/.config/org.ukui/ukui-search/ukui-search-block-dirs.conf"
+@@ -85,7 +84,6 @@ public:
+     QIcon icon() const Q_DECL_OVERRIDE;
+     bool isEnable() const Q_DECL_OVERRIDE;
+ 
+-    static DataManagementSession* s_session;
+     static bool s_failed;
+ 
+ public Q_SLOTS:
+@@ -199,12 +197,10 @@ private:
+     void removeSearchDirFromList(const QString &path);
+ 
+     void setupConnection();
+-    void initAiSettings();
+ 
+ private slots:
+     void onBtnAddBlockFolderClicked();
+     void onAddSearchDirBtnClicked();
+-    void onGetAiModelBtnClicked();
+ };
+ 
+ #endif // SEARCH_H

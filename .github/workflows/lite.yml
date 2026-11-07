@@ -1,7 +1,7 @@
 name: openKylin Lite
 on:
   push:
-    branches: [main, codex/ukui-password]
+    branches: [main, codex/ukui-password, codex/ai-free-desktop]
   workflow_dispatch:
     inputs:
       mode:
@@ -59,7 +59,7 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
   remaster:
-    needs: [ukui-password-candidates, installer-candidate, control-center-candidate]
+    needs: [verify-sources, ukui-password-candidates, installer-candidate, control-center-candidate, ai-free-desktop]
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
@@ -90,6 +90,12 @@ jobs:
           path: ukui-candidates
       - name: Set UKUI candidate package directory
         run: echo "UKUI_DEB_DIR=$GITHUB_WORKSPACE/ukui-candidates" >> "$GITHUB_ENV"
+      - name: Download AI-free desktop packages
+        uses: actions/download-artifact@v6
+        with:
+          pattern: ai-free-desktop-*
+          path: ukui-candidates
+          merge-multiple: true
       - name: Set original ISO location
         run: echo "ISO_SOURCE_DIR=$RUNNER_TEMP/openkylin-source" >> "$GITHUB_ENV"
       - name: Install ISO tools
@@ -171,6 +177,27 @@ jobs:
         with:
           name: ${{ matrix.package }}-password-candidate
           path: ukui-output/
+          if-no-files-found: error
+          retention-days: 7
+
+  ai-free-desktop:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
+    strategy:
+      fail-fast: false
+      matrix:
+        source: [ukui-search, ukui-clipboard, kylin-photo-viewer, peony-extensions, orca, ukui-file-metadata, kylin-scanner]
+    steps:
+      - uses: actions/checkout@v6
+      - name: Rebuild desktop without AI
+        env:
+          SOURCE_PACKAGE: ${{ matrix.source }}
+        run: bash scripts/build_ai_free_desktop.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ai-free-desktop-${{ matrix.source }}
+          path: desktop-output/${{ matrix.source }}/
           if-no-files-found: error
           retention-days: 7
 

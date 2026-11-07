@@ -118,7 +118,7 @@ class InstallerPatchTests(unittest.TestCase):
         self.assertIn('group: openkylin-lite', workflow)
         self.assertIn('cancel-in-progress: true', workflow)
         self.assertIn('key: openkylin-source-v1-${{ env.SOURCE_SHA256 }}', workflow)
-        self.assertIn('needs: [ukui-password-candidates, installer-candidate, control-center-candidate]', workflow)
+        self.assertIn('needs: [verify-sources, ukui-password-candidates, installer-candidate, control-center-candidate, ai-free-desktop]', workflow)
 
     def test_30gb_to_500gb_partition_sizing_invariants(self):
         for disk_gib in (30, 32, 40, 50, 64, 100, 500):

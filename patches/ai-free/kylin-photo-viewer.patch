@@ -87,7 +87,7 @@ index ae77518..ab9d26c 100644
  
  
 diff --git a/src/controller/core/coreinteraction.cpp b/src/controller/core/coreinteraction.cpp
-index 6a92355..492ab5a 100644
+index 6a92355..36202cc 100644
 --- a/src/controller/core/coreinteraction.cpp
 +++ b/src/controller/core/coreinteraction.cpp
 @@ -113,7 +113,6 @@ void CoreInteraction::initConnect()
@@ -98,42 +98,14 @@ index 6a92355..492ab5a 100644
      connect(m_core, &Core::getTextResult, this, &CoreInteraction::getTextFinish);         //图片中文字识别结果
      connect(m_core, &Core::exitOcrModeSign, this, &CoreInteraction::exitOcrModeSign);    //退出ocr模式
  
-@@ -500,10 +499,7 @@ void CoreInteraction::cutImage()
-     kdk_dia_data_free(node);
- }
+@@ -502,7 +501,6 @@ void CoreInteraction::cutImage()
  #endif
--void CoreInteraction::getText()
--{
+ void CoreInteraction::getText()
+ {
 -    Q_EMIT coreGetText();
--}
-+
+ }
  
  void CoreInteraction::cutRegion(const QPoint &point)
- {
-diff --git a/src/controller/core/coreinteraction.h b/src/controller/core/coreinteraction.h
-index af694a7..c2f724a 100644
---- a/src/controller/core/coreinteraction.h
-+++ b/src/controller/core/coreinteraction.h
-@@ -120,7 +120,6 @@ protected:
-     virtual void printImage(QPrinter *printer);                          //打印
-     virtual void cutImage();                                             //裁剪
- #endif
--    virtual void getText();                                              //获取当前打开图片中文字
-     virtual void cutRegion(const QPoint &point);                         //裁剪区域
-     virtual void startChange(const QPoint &point);                       //起始点-裁剪
-     virtual void releasePos(const QPoint &point);                        //裁剪-鼠标释放
-diff --git a/src/controller/interaction.h b/src/controller/interaction.h
-index 24ec09b..b7ee0c5 100644
---- a/src/controller/interaction.h
-+++ b/src/controller/interaction.h
-@@ -350,7 +350,6 @@ public:
-      * 参数类型：QPoint
-      * 参数描述：鼠标在导航栏的坐标
-      */
--    virtual void getText() = 0; //获取图片中文字
-     /*
-      * 接口功能：ocr
-      * 接口场景：点击工具栏ocr按钮
 diff --git a/src/src.pro b/src/src.pro
 index cd75083..10e058c 100644
 --- a/src/src.pro

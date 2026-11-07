@@ -91,18 +91,19 @@ index 5951f88..78a5b9a 100644
  
  bool UkccCommon::isZJY()
 diff --git a/registeredSession/ukccsessionserver.cpp b/registeredSession/ukccsessionserver.cpp
-index 3fc1dd2..e1aa478 100644
+index 3fc1dd2..94010df 100644
 --- a/registeredSession/ukccsessionserver.cpp
 +++ b/registeredSession/ukccsessionserver.cpp
-@@ -25,6 +25,7 @@
+@@ -25,6 +25,8 @@
  #include <QDebug>
  #include <QDBusInterface>
  #include <QDBusReply>
 +#include <QDBusServiceWatcher>
++#include <QFileInfo>
  
  #ifdef signals
  #undef signals
-@@ -37,7 +38,17 @@ const QStringList openkylinFilterPathList = {"/Shortcut/Add", "/Shortcut/Customi
+@@ -37,7 +39,17 @@ const QStringList openkylinFilterPathList = {"/Shortcut/Add", "/Shortcut/Customi
  
  ukccSessionServer::ukccSessionServer():UKUI::ServiceObject(nullptr)
  {
@@ -114,13 +115,13 @@ index 3fc1dd2..e1aa478 100644
 +       [this](const QString &, const QString &, const QString &) { ReloadSecurityConfig(); });
 +   m_securityPath->request([this](const QString &path) {
 +       mUsdJsonFile = path;
-+       if (QFile::exists(path)) m_securityWatcher->addPath(path);
++       watchSecurityFiles();
 +       Q_EMIT configChanged();
 +   });
  }
  
  QMap<QString, QVariant> ukccSessionServer::getJsonInfo(const QString &configFile)
-@@ -250,28 +261,31 @@ void ukccSessionServer::exitService()
+@@ -250,28 +262,31 @@ void ukccSessionServer::exitService()
  
  void ukccSessionServer::ReloadSecurityConfig()
  {
@@ -129,7 +130,7 @@ index 3fc1dd2..e1aa478 100644
 +    m_securityPath->invalidate();
 +    m_securityPath->request([this](const QString &path) {
 +        mUsdJsonFile = path;
-+        if (QFile::exists(path)) m_securityWatcher->addPath(path);
++        watchSecurityFiles();
 +        Q_EMIT configChanged();
 +    });
  }
@@ -169,7 +170,7 @@ index 3fc1dd2..e1aa478 100644
      QMap<QString, QVariant> usdConfig = getUSDJsonInfo(mUsdJsonFile);
      if (!usdConfig.isEmpty()) {
          return usdConfig;
-@@ -297,19 +311,7 @@ QVariantMap ukccSessionServer::getModuleHideStatus()
+@@ -297,19 +312,7 @@ QVariantMap ukccSessionServer::getModuleHideStatus()
  
  QString ukccSessionServer::GetSecurityConfigPath()
  {
@@ -190,7 +191,7 @@ index 3fc1dd2..e1aa478 100644
  
      QString systemFilename = "/usr/share/ukui-control-center/data/ukui-control-center-security-config.json";
      QFile file(systemFilename);
-@@ -329,14 +331,18 @@ QString ukccSessionServer::GetSecurityConfigPath()
+@@ -329,14 +332,37 @@ QString ukccSessionServer::GetSecurityConfigPath()
  
  void ukccSessionServer::monitoFileChanged()
  {
@@ -198,25 +199,44 @@ index 3fc1dd2..e1aa478 100644
 -    m_FileWatcher->addPath(GetSecurityConfigPath());
 -    connect(m_FileWatcher, &QFileSystemWatcher::fileChanged, this, [=](){
 +    m_securityWatcher = new QFileSystemWatcher(this);
-+    for (const QString &path : {GetSecurityConfigPath(),
-+         QDir::homePath() + "/.config/ukui-control-center-security-config.json",
-+         QStringLiteral("/usr/share/ukui-control-center/data/ukui-control-center-security-config.json")}) {
-+        if (QFile::exists(path)) m_securityWatcher->addPath(path);
-+    }
-+    connect(m_securityWatcher, &QFileSystemWatcher::fileChanged, this, [this](const QString &path) {
-+        if (QFile::exists(path)) m_securityWatcher->addPath(path);
++    watchSecurityFiles();
++    auto changed = [this](const QString &) {
++        watchSecurityFiles();
          Q_EMIT configChanged();
-     });
--
--    QDBusConnection::systemBus().connect(QString(), QString("/securityConfig"), "com.kylin.ukui.SettingsDaemon.interface", "configChanged",
--                                         this, SLOT(ReloadSecurityConfig()));
+-    });
++    };
++    connect(m_securityWatcher, &QFileSystemWatcher::fileChanged, this, changed);
++    connect(m_securityWatcher, &QFileSystemWatcher::directoryChanged, this, changed);
 +    QDBusConnection::systemBus().connect(QString(), QString("/securityConfig"),
 +        "com.kylin.ukui.SettingsDaemon.interface", "configChanged", this, SLOT(ReloadSecurityConfig()));
++}
+ 
+-    QDBusConnection::systemBus().connect(QString(), QString("/securityConfig"), "com.kylin.ukui.SettingsDaemon.interface", "configChanged",
+-                                         this, SLOT(ReloadSecurityConfig()));
++void ukccSessionServer::watchSecurityFiles()
++{
++    for (const QString &path : {GetSecurityConfigPath(),
++         mUsdJsonFile,
++         QDir::homePath() + "/.config/ukui-control-center-security-config.json",
++         QStringLiteral("/usr/share/ukui-control-center/data/ukui-control-center-security-config.json")}) {
++        if (path.isEmpty()) continue;
++        if (QFile::exists(path) && !m_securityWatcher->files().contains(path))
++            m_securityWatcher->addPath(path);
++        // Watching a directory also catches new files and atomic replacement.
++        QString directory = QFileInfo(path).absolutePath();
++        while (!QDir(directory).exists()) {
++            const QString parent = QFileInfo(directory).absolutePath();
++            if (parent == directory) break;
++            directory = parent;
++        }
++        if (QDir(directory).exists() && !m_securityWatcher->directories().contains(directory))
++            m_securityWatcher->addPath(directory);
++    }
  }
  
  QVariantMap ukccSessionServer::getSearchItems()
 diff --git a/registeredSession/ukccsessionserver.h b/registeredSession/ukccsessionserver.h
-index bfedd92..ec6a9e7 100644
+index bfedd92..9856271 100644
 --- a/registeredSession/ukccsessionserver.h
 +++ b/registeredSession/ukccsessionserver.h
 @@ -28,13 +28,14 @@
@@ -235,18 +255,19 @@ index bfedd92..ec6a9e7 100644
  {
      Q_OBJECT
      Q_CLASSINFO("D-Bus Interface", "org.ukui.ukcc.session.interface")
-@@ -50,6 +51,9 @@ private:
+@@ -50,6 +51,10 @@ private:
  private:
      QString mScreenMode;
      QString mUsdJsonFile = "";
 +    SecurityPathProvider *m_securityPath = nullptr;
 +    QFileSystemWatcher *m_securityWatcher = nullptr;
++    void watchSecurityFiles();
 +    QVariantMap moduleHideStatusFromFiles();
  
  Q_SIGNALS:
      void configChanged();
 diff --git a/shell/mainwindow.cpp b/shell/mainwindow.cpp
-index 59d7e21..361421d 100644
+index 59d7e21..4725af0 100644
 --- a/shell/mainwindow.cpp
 +++ b/shell/mainwindow.cpp
 @@ -18,6 +18,8 @@
@@ -293,7 +314,7 @@ index 59d7e21..361421d 100644
      const QByteArray ukccID(UKCC_SCHEMA);
      m_ukccSettings = new QGSettings(ukccID, QByteArray(), this);
  
-@@ -425,7 +436,37 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
+@@ -425,7 +436,45 @@ void MainWindow::keyPressEvent(QKeyEvent *event)
      }
  }
  
@@ -312,14 +333,22 @@ index 59d7e21..361421d 100644
 +            qApp->setProperty("_ukccPolicyReady", true);
 +            m_ModuleMap = qApp->property("_ukccModulePolicy").toMap();
 +            m_policyPending = false;
++            const bool refreshAgain = m_policyRefreshAgain;
++            m_policyRefreshAgain = false;
 +            auto callbacks = std::move(m_policyCallbacks);
 +            m_policyCallbacks.clear();
 +            for (const auto &callback : callbacks) callback();
++            if (refreshAgain) refreshModulePolicy();
 +        });
 +}
 +
 +void MainWindow::refreshModulePolicy()
 +{
++    // A config/owner change during an in-flight lookup needs a fresh request.
++    if (m_policyPending) {
++        m_policyRefreshAgain = true;
++        return;
++    }
 +    requestModulePolicy([] {});
 +}
 +
@@ -331,7 +360,7 @@ index 59d7e21..361421d 100644
      ModulesFactory::loadConfig();
      //加载插件
      loadPlugins();
-@@ -433,6 +474,11 @@ void MainWindow::loadAllModules() {
+@@ -433,6 +482,11 @@ void MainWindow::loadAllModules() {
  }
  
  void MainWindow::initPageWidgetSlot() {
@@ -343,7 +372,7 @@ index 59d7e21..361421d 100644
      if (loadWidget) {
          qDebug() << Q_FUNC_INFO << "Page widget already initialized, skipping...";
          return;
-@@ -451,16 +497,10 @@ void MainWindow::initPageWidgetSlot() {
+@@ -451,16 +505,10 @@ void MainWindow::initPageWidgetSlot() {
          ui->stackedWidget->addWidget(homepageWidget);
          ui->stackedWidget->setFocusPolicy(Qt::ClickFocus);
  
@@ -364,7 +393,7 @@ index 59d7e21..361421d 100644
          //加载左侧边栏一级菜单
          initLeftsideBar();
  
-@@ -614,12 +654,9 @@ void MainWindow::initUI()
+@@ -614,12 +662,9 @@ void MainWindow::initUI()
          m_isSetUI = true;
      }
  
@@ -380,7 +409,7 @@ index 59d7e21..361421d 100644
  
      const QByteArray id("org.ukui.style");
      m_fontSetting = new QGSettings(id, QByteArray(), this);
-@@ -706,18 +743,12 @@ void MainWindow::initUI()
+@@ -706,18 +751,12 @@ void MainWindow::initUI()
      });
  
      //监听平板模式切换
@@ -405,7 +434,7 @@ index 59d7e21..361421d 100644
  
      mainWindow_statusDbusSlot(m_tabletmode);
  }
-@@ -1664,6 +1695,10 @@ bool MainWindow::isFontFile(QString path)
+@@ -1664,6 +1703,10 @@ bool MainWindow::isFontFile(QString path)
  
  void MainWindow::sltMessageReceived(const QString &msg)
  {
@@ -417,7 +446,7 @@ index 59d7e21..361421d 100644
      qDebug() << Q_FUNC_INFO << "Message received" << msg << "platform" << platform;
  
 diff --git a/shell/mainwindow.h b/shell/mainwindow.h
-index 126e741..9d7bdb0 100644
+index 126e741..79cc683 100644
 --- a/shell/mainwindow.h
 +++ b/shell/mainwindow.h
 @@ -39,6 +39,8 @@
@@ -429,11 +458,12 @@ index 126e741..9d7bdb0 100644
  #include <kysdk/applications/ukuiwindowhelper/ukuiwindowhelper.h>
  
  
-@@ -141,12 +143,15 @@ private:
+@@ -141,12 +143,16 @@ private:
      bool m_sidebarSkipClick = false;
      QStringList       m_updatePlugins;
      QVariantMap       m_ModuleMap;
 +    bool m_policyPending = false;
++    bool m_policyRefreshAgain = false;
 +    std::vector<std::function<void()>> m_policyCallbacks;
 +    void requestModulePolicy(std::function<void()> callback);
      QGSettings       *m_fontSetting;
@@ -446,7 +476,7 @@ index 126e741..9d7bdb0 100644
      bool m_tabletmode = false;
      bool m_isSetUI = false;
  
-@@ -209,6 +214,7 @@ private:
+@@ -209,6 +215,7 @@ private:
      void restoreHomepageFocus();
  
  public slots:

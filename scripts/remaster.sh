@@ -278,7 +278,9 @@ chroot "$root" dpkg --audit > "$report_dir/dpkg-audit.txt"
 [[ ! -s "$report_dir/dpkg-audit.txt" ]] || { echo 'dpkg audit failed'; exit 1; }
 chroot "$root" apt-get "${apt_options[@]}" clean
 find "$root/var/cache/apt/archives" -type f -name '*.deb' -delete
-find "$root/var/lib/apt/lists" -type f -delete
+# Keep the original repository indexes for the Software Store on Live media.
+# Regenerate the local cache against the package database after the purge.
+chroot "$root" apt-cache gencaches
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-after.txt"
 printf '%s\n' "ukui-greeter ${ukui_versions[ukui-greeter]}" "ukui-screensaver ${ukui_versions[ukui-screensaver]}" "ukui-polkit ${ukui_versions[ukui-polkit]}" > "$report_dir/ukui-candidate-versions.txt"
 python3 - "$baseline" "$root/var/lib/dpkg/status" "$work/expected-removed" "$report_dir/ukui-candidate-versions.txt" > "$report_dir/package-diff.txt" <<'PY'

@@ -1,4 +1,15 @@
 {
+  "kylin-user-guide": {
+    "version": "4.10.0.0-ok2.27",
+    "reason": "User-requested complete removal of Manual and its background helper",
+    "desktop": "/usr/share/applications/kylin-user-guide.desktop"
+  },
+  "kylin-user-guide-common": {
+    "version": "4.10.0.0-ok2.27",
+    "reason": "User-requested removal of the shared Manual documentation and assets",
+    "kind": "manual-data",
+    "section": "utils"
+  },
   "app.web.openkylincommunity": {
     "version": "1.0.0",
     "reason": "Remove the standalone openKylin community website launcher",

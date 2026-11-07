@@ -129,7 +129,8 @@ def check_app(name, fields, review, owned_files):
         raise ValueError(f'{name}: missing reviewed-apps.json entry')
     ai_component = review.get('kind') == 'ai-component' and name in AI_COMPONENTS
     biometric_component = review.get('kind') == 'biometric-component' and name in BIOMETRIC_COMPONENTS
-    component = ai_component or biometric_component
+    manual_data = review.get('kind') == 'manual-data' and name == 'kylin-user-guide-common'
+    component = ai_component or biometric_component or manual_data
     if name.startswith('lib') and not component:
         raise ValueError(f'{name}: shared libraries cannot be removed as desktop apps')
     for key in (('version', 'reason') if component else ('version', 'reason', 'desktop')):

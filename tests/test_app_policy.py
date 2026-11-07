@@ -43,6 +43,17 @@ class AppPolicyTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             check_app('unreviewed-component', self.fields, review, [])
 
+    def test_manual_data_requires_exact_package_and_safe_files(self):
+        review = {'kind': 'manual-data', 'version': '1.2',
+                  'reason': 'Remove Manual data', 'section': 'utils'}
+        check_app('kylin-user-guide-common', self.fields, review,
+                  ['/usr/share/kylin-user-guide/index.html'])
+        with self.assertRaises(ValueError):
+            check_app('unreviewed-component', self.fields, review, [])
+        with self.assertRaises(ValueError):
+            check_app('kylin-user-guide-common', self.fields, review,
+                      ['/usr/lib/systemd/system/core.service'])
+
     def test_ai_component_cannot_remove_core_unit(self):
         review = {'kind': 'ai-component', 'version': '1.2', 'reason': 'Approved AI model', 'section': 'utils'}
         with self.assertRaises(ValueError):

@@ -31,6 +31,15 @@ class AiPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'model payload'):
                 check_payload(root)
 
+    def test_ignored_payload_directories_are_skipped(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fx_dir = root / 'opt/apps/net.mozilla.firefox'
+            fx_dir.mkdir(parents=True)
+            (fx_dir / 'model.onnx').write_bytes(b'model')
+            (fx_dir / 'libonnxruntime.so').write_bytes(b'\x7fELF')
+            check_payload(root)
+
     def test_ai_removal_does_not_allow_unrelated_system_units(self):
         name = 'peony-intelligent-data-management-service'
         review = REMOVALS[name]

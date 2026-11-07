@@ -10,6 +10,9 @@ from check_apps import read_status
 FORBIDDEN_LINK = re.compile(r'lib(?:kyai|kylin-ai|kylin-(?:.*nlp|.*speech|.*vision|.*embedding)|'
                             r'kysdk-(?:.*ai|ocr|mcp|vector-engine)|kyocr|onnx|tesseract|opencv_dnn)')
 MODEL_SUFFIXES = {'.onnx', '.gguf', '.ggml', '.tflite', '.safetensors', '.traineddata'}
+# Stock web browser bundles private translation runtime (Bergamot / ONNX runtime)
+# which is isolated to the browser application and not part of the system desktop AI stack.
+IGNORED_PAYLOAD_DIRS = {'net.mozilla.firefox'}
 
 
 def check_packages(installed):
@@ -25,6 +28,8 @@ def check_packages(installed):
 def check_payload(root):
     count = 0
     for path in root.rglob('*'):
+        if any(part in IGNORED_PAYLOAD_DIRS for part in path.parts):
+            continue
         if path.is_symlink():
             # Do not dereference absolute image symlinks on the build host.
             if FORBIDDEN_LINK.search(path.readlink().as_posix()):

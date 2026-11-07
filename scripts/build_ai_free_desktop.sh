@@ -64,19 +64,19 @@ Pin: version 4.25.0.0-ok0.1
 Pin-Priority: 1001
 PIN
 apt-get install -y --allow-downgrades --no-install-recommends "$work/metadata-deps/"*.deb
-# Keep diagnostics aligned with the pinned ISO so shlibdeps doesn't bump dependencies beyond the Live root.
-mkdir "$work/diagnostics-deps"
+# Keep libkysdk-base aligned with the pinned ISO so shlibdeps doesn't bump dependencies beyond the Live root.
+mkdir "$work/kysdk-base-deps"
 while read -r digest file; do
-  [[ $digest =~ ^[0-9a-f]{64}$ && $file == libkysdk-diagnostics*3.0.1.0-ok0.1*.deb ]]
-  curl -fL --retry 4 -o "$work/diagnostics-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/libk/libkysdk-base/$file"
-  echo "$digest  $work/diagnostics-deps/$file" | sha256sum -c -
-done < "$workspace/config/diagnostics-build-deps.sha256"
-cat > /etc/apt/preferences.d/openkylin-lite-diagnostics <<'PIN'
-Package: libkysdk-diagnostics libkysdk-diagnostics-dev
-Pin: version 3.0.1.0-ok0.1
+  [[ $digest =~ ^[0-9a-f]{64}$ && $file == libkysdk-*3.0.1.0-ok0.1*.deb ]]
+  curl -fL --retry 4 -o "$work/kysdk-base-deps/$file" "https://archive.build.openkylin.top/openkylin/pool/main/libk/libkysdk-base/$file"
+  echo "$digest  $work/kysdk-base-deps/$file" | sha256sum -c -
+done < "$workspace/config/kysdk-base-build-deps.sha256"
+cat > /etc/apt/preferences.d/openkylin-lite-kysdk-base <<'PIN'
+Package: libkysdk-base libkysdk-base-dev libkysdk-basecommon libkysdk-conf2 libkysdk-conf2-dev libkysdk-conf2-tools libkysdk-config libkysdk-config-dev libkysdk-diagnostics libkysdk-diagnostics-dev libkysdk-gsetting libkysdk-gsetting-dev libkysdk-log libkysdk-log-dev libkysdk-timer libkysdk-timer-dev libkysdk-utils libkysdk-utils-dev
+Pin: version 3.0.1.0-ok0.1*
 Pin-Priority: 1001
 PIN
-apt-get install -y --allow-downgrades --no-install-recommends "$work/diagnostics-deps/"*.deb
+apt-get install -y --allow-downgrades --no-install-recommends "$work/kysdk-base-deps/"*.deb
 apt-get build-dep -y --no-install-recommends ./
 for pc in /usr/lib/*/pkgconfig/poppler.pc /usr/lib/pkgconfig/poppler.pc; do
   [[ -f "$pc" ]] && sed -Ei 's/libcurl >= [0-9.]+/libcurl/g' "$pc"

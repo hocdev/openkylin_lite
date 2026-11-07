@@ -10,6 +10,7 @@ trap 'rm -rf -- "$work"' EXIT
 
 apt-get -o Acquire::Retries=3 update
 apt-get install -y --no-install-recommends ca-certificates curl git build-essential devscripts python3 xz-utils
+bash scripts/build_default_settings_candidate.sh
 curl -fL --retry 4 --retry-delay 5 \
   -o "$work/source.tar.xz" \
   https://archive.build.openkylin.top/openkylin/pool/main/u/ukui-control-center/ukui-control-center_4.24.0.0-ok2.8.tar.xz

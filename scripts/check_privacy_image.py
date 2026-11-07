@@ -11,6 +11,11 @@ def audit(root):
     remaining = set(installed) & set(PRIVACY_COMPONENTS)
     if remaining:
         raise ValueError(f'Telemetry/cloud packages remain: {sorted(remaining)}')
+    for name, fields in installed.items():
+        for field in ('Depends', 'Pre-Depends'):
+            names = re.findall(r'[a-z0-9][a-z0-9+.-]*', re.sub(r'\([^)]*\)', '', fields.get(field, '')))
+            if set(names) & set(PRIVACY_COMPONENTS):
+                raise ValueError(f'{name}: hard dependency on a removed privacy component in {field}')
     sdk = installed.get('libkysdk-datacollect', {})
     if not sdk.get('Version', '').startswith('3.0.1.0-0k0.1update1+lite'):
         raise ValueError('The disabled telemetry SDK is missing')

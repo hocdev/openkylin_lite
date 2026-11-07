@@ -18,7 +18,7 @@ if [[ $MODE != inspect ]]; then
     package=$(dpkg-deb -f "$deb" Package)
     version=$(dpkg-deb -f "$deb" Version)
     case $package in
-      ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer|ukui-control-center|libukcc3|libkysdk-datacollect|libkysdk-datacollect-dev|libkysdk-diagnosetest|libkysdk-diagnosetest-dev|libkysdk-diagnosetest-doc) ;;
+      ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer|ukui-control-center|libukcc3|libkysdk-datacollect|libkysdk-datacollect-dev|libkysdk-diagnosetest|libkysdk-diagnosetest-dev|libkysdk-diagnosetest-doc|openkylin-default-settings) ;;
       *) echo "Unexpected candidate package: $package"; exit 1 ;;
     esac
     [[ ! ${ukui_versions[$package]+present} ]] || { echo "Duplicate candidate: $package"; exit 1; }
@@ -27,8 +27,8 @@ if [[ $MODE != inspect ]]; then
       echo "$package still depends on biometric authentication"; exit 1
     fi
   done
-  [[ ${#ukui_versions[@]} == 11 ]] || { echo 'Expected password, installer, control center and disabled telemetry SDK candidates'; exit 1; }
-  for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer ukui-control-center libukcc3 libkysdk-datacollect libkysdk-datacollect-dev libkysdk-diagnosetest libkysdk-diagnosetest-dev libkysdk-diagnosetest-doc; do
+  [[ ${#ukui_versions[@]} == 12 ]] || { echo 'Expected password, installer, control center, defaults and disabled telemetry SDK candidates'; exit 1; }
+  for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer ukui-control-center libukcc3 libkysdk-datacollect libkysdk-datacollect-dev libkysdk-diagnosetest libkysdk-diagnosetest-dev libkysdk-diagnosetest-doc openkylin-default-settings; do
     [[ -n ${ukui_versions[$package]+present} ]] || { echo "Missing candidate: $package"; exit 1; }
   done
 fi
@@ -161,9 +161,13 @@ chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifes
 mkdir -p "$root$candidate_dir"
 for deb in "$ukui_deb_dir"/*.deb; do
   package=$(dpkg-deb -f "$deb" Package)
-  if [[ $package == kylin-os-installer || $package == libkysdk-* ]]; then
+  if [[ $package == kylin-os-installer || $package == libkysdk-* || $package == openkylin-default-settings ]]; then
     status=$(chroot "$root" dpkg-query -W '-f=${Status}' "$package" 2>/dev/null || true)
     [[ $status == 'install ok installed' ]] || continue
+  fi
+  if [[ $package == openkylin-default-settings ]]; then
+    actual=$(chroot "$root" dpkg-query -W '-f=${Version}' "$package")
+    [[ $actual == 1:3.0.2 ]] || { echo "Unreviewed desktop defaults version: $actual"; return 1; }
   fi
   cp "$deb" "$root$candidate_dir/"
   candidate_debs+=("$candidate_dir/$(basename "$deb")")
@@ -203,7 +207,11 @@ awk '/^(Remv|Purg) / {print $2}' "$report_dir/purge-plan.txt" | sort -u > "$work
 printf '%s\n' "${packages[@]}" | sort -u > "$work/allowed"
 printf '%s\n' "${packages[@]}" | sort -u > "$work/expected-removed"
 comm -23 "$work/planned" "$work/allowed" > "$report_dir/unexpected-removals.txt"
-[[ ! -s "$report_dir/unexpected-removals.txt" ]] || { echo 'Dependencies would remove additional packages; review unexpected-removals.txt'; exit 1; }
+if [[ -s "$report_dir/unexpected-removals.txt" ]]; then
+  echo 'Dependencies would remove additional packages:'
+  cat "$report_dir/unexpected-removals.txt"
+  exit 1
+fi
 while read -r p; do
   case "$p" in
     ukui-biometric-manager) ;; # Exact desktop package reviewed above; keep its authentication dependencies.

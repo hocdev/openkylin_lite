@@ -62,6 +62,11 @@ class PrivacyPolicyTests(unittest.TestCase):
             hook.write_text('Exec=/usr/bin/kylin-cloud-sync')
             with self.assertRaises(ValueError):
                 audit(root)
+            hook.unlink()
+            status.write_text(status.read_text() + '\nPackage: openkylin-default-settings\n'
+                              'Status: install ok installed\nVersion: 1:3.0.2\nDepends: kylin-daq\n')
+            with self.assertRaisesRegex(ValueError, 'hard dependency'):
+                audit(root)
 
 
 if __name__ == '__main__':

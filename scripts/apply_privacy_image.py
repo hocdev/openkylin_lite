@@ -31,7 +31,7 @@ preferences.write_text('''Package: kylin-daq kylin-sso-client kylin-cloud-sync l
 Pin: version *
 Pin-Priority: -1
 
-Package: libkysdk-datacollect libkysdk-datacollect-dev libkysdk-diagnosetest libkysdk-diagnosetest-dev libkysdk-diagnosetest-doc libkysdk-diagnostics ukui-control-center libukcc3
+Package: libkysdk-datacollect libkysdk-datacollect-dev libkysdk-diagnosetest libkysdk-diagnosetest-dev libkysdk-diagnosetest-doc libkysdk-diagnostics ukui-control-center libukcc3 openkylin-default-settings
 Pin: version *
 Pin-Priority: -1
 ''')

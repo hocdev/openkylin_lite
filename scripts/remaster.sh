@@ -17,7 +17,7 @@ if [[ $MODE != inspect ]]; then
     package=$(dpkg-deb -f "$deb" Package)
     version=$(dpkg-deb -f "$deb" Version)
     case $package in
-      ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer) ;;
+      ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer|ukui-control-center) ;;
       *) echo "Unexpected candidate package: $package"; exit 1 ;;
     esac
     [[ ! ${ukui_versions[$package]+present} ]] || { echo "Duplicate candidate: $package"; exit 1; }
@@ -26,8 +26,8 @@ if [[ $MODE != inspect ]]; then
       echo "$package still depends on biometric authentication"; exit 1
     fi
   done
-  [[ ${#ukui_versions[@]} == 4 ]] || { echo 'Expected three password-only UKUI packages and kylin-os-installer'; exit 1; }
-  for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer; do
+  [[ ${#ukui_versions[@]} == 5 ]] || { echo 'Expected three password-only UKUI packages, installer and control center'; exit 1; }
+  for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer ukui-control-center; do
     [[ -n ${ukui_versions[$package]+present} ]] || { echo "Missing candidate: $package"; exit 1; }
   done
 fi
@@ -168,8 +168,8 @@ for deb in "$ukui_deb_dir"/*.deb; do
   expected_versions[$package]=${ukui_versions[$package]}
   ((candidate_count+=1))
 done
-(( candidate_count >= 3 )) || { echo 'Candidate package staging is incomplete'; return 1; }
-for package in ukui-greeter ukui-screensaver ukui-polkit; do
+(( candidate_count >= 4 )) || { echo 'Candidate package staging is incomplete'; return 1; }
+for package in ukui-greeter ukui-screensaver ukui-polkit ukui-control-center; do
   [[ -n ${expected_versions[$package]+present} ]] || { echo "Missing required UKUI candidate: $package"; return 1; }
 done
 for p in "${packages[@]}"; do

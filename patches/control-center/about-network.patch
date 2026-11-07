@@ -1,0 +1,242 @@
+diff --git a/registeredSession/plugins/about/aboutinterface.cpp b/registeredSession/plugins/about/aboutinterface.cpp
+index 227a404..7128c57 100644
+--- a/registeredSession/plugins/about/aboutinterface.cpp
++++ b/registeredSession/plugins/about/aboutinterface.cpp
+@@ -18,6 +18,7 @@
+  *
+  */
+ #include "aboutinterface.h"
++#include "ntpdateprovider.h"
+ 
+ #include <QFile>
+ #include <QTextStream>
+@@ -304,33 +305,10 @@ QString AboutInterface::getUpgradeDate()
+ 
+ QString AboutInterface::getNtpTime()
+ {
+-    int count = 0;
+-    for (QString host : mNtphostNameList) {
+-        {
+-            QMutexLocker locker(&ipListMutex);
+-            ipList.clear();
+-        }
+-        QByteArray hostBytes = host.toLatin1();
+-        ntpGethostbyname(hostBytes.data());
+-        QStringList resolvedIps;
+-        {
+-            QMutexLocker locker(&ipListMutex);
+-            resolvedIps = ipList;
+-        }
+-        for (QString ip : resolvedIps) {
+-            ++count;
+-            qDebug() << Q_FUNC_INFO << host << "---->" << ip << ":" << count;
+-            if (count >= 5) {
+-                return "";
+-            }
+-            QByteArray ipBytes = ip.toLatin1();
+-            char *result = ntpdate(ipBytes.data());
+-            if (result != NULL) {
+-                return QString(result);
+-            }
+-        }
+-    }
+-    return QString();
++    // Property reads run on the session service's event loop. Never join DNS
++    // threads or wait for network packets here (including Properties.GetAll).
++    static auto *provider = new NtpDateProvider(QCoreApplication::instance());
++    return provider->value();
+ }
+ 
+ bool AboutInterface::openActivation()
+diff --git a/registeredSession/registeredSession.pro b/registeredSession/registeredSession.pro
+index ce19d7a..88c9a35 100644
+--- a/registeredSession/registeredSession.pro
++++ b/registeredSession/registeredSession.pro
+@@ -1,4 +1,4 @@
+-QT += core dbus KService KCoreAddons KXmlGui KGlobalAccel x11extras KConfigCore
++QT += core dbus network KService KCoreAddons KXmlGui KGlobalAccel x11extras KConfigCore
+ QT -= gui
+ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets concurrent sql xml
+ 
+diff --git a/plugins/system/about/about.cpp b/plugins/system/about/about.cpp
+index d6ca4f7..e1e99bd 100644
+--- a/plugins/system/about/about.cpp
++++ b/plugins/system/about/about.cpp
+@@ -29,6 +29,28 @@
+ #include <QPluginLoader>
+ #include <QEvent>
+ #include <QMessageBox>
++#include <QDBusPendingCallWatcher>
++#include <QDBusPendingReply>
++#include <functional>
++
++namespace {
++void queryAboutPolicy(QObject *context, std::function<void(const QVariantMap &)> callback)
++{
++    const auto message = QDBusMessage::createMethodCall(
++        QStringLiteral("org.ukui.ukcc.session"), QStringLiteral("/"),
++        QStringLiteral("org.ukui.ukcc.session.interface"),
++        QStringLiteral("getModuleHideStatus"));
++    auto *watcher = new QDBusPendingCallWatcher(
++        QDBusConnection::sessionBus().asyncCall(message, 2000), context);
++    QObject::connect(watcher, &QDBusPendingCallWatcher::finished, context,
++                     [watcher, callback](QDBusPendingCallWatcher *) {
++        QDBusPendingReply<QVariantMap> reply = *watcher;
++        callback(reply.isError() ? QVariantMap() : reply.value());
++        watcher->deleteLater();
++    });
++}
++}
++
+ 
+ #ifdef Q_OS_LINUX
+ #include <sys/sysinfo.h>
+@@ -115,8 +137,6 @@ QWidget *About::pluginUi()
+         setPrivacyCompent();
+         setupDiskComponent();
+         securityControl();
+-        setupSysInstallComponent();
+-        setupUpgradeComponent();
+     }
+     return mAboutWidget;
+ }
+@@ -831,62 +851,52 @@ void About::setupSysInstallComponent()
+ {
+     if (mAboutWidget->getInstallDateFrame()->isHidden())
+         return;
+-    QProcess process;
+-    process.start("lsblk");
+-    process.waitForFinished();
+-    QString diskSize = process.readAllStandardOutput();
+-    foreach (QString diskResult, diskSize.split("\n")) {
+-        if (diskResult == NULL)
+-            continue;
+-        diskResult.replace(QRegExp("[\\s]+"), " ");
+-        diskInfo = diskResult.split(" ");
+-
+-        if (diskInfo.count() >= 6) {
+-            if (diskInfo.at(5).contains("part"))
+-                mDiskParts.append(diskInfo.at(0));
+-        }
+-        if (diskInfo.count() >= 6 && (!diskInfo.at(0).contains("fd")) &&
+-               (diskInfo.at(2) !="1")) { //过滤掉可移动硬盘
+-            if (diskInfo.at(5) == "disk") {
+-                QStringList totalSize;
+-                totalSize.append(diskInfo.at(3));
+-                disk2.insert(diskInfo.at(0),totalSize); //硬盘信息分类存储，用以兼容多硬盘电脑
+-            }
+-
+-        }
++    const QByteArray device = QStorageInfo::root().device();
++    if (!device.startsWith("/dev/")) {
++        mAboutWidget->getInstallDateFrame()->hide();
++        return;
+     }
+-    qDebug() << Q_FUNC_INFO << "mDiskParts" << mDiskParts;
+-    for (QString part : mDiskParts) {
+-        part = part.mid(2);
+-        if (mUkccDbus->isValid()) {
+-            QDBusReply<QString>  result = mUkccDbus->call("getSysInstallTime", part);
+-            qDebug() << Q_FUNC_INFO << "part" << part << "result" << result.isValid() << "value" << result.value();
+-            if (result != "") {
+-                qDebug() << Q_FUNC_INFO << "part" << part << "result" << QString(result);
+-                QStringList list = QString(result).split(" ");
+-                if (list.count() >= 5) {
+-                    QString date = list.at(2);
+-                    date = date.toInt() < 10 ? QString("0%1").arg(date) : date;
+-                    mAboutWidget->getInstallDate()->setText(QString("%1-%2-%3").arg(list.at(4)).arg(QString::number(getMonth(list.at(1)))).arg(date));
+-                    qDebug() << Q_FUNC_INFO << "getInstallDate set Text" << date;
+-                    return;
+-                }
+-            }
++    auto message = QDBusMessage::createMethodCall(
++        QStringLiteral("com.control.center.qt.systemdbus"), QStringLiteral("/"),
++        QStringLiteral("com.control.center.interface"), QStringLiteral("getSysInstallTime"));
++    message << QString::fromLocal8Bit(device.mid(5));
++    auto *watcher = new QDBusPendingCallWatcher(
++        QDBusConnection::systemBus().asyncCall(message, 2000), this);
++    connect(watcher, &QDBusPendingCallWatcher::finished, this,
++            [this, watcher](QDBusPendingCallWatcher *) {
++        QDBusPendingReply<QString> reply = *watcher;
++        const QStringList fields = reply.value().simplified().split(' ');
++        if (!reply.isError() && fields.size() >= 5) {
++            mAboutWidget->getInstallDate()->setText(QString("%1-%2-%3")
++                .arg(fields.at(4)).arg(getMonth(fields.at(1)))
++                .arg(fields.at(2).toInt(), 2, 10, QLatin1Char('0')));
++        } else {
++            mAboutWidget->getInstallDateFrame()->hide();
+         }
+-    }
+-    mAboutWidget->getInstallDateFrame()->hide();
++        watcher->deleteLater();
++    });
+ }
+ 
+ void About::setupUpgradeComponent()
+ {
+     if (mAboutWidget->getUpgradeDateFrame()->isHidden())
+         return;
+-
+-    QString upgradeDate = mAboutDBus->property("upgradeDate").toString();
+-    if (upgradeDate.isEmpty())
+-        mAboutWidget->getUpgradeDateFrame()->hide();
+-    else
+-        mAboutWidget->getUpgradeDate()->setText(upgradeDate);
++    auto message = QDBusMessage::createMethodCall(
++        QStringLiteral("org.ukui.ukcc.session"), QStringLiteral("/About"),
++        QStringLiteral("org.freedesktop.DBus.Properties"), QStringLiteral("Get"));
++    message << QStringLiteral("org.ukui.ukcc.session.About") << QStringLiteral("upgradeDate");
++    auto *watcher = new QDBusPendingCallWatcher(
++        QDBusConnection::sessionBus().asyncCall(message, 2000), this);
++    connect(watcher, &QDBusPendingCallWatcher::finished, this,
++            [this, watcher](QDBusPendingCallWatcher *) {
++        QDBusPendingReply<QDBusVariant> reply = *watcher;
++        const QString date = reply.value().variant().toString();
++        if (reply.isError() || date.isEmpty())
++            mAboutWidget->getUpgradeDateFrame()->hide();
++        else
++            mAboutWidget->getUpgradeDate()->setText(date);
++        watcher->deleteLater();
++    });
+ }
+ 
+ void About::securityControl()
+@@ -909,12 +919,14 @@ void About::setVisibleBySecurity()
+     }
+ 
+     // 安全管控 安装时间及系统更新时间的显示与隐藏
+-    QVariantMap ModuleMap = UkccCommon::getModuleHideStatus();
++    queryAboutPolicy(this, [this](const QVariantMap &ModuleMap) {
+     QString moduleSettings = ModuleMap.value(name().toLower() + "Settings").toString();
+     QStringList setItems = moduleSettings.split(",");
+ 
+     foreach (QString setItem, setItems) {
+         QStringList item = setItem.split(":");
++        if (item.size() != 2)
++            continue;
+         qDebug() << "set item Name: " << item.at(0);
+         if (item.at(0) == "installedDateFrame") {
+             mAboutWidget->getInstallDateFrame()->setVisible(item.at(1) == "true");
+@@ -926,10 +938,13 @@ void About::setVisibleBySecurity()
+             mAboutWidget->getEditHost()->setVisible(item.at(1) == "true");
+         }
+     }
++    setupSysInstallComponent();
++    setupUpgradeComponent();
++    });
+ }
+ 
+ void About::setEnableBySecurity() {
+-    QVariantMap ModuleMap = UkccCommon::getModuleHideStatus();
++    queryAboutPolicy(this, [this](const QVariantMap &ModuleMap) {
+     QString moduleSettings = ModuleMap.value("aboutEnable").toString();
+     QStringList setItems = moduleSettings.split(",");
+     qDebug() << Q_FUNC_INFO << moduleSettings;
+@@ -943,6 +958,7 @@ void About::setEnableBySecurity() {
+             mAboutWidget->getEditHost()->setEnabled(item.at(1) == "true");
+         }
+     }
++    });
+ }
+ 
+ void About::compareTime(QString date)

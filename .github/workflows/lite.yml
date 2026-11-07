@@ -59,7 +59,7 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
   remaster:
-    needs: [ukui-password-candidates, installer-candidate]
+    needs: [ukui-password-candidates, installer-candidate, control-center-candidate]
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
@@ -82,6 +82,11 @@ jobs:
         uses: actions/download-artifact@v6
         with:
           name: kylin-os-installer-candidate
+          path: ukui-candidates
+      - name: Download responsive About control center package
+        uses: actions/download-artifact@v6
+        with:
+          name: ukui-control-center-candidate
           path: ukui-candidates
       - name: Set UKUI candidate package directory
         run: echo "UKUI_DEB_DIR=$GITHUB_WORKSPACE/ukui-candidates" >> "$GITHUB_ENV"
@@ -166,6 +171,22 @@ jobs:
         with:
           name: ${{ matrix.package }}-password-candidate
           path: ukui-output/
+          if-no-files-found: error
+          retention-days: 7
+
+  control-center-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build control center with nonblocking About queries
+        shell: bash
+        run: bash scripts/build_control_center_candidate.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: ukui-control-center-candidate
+          path: control-center-output/
           if-no-files-found: error
           retention-days: 7
 

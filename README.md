@@ -11,6 +11,14 @@ Nguồn cố định: `openKylin-Desktop-V3.0-20260918-x86_64.iso` (7.647.188.99
 
 Mục tiêu: **3–4 GB thập phân**, tối đa 4.000.000.000 byte (khoảng 3,73 GiB), giảm khoảng 48–61% so với nguồn. Cấu hình tại `config/size-target.json`. Nhỏ hơn 3 GB vẫn được chấp nhận, không chèn dữ liệu cho đủ dung lượng. Build vượt 4 GB sẽ dừng trước upload ISO; xem `size-result.txt`. Inspect xuất `size-budget.txt` để phân biệt squashfs và phần còn lại trên ISO. Chưa xác nhận có thể đạt mục tiêu chỉ bằng xóa app tùy chọn; ưu tiên ổn định, giữ desktop/trình cài đặt/driver/font/bộ gõ.
 
+## Sửa installer và Properties/About (sau build #45)
+
+- #45 dừng ở bước biên dịch installer vì Qt chuyển tên tài nguyên Trung Quốc thành `?` trong locale C; chưa tạo ISO. Build installer dùng `C.UTF-8` cho cả Qt resource scanner và qmake.
+- Ngưỡng cài đặt trong bản vá là **30 GiB** (khoảng 32,21 GB thập phân), root tối thiểu 20 GiB. Đây là cùng hệ đơn vị nhị phân mà installer gốc dùng cho ngưỡng 50G. Kiểm tra chạy script chia phân vùng thật với EFI/BIOS, máy thật/VM, swapfile/swap partition và RAM 4/64 GiB trước khi đóng gói.
+- Rebuild đúng `ukui-control-center 4.24.0.0-ok2.8`, xác minh SHA256 tarball. About đọc ngày mạng từ bộ nhớ đệm và thực hiện DNS/NTP bất đồng bộ với thời hạn 2 giây; truy vấn chính sách và ngày cài đặt/cập nhật cũng bất đồng bộ. Qt test kiểm tra phản hồi hợp lệ, bỏ qua gói sai và giao diện tiếp tục xử lý sự kiện khi máy chủ im lặng.
+- Giữ bản ISO chia phần trong draft Release. ISO #44 nguyên vẹn có dung lượng 3.956.604.928 byte, vượt giới hạn 2 GiB/tệp của Releases; ghép phần và xác minh checksum trước khi ghi USB.
+- Các kiểm tra build không thay cho boot và cài thử ISO 30 GiB, hoặc tái hiện Properties/About trong desktop UKUI.
+
 ## Khả năng chạy miễn phí
 
 - Repository public + runner Ubuntu tiêu chuẩn: compute miễn phí. Runner public Ubuntu có 4 CPU, 16 GB RAM, nhưng chỉ công bố 14 GB SSD. RAM không phải vấn đề chính; ổ đĩa mới là giới hạn.

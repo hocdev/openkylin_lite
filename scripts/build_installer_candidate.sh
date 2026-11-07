@@ -3,6 +3,10 @@ set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive
 export DEBFULLNAME='openKylin Lite'
 export DEBEMAIL='openkylin-lite@users.noreply.github.com'
+# Qt's resource scanner uses the locale codec for file names. The source has
+# Chinese resource names; the container's C locale turns them into '?' in Makefiles.
+export LANG=C.UTF-8
+export LC_ALL=C.UTF-8
 
 PACKAGE=${PACKAGE:-kylin-os-installer}
 SOURCE_PACKAGE=${SOURCE_PACKAGE:-$PACKAGE}
@@ -44,6 +48,7 @@ fi
 dpkg-source --before-build .
 git apply --check "$workspace/patches/installer/kylin-os-installer.patch"
 git apply "$workspace/patches/installer/kylin-os-installer.patch"
+INSTALLER_SOURCE_DIR=$PWD python3 -m unittest discover -s "$workspace/tests" -p 'test_installer_runtime.py' -v
 
 python3 - <<'PYTHON'
 import pathlib

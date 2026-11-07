@@ -59,7 +59,7 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
   remaster:
-    needs: [ukui-password-candidates]
+    needs: [ukui-password-candidates, installer-candidate]
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
@@ -78,6 +78,11 @@ jobs:
           pattern: ukui-*-password-candidate
           path: ukui-candidates
           merge-multiple: true
+      - name: Download 30GB-limit installer package
+        uses: actions/download-artifact@v6
+        with:
+          name: kylin-os-installer-candidate
+          path: ukui-candidates
       - name: Set UKUI candidate package directory
         run: echo "UKUI_DEB_DIR=$GITHUB_WORKSPACE/ukui-candidates" >> "$GITHUB_ENV"
       - name: Set original ISO location
@@ -161,5 +166,27 @@ jobs:
         with:
           name: ${{ matrix.package }}-password-candidate
           path: ukui-output/
+          if-no-files-found: error
+          retention-days: 7
+
+  installer-candidate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
+    steps:
+      - uses: actions/checkout@v6
+      - name: Build 30GB-limit kylin-os-installer package
+        shell: bash
+        env:
+          PACKAGE: kylin-os-installer
+          SOURCE_TAG: build/0.2.2-0k1.16
+          SOURCE_COMMIT: 15008beb5f39ccf33f920e03e6bcef24c2826b22
+          SOURCE_TARBALL_URL: http://archive.build.openkylin.top/openkylin/pool/main/k/kylin-os-installer/kylin-os-installer_0.2.2-0k1.16.tar.xz
+          SOURCE_TARBALL_SHA256: 189349021171f31d19539d41bed9955288104427ce35474beddb0a42cbac0042
+        run: bash scripts/build_installer_candidate.sh
+      - uses: actions/upload-artifact@v6
+        with:
+          name: kylin-os-installer-candidate
+          path: installer-output/
           if-no-files-found: error
           retention-days: 7

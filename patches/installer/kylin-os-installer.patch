@@ -1,0 +1,467 @@
+diff --git a/data/systemdatasize.sh b/data/systemdatasize.sh
+--- a/data/systemdatasize.sh
++++ b/data/systemdatasize.sh
+@@ -50,6 +50,10 @@
+ }
+ 
+ do_backup_size() {
++	if [ $real_size -lt 65536 ]; then
++		backup_size=1024
++		return
++	fi
+ 	backup_size=$(( real_size / 9 ))
+ 	if [ $backup_size -lt 16384 ]; then
+     		backup_size=16384
+@@ -83,6 +87,11 @@
+ if [ $swap -gt 64000 ]; then
+     swap=64000
+ fi
++if [ $real_size -lt 51200 ] && [ $swap -gt 2048 ]; then
++    swap=2048
++elif [ $swap -gt $(( real_size / 5 )) ]; then
++    swap=$(( real_size / 5 ))
++fi
+ swapfile=0
+ if grep -q kyswapfile /proc/cmdline; then
+     swapfile=${swap}
+@@ -93,8 +102,8 @@
+ 
+ ### root
+ root_size=$(( free_size * 6 / 10 ))
+-if [ $root_size -lt 40960 ]; then
+-    root_size=40960
++if [ $root_size -lt 20480 ]; then
++    root_size=20480
+     if [ $free_size -lt 0 ]; then
+         exit 1
+     fi
+@@ -109,11 +118,24 @@
+ #system_min_size=$(( real_size - free_size + 16384 + swapfile ))
+ #system_max_size=$(( real_size * 8 / 10 ))
+ 
+-data_min_size=$(( real_size * 2 / 10 ))
+-data_max_size=$(( free_size - 40960 - swapfile ))
++if [ $real_size -lt 51200 ]; then
++    data_min_size=1024
++else
++    data_min_size=$(( real_size * 2 / 10 ))
++fi
++data_max_size=$(( free_size - 20480 - swapfile ))
++if [ $data_max_size -lt 0 ]; then
++    exit 1
++fi
+ 
+ #系统和数据分区大小
+ data_default_size=$(( free_size - root_size ))
++if [ $data_min_size -gt $data_default_size ]; then
++    data_min_size=$(( data_default_size / 2 ))
++fi
++if [ $data_min_size -gt $data_max_size ]; then
++    data_min_size=$data_max_size
++fi
+ system_default_size=$(( real_size - data_default_size ))
+ 
+ 
+diff --git a/scripts/autopart-custom.sh b/scripts/autopart-custom.sh
+--- a/scripts/autopart-custom.sh
++++ b/scripts/autopart-custom.sh
+@@ -61,11 +61,15 @@
+ 
+ 	if [[ $i == "backup" ]]; then
+                 if [[ $size == "default" ]]; then
+-                        backup_size=$(( real_size / 9 ))
+-                        if [ $backup_size -lt 16384 ]; then
+-                                backup_size=16384
+-                        elif [ $backup_size -gt 102400 ]; then
+-                                backup_size=102400
++                        if [ $real_size -lt 65536 ]; then
++                                backup_size=1024
++                        else
++                                backup_size=$(( real_size / 9 ))
++                                if [ $backup_size -lt 16384 ]; then
++                                        backup_size=16384
++                                elif [ $backup_size -gt 102400 ]; then
++                                        backup_size=102400
++                                fi
+                         fi
+ 
+                         if [[ "${virtual_machine}" == "true" ]]; then
+@@ -97,6 +101,11 @@
+ 			swap_size=$(( ram * 12 / 1024 / 10 ))
+ 			if [ ${swap_size} -gt 64000 ]; then
+     				swap_size=64000
++			fi
++			if [ $real_size -lt 51200 ] && [ ${swap_size} -gt 2048 ]; then
++				swap_size=2048
++			elif [ ${swap_size} -gt $(( real_size / 5 )) ]; then
++				swap_size=$(( real_size / 5 ))
+ 			fi
+ 			swapfile=0
+ 			if [[ "${is_swapfile}" == "true" ]]; then
+@@ -183,8 +192,8 @@
+         	if [[ $i == "root" ]]; then
+                 	if [[ $size == "default" ]]; then
+ 				root_size=$(( free_size * 6 / 10 ))
+-				if [ $root_size -lt 16384 ]; then
+-    					root_size=16384
++				if [ $root_size -lt 20480 ]; then
++    					root_size=20480
+ 				elif [ $root_size -gt 102400 ]; then
+     					root_size=102400
+ 					if [ $free_size -lt 204800 ]; then
+diff --git a/scripts/autopart-efi-custom.sh b/scripts/autopart-efi-custom.sh
+--- a/scripts/autopart-efi-custom.sh
++++ b/scripts/autopart-efi-custom.sh
+@@ -72,11 +72,15 @@
+ 
+ 	if [[ $i == "backup" ]]; then
+                 if [[ $size == "default" ]]; then
+-                        backup_size=$(( real_size / 9 ))
+-                        if [ $backup_size -lt 16384 ]; then
+-                                backup_size=16384
+-                        elif [ $backup_size -gt 102400 ]; then
+-                                backup_size=102400
++                        if [ $real_size -lt 65536 ]; then
++                                backup_size=1024
++                        else
++                                backup_size=$(( real_size / 9 ))
++                                if [ $backup_size -lt 16384 ]; then
++                                        backup_size=16384
++                                elif [ $backup_size -gt 102400 ]; then
++                                        backup_size=102400
++                                fi
+                         fi
+ 
+                         if [[ "${virtual_machine}" == "true" ]]; then
+@@ -108,6 +112,11 @@
+ 			swap_size=$(( ram * 12 / 1024 / 10 ))
+ 			if [ ${swap_size} -gt 64000 ]; then
+     				swap_size=64000
++			fi
++			if [ $real_size -lt 51200 ] && [ ${swap_size} -gt 2048 ]; then
++				swap_size=2048
++			elif [ ${swap_size} -gt $(( real_size / 5 )) ]; then
++				swap_size=$(( real_size / 5 ))
+ 			fi
+ 			swapfile=0
+ 			if [[ "${is_swapfile}" == "true" ]]; then
+@@ -194,8 +203,8 @@
+         	if [[ $i == "root" ]]; then
+                 	if [[ $size == "default" ]]; then
+ 				root_size=$(( free_size * 6 / 10 ))
+-				if [ $root_size -lt 16384 ]; then
+-    					root_size=16384
++				if [ $root_size -lt 20480 ]; then
++    					root_size=20480
+ 				elif [ $root_size -gt 102400 ]; then
+     					root_size=102400
+ 					if [ $free_size -lt 204800 ]; then
+diff --git a/scripts/autopart-efi.sh b/scripts/autopart-efi.sh
+--- a/scripts/autopart-efi.sh
++++ b/scripts/autopart-efi.sh
+@@ -63,11 +63,15 @@
+ boot=2048
+ 
+ ### backup
+-backup_size=$(( real_size / 9 ))
+-if [ $backup_size -lt 16384 ]; then
+-    backup_size=16384
+-elif [ $backup_size -gt 102400 ]; then
+-    backup_size=102400
++if [ $real_size -lt 65536 ]; then
++    backup_size=1024
++else
++    backup_size=$(( real_size / 9 ))
++    if [ $backup_size -lt 16384 ]; then
++        backup_size=16384
++    elif [ $backup_size -gt 102400 ]; then
++        backup_size=102400
++    fi
+ fi
+ if [[ "${virtual_machine}" == "true" ]]; then
+     backup_size=0
+@@ -82,6 +86,11 @@
+ if [ $swap -gt 64000 ]; then
+     swap=64000
+ fi
++if [ $real_size -lt 51200 ] && [ $swap -gt 2048 ]; then
++    swap=2048
++elif [ $swap -gt $(( real_size / 5 )) ]; then
++    swap=$(( real_size / 5 ))
++fi
+ swapfile=0
+ if [[ "${is_swapfile}" == "true" ]]; then
+     swapfile=${swap}
+@@ -95,8 +104,8 @@
+ ### root
+ 
+ root_size=$(( free_size * 6 / 10 ))
+-if [ $root_size -lt 16384 ]; then
+-    root_size=16384
++if [ $root_size -lt 20480 ]; then
++    root_size=20480
+     if [ $free_size -lt 0 ]; then
+         exit 1
+     fi
+diff --git a/scripts/autopart.sh b/scripts/autopart.sh
+--- a/scripts/autopart.sh
++++ b/scripts/autopart.sh
+@@ -60,11 +60,15 @@
+ 
+ 
+ ### backup
+-backup_size=$(( real_size / 9 ))
+-if [ $backup_size -lt 16384 ]; then
+-    backup_size=16384
+-elif [ $backup_size -gt 102400 ]; then
+-    backup_size=102400
++if [ $real_size -lt 65536 ]; then
++    backup_size=1024
++else
++    backup_size=$(( real_size / 9 ))
++    if [ $backup_size -lt 16384 ]; then
++        backup_size=16384
++    elif [ $backup_size -gt 102400 ]; then
++        backup_size=102400
++    fi
+ fi
+ if [[ "${virtual_machine}" == "true" ]]; then
+     backup_size=0
+@@ -79,6 +83,11 @@
+ if [ $swap -gt 64000 ]; then
+     swap=64000
+ fi
++if [ $real_size -lt 51200 ] && [ $swap -gt 2048 ]; then
++    swap=2048
++elif [ $swap -gt $(( real_size / 5 )) ]; then
++    swap=$(( real_size / 5 ))
++fi
+ swapfile=0
+ if [[ "${is_swapfile}" == "true" ]]; then
+     swapfile=${swap}
+@@ -89,8 +98,8 @@
+ 
+ ### root
+ root_size=$(( free_size * 6 / 10 ))
+-if [ $root_size -lt 16384 ]; then
+-    root_size=16384
++if [ $root_size -lt 20480 ]; then
++    root_size=20480
+     if [ $free_size -lt 0 ]; then
+         exit 1
+     fi
+diff --git a/scripts/utils b/scripts/utils
+--- a/scripts/utils
++++ b/scripts/utils
+@@ -143,7 +143,7 @@
+         Val=`LANG=en_US; echo $i | cut -d ':' -f 2`
+         Val=$[$Val / 1024 / 1024 / 1024]
+         Disk=`LANG=en_US; echo $i | cut -d ':' -f 1`
+-            if [[ `echo "$Val < 35" | bc` -eq 1 ]]; then
++            if [[ `echo "$Val < 25" | bc` -eq 1 ]]; then
+             continue
+         fi
+         if [[ `echo "$Val < $Size_0" | bc` -eq 1 ]]; then
+@@ -169,10 +169,10 @@
+ auto_disk() {
+     DiskList=`LANG=en_US; sudo fdisk -l | awk '{if($1=="Disk" && $2!="identifier:" && $2!="model:") print $2$5}'`
+     MAX=2050
+-    MIN=50
+-    Size_0=50
+-    Size_1=50
+-    Size_2=50
++    MIN=30
++    Size_0=30
++    Size_1=30
++    Size_2=30
+ 
+     Ret=
+ 
+@@ -193,7 +193,7 @@
+ 
+         Disk=`LANG=en_US; echo $i | cut -d ':' -f 1`
+ 
+-        if [[ `echo "$Val < 35" | bc` -eq 1 ]]; then
++        if [[ `echo "$Val < 25" | bc` -eq 1 ]]; then
+             continue
+         fi
+ 
+@@ -246,7 +246,7 @@
+ auto_disk_min() {
+     DiskList=`LANG=en_US; sudo fdisk -l | awk '{if($1=="Disk" && $2!="identifier:" && $2!="model:") print $2$5}'`
+     MAX=2050
+-    MIN=50
++    MIN=30
+     Size_0=2050
+     Size_1=2050
+     Size_2=2050
+@@ -270,7 +270,7 @@
+ 
+         Disk=`LANG=en_US; echo $i | cut -d ':' -f 1`
+ 
+-        if [[ `echo "$Val < 35" | bc` -eq 1 ]]; then
++        if [[ `echo "$Val < 25" | bc` -eq 1 ]]; then
+             continue
+         fi
+ 
+@@ -387,10 +387,10 @@
+                         #当未检测到总线最大速度时,跳出循环
+                         if [[ -n ${test_speed} ]]; then
+                                 echo "/dev/$i=${test_speed}GT/s"
+-                                #过滤掉小于50G的磁盘
++                                #过滤掉小于30G的磁盘
+                                 test_size=$(fdisk -s "/dev/$i")
+                                 test_size=$(( test_size / 1024 / 1024))
+-                                if [[ `echo "${test_size} < 50" | bc` -eq 1 ]]; then
++                                if [[ `echo "${test_size} < 30" | bc` -eq 1 ]]; then
+                                         continue
+                                 fi
+                                 test_size=0
+@@ -492,10 +492,10 @@
+ 
+         DiskList=`LANG=en_US; sudo fdisk -l | grep -v "${disk}" | awk '{if($1=="Disk" && $2!="identifier:" && $2!="model:") print $2$5}'`
+         MAX=2050
+-        MIN=50
+-        Size_0=50
+-        Size_1=50
+-        Size_2=50
++        MIN=30
++        Size_0=30
++        Size_1=30
++        Size_2=30
+ 
+         Ret=
+ 
+@@ -517,7 +517,7 @@
+ 
+                 Disk=`LANG=en_US; echo $i | cut -d ':' -f 1`
+ 
+-                if [[ `echo "$Val < 35" | bc` -eq 1 ]]; then
++                if [[ `echo "$Val < 25" | bc` -eq 1 ]]; then
+                         continue
+                 fi
+ 
+diff --git a/src/plugins/KPartition/createpartitionframe.cpp b/src/plugins/KPartition/createpartitionframe.cpp
+--- a/src/plugins/KPartition/createpartitionframe.cpp
++++ b/src/plugins/KPartition/createpartitionframe.cpp
+@@ -381,10 +381,10 @@
+                         }
+                     }
+                 }
+-		if( (sizeEdit->getValue()*kMebiByte) < 40*kGibiByte )
++		if( (sizeEdit->getValue()*kMebiByte) < 20*kGibiByte )
+                 {
+                     message=new MessageBox(this);
+-                	message->setMessageInfo(tr("Root partition size is greater than 40GB."));//根分区大小大于40GB
++                	message->setMessageInfo(tr("Root partition size is greater than 20GB."));//根分区大小大于20GB
+                 	message->setCancleHidden();
+                 	message->exec();
+                     QApplication::processEvents(QEventLoop::ExcludeSocketNotifiers|QEventLoop::ExcludeUserInputEvents);
+@@ -791,7 +791,7 @@
+ 	if(sizeStr.toInt()>=root_default_size){
+ 		sizeEdit->m_ledit->setText(QString::number(root_default_size));
+ 	}
+-        tipLabel->setText(tr("Root partition size is greater than 40GB."));//根分区大小大于40GB
++        tipLabel->setText(tr("Root partition size is greater than 20GB."));//根分区大小大于20GB
+     } else if(text == "/data") {
+ 	fileFormat->setCurrentText(QObject::tr("kylin-data"));
+ 	fileFormat->setEnabled(true);
+diff --git a/src/plugins/KPartition/createpartitionframe.h b/src/plugins/KPartition/createpartitionframe.h
+--- a/src/plugins/KPartition/createpartitionframe.h
++++ b/src/plugins/KPartition/createpartitionframe.h
+@@ -80,8 +80,8 @@
+     QString sizeStr;
+     qint64 sizevalue;
+ 
+-    qint64 root_default_size=50000;
+-    qint64 data_default_size=50000;
++    qint64 root_default_size=20480;
++    qint64 data_default_size=20480;
+     qint64 swap_default_size=8000;
+     qint64 backup_default_size=20000;
+     bool priTypebl, startPosbl;
+diff --git a/src/plugins/KPartition/delegate/custom_partition_delegate.cpp b/src/plugins/KPartition/delegate/custom_partition_delegate.cpp
+--- a/src/plugins/KPartition/delegate/custom_partition_delegate.cpp
++++ b/src/plugins/KPartition/delegate/custom_partition_delegate.cpp
+@@ -330,9 +330,9 @@
+     QString tmp = getDeviceStrByType(getDeviceModel());
+     tmp.remove(QRegExp("\\s"));//去除字符串中间空格
+     if(tmp.contains("Kirin990") || tmp.contains("Kirin9006C")) {
+-        root_required = 50;
++        root_required = 30;
+     } else {
+-        root_required = 40;
++        root_required = 20;
+     }
+ 
+     int boot_required = 2;//2GB
+diff --git a/src/plugins/KPartition/delegate/full_partition_delegate.cpp b/src/plugins/KPartition/delegate/full_partition_delegate.cpp
+--- a/src/plugins/KPartition/delegate/full_partition_delegate.cpp
++++ b/src/plugins/KPartition/delegate/full_partition_delegate.cpp
+@@ -31,7 +31,7 @@
+ #include "partition_delegate.h"
+ 
+ namespace KInstaller {
+-#define DISKMINSIZE 50
++#define DISKMINSIZE 30
+ FullPartitionDelegate::FullPartitionDelegate(QObject* parent) :PartitionDelegate(parent),
+     m_quickInstall(false)
+ {
+diff --git a/src/plugins/KPartition/frames/levelscrolldiskview.cpp b/src/plugins/KPartition/frames/levelscrolldiskview.cpp
+--- a/src/plugins/KPartition/frames/levelscrolldiskview.cpp
++++ b/src/plugins/KPartition/frames/levelscrolldiskview.cpp
+@@ -216,7 +216,7 @@
+         double d =100.0 * usedspace / devlist.at(i)->m_diskTotal;
+         disk->setProgressValue(d);
+         qint64 t = devlist.at(i)->m_diskTotal/1024/1024/1024;
+-        int r = t - 50;//50G
++        int r = t - 30;//30G
+         if(r < 0) {
+             m_disklist.at(i)->setWidgetDisabled();
+             m_disklist.at(i)->m_checkable = false;
+diff --git a/src/plugins/KPartition/mainpartframe.cpp b/src/plugins/KPartition/mainpartframe.cpp
+--- a/src/plugins/KPartition/mainpartframe.cpp
++++ b/src/plugins/KPartition/mainpartframe.cpp
+@@ -830,7 +830,7 @@
+                 validateMessage.append(tr("Efi partition number invalid\n"));
+                 return 0;
+             case ValidateState::RootTooSmall:
+-                validateMessage.append(tr("Root partition size is greater than 40GB\n"));//根分区大小大于40GB
++                validateMessage.append(tr("Root partition size is greater than 20GB\n"));//根分区大小大于20GB
+                 return 0;
+             case ValidateState::BackUpPartitionTooSmall:
+                 validateMessage.append(tr("BackUp partition too small\n"));
+diff --git a/src/plugins/KPartition/quickpartitionframe.cpp b/src/plugins/KPartition/quickpartitionframe.cpp
+--- a/src/plugins/KPartition/quickpartitionframe.cpp
++++ b/src/plugins/KPartition/quickpartitionframe.cpp
+@@ -150,7 +150,7 @@
+     slistDisk->addItemsToList(devs);
+     emit signalFinishedLoadDisk(slistDisk->m_disklist.count());
+     devlist = devs;
+-    if(devs.length() == 1 && (devs.at(0)->m_diskTotal/1024/1024/1024 - 50 < 0)) {
++    if(devs.length() == 1 && (devs.at(0)->m_diskTotal/1024/1024/1024 - 30 < 0)) {
+         m_tip->show();
+     }
+     if( m_display ) //bug165285，防止读取硬盘信息较快造成的过早(在首界面)显示提示信息
+@@ -344,7 +344,7 @@
+ 
+ void FullPartitionFrame::translateStr()
+ {
+-    m_tip->setText(tr("Please choose custom way to install, disk size less than 50G!"));//请选择自定义方式进行安装！
++    m_tip->setText(tr("Please choose custom way to install, disk size less than 30G!"));//请选择自定义方式进行安装！
+     m_encryptBox->setText(tr("Full disk encryption"));
+     m_lvm->setText(tr("lvm"));
+     m_firstback->setText(tr("Factory backup"));
+@@ -496,9 +496,9 @@
+     }
+ 
+     if (slistDisk->m_SSDBoolValue && slistDisk->m_HDDBoolValue) {
+-        // 两个硬盘中任何一个小于50GB就不发出提示
+-        if( (devlist.at(slistDisk->m_SSDIndex)->m_diskTotal/1024/1024/1024 < 50) ||
+-            (devlist.at(slistDisk->m_HDDIndex)->m_diskTotal/1024/1024/1024 < 50))
++        // 两个硬盘中任何一个小于30GB就不发出提示
++        if( (devlist.at(slistDisk->m_SSDIndex)->m_diskTotal/1024/1024/1024 < 30) ||
++            (devlist.at(slistDisk->m_HDDIndex)->m_diskTotal/1024/1024/1024 < 30))
+             return;
+ 
+         // 设置CheckBox不可见

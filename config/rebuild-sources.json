@@ -1,6 +1,6 @@
 {
   "status": "exact-version-tags-found; patched-build-and-runtime-compatibility-unverified",
-  "checked_date": "2026-11-06",
+  "checked_date": "2026-11-07",
   "branch_family": "openkylin/huanghe",
   "packages": [
     {"source": "ukui-search", "version": "4.24.0.0-ok0.2", "repository": "https://gitee.com/openkylin/ukui-search.git", "tag": "build/4.24.0.0-ok0.2", "commit": "98546374698f48699af3f375585e225e4cd1f557"},
@@ -9,6 +9,7 @@
     {"source": "peony-extensions", "version": "4.24.0.0-ok5", "repository": "https://gitee.com/openkylin/peony-extensions.git", "tag": "build/4.24.0.0-ok5", "commit": "7850ac7bf541009ab73c0afce761d3b0540e7cea"},
     {"source": "orca", "version": "46.1-ok6", "repository": "https://gitee.com/openkylin/orca.git", "tag": "build/46.1-ok6", "commit": "87f9c2b8e88f9da4952c510a22af97b13086a18a"},
     {"source": "ukui-voice-wing", "version": "4.24.0.0-ok0.1k0.3", "repository": "https://gitee.com/openkylin/ukui-voice-wing.git", "tag": "build/4.24.0.0-ok0.1k0.3", "commit": "3b65d13ebfd24ce57110beb47ec0507bccf9243e"},
-    {"source": "kolourpaint", "version": "4:23.08.3-ok3.18", "repository": "https://gitee.com/openkylin/kolourpaint.git", "tag": "build/4%23.08.3-ok3.18", "commit": "2d197543cf2bf4ca38afdfa8b340ce4025bd2098"}
+    {"source": "kolourpaint", "version": "4:23.08.3-ok3.18", "repository": "https://gitee.com/openkylin/kolourpaint.git", "tag": "build/4%23.08.3-ok3.18", "commit": "2d197543cf2bf4ca38afdfa8b340ce4025bd2098"},
+    {"source": "kylin-os-installer", "version": "0.2.2-0k1.16", "repository": "https://gitee.com/openkylin/kylin-os-installer.git", "tag": "build/0.2.2-0k1.16", "commit": "15008beb5f39ccf33f920e03e6bcef24c2826b22"}
   ]
 }

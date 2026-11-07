@@ -11,14 +11,14 @@ repo=$PWD
 ukui_deb_dir=${UKUI_DEB_DIR:-}
 declare -A ukui_versions=()
 if [[ $MODE != inspect ]]; then
-  [[ -n $ukui_deb_dir && -d $ukui_deb_dir ]] || { echo 'Password-only UKUI candidate packages are required'; exit 1; }
+  [[ -n $ukui_deb_dir && -d $ukui_deb_dir ]] || { echo 'Candidate packages are required'; exit 1; }
   shopt -s nullglob
   for deb in "$ukui_deb_dir"/*.deb; do
     package=$(dpkg-deb -f "$deb" Package)
     version=$(dpkg-deb -f "$deb" Version)
     case $package in
-      ukui-greeter|ukui-screensaver|ukui-polkit) ;;
-      *) echo "Unexpected UKUI candidate package: $package"; exit 1 ;;
+      ukui-greeter|ukui-screensaver|ukui-polkit|kylin-os-installer) ;;
+      *) echo "Unexpected candidate package: $package"; exit 1 ;;
     esac
     [[ ! ${ukui_versions[$package]+present} ]] || { echo "Duplicate candidate: $package"; exit 1; }
     ukui_versions[$package]=$version
@@ -26,8 +26,8 @@ if [[ $MODE != inspect ]]; then
       echo "$package still depends on biometric authentication"; exit 1
     fi
   done
-  [[ ${#ukui_versions[@]} == 3 ]] || { echo 'Expected exactly three password-only UKUI packages'; exit 1; }
-  for package in ukui-greeter ukui-screensaver ukui-polkit; do
+  [[ ${#ukui_versions[@]} == 4 ]] || { echo 'Expected three password-only UKUI packages and kylin-os-installer'; exit 1; }
+  for package in ukui-greeter ukui-screensaver ukui-polkit kylin-os-installer; do
     [[ -n ${ukui_versions[$package]+present} ]] || { echo "Missing candidate: $package"; exit 1; }
   done
 fi
@@ -138,8 +138,8 @@ mount -t squashfs -o loop,ro "$sq" "$work/lower"
 mount -t overlay overlay -o "lowerdir=$work/lower,upperdir=$work/upper,workdir=$work/overlay-work" "$root"
 disk_stage overlay-mounted
 purge_packages() {
-local root=$1 baseline=$2 report_dir=$3 p essential guard purge_status=0
-local -a apt_options=(-o Dpkg::Use-Pty=0)
+local root=$1 baseline=$2 report_dir=$3 p essential guard purge_status=0 status actual
+local -a apt_options=(-o Dpkg::Use-Pty=0) candidate_debs=() candidate_packages=()
 local candidate_dir=/tmp/openkylin-ukui-candidates deb candidate_count=0
 local -A expected_versions=()
 mkdir -p "$report_dir"
@@ -157,12 +157,21 @@ chroot "$root" dpkg --audit > "$report_dir/dpkg-audit-before.txt"
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-before.txt"
 mkdir -p "$root$candidate_dir"
 for deb in "$ukui_deb_dir"/*.deb; do
-  cp "$deb" "$root$candidate_dir/"
   package=$(dpkg-deb -f "$deb" Package)
+  if [[ $package == kylin-os-installer ]]; then
+    status=$(chroot "$root" dpkg-query -W '-f=${Status}' "$package" 2>/dev/null || true)
+    [[ $status == 'install ok installed' ]] || continue
+  fi
+  cp "$deb" "$root$candidate_dir/"
+  candidate_debs+=("$candidate_dir/$(basename "$deb")")
+  candidate_packages+=("$package")
   expected_versions[$package]=${ukui_versions[$package]}
   ((candidate_count+=1))
 done
-(( candidate_count == 3 )) || { echo 'Candidate package staging is incomplete'; return 1; }
+(( candidate_count >= 3 )) || { echo 'Candidate package staging is incomplete'; return 1; }
+for package in ukui-greeter ukui-screensaver ukui-polkit; do
+  [[ -n ${expected_versions[$package]+present} ]] || { echo "Missing required UKUI candidate: $package"; return 1; }
+done
 for p in "${packages[@]}"; do
   chroot "$root" dpkg-query -W '-f=${Status}\n' "$p" | grep -qx 'install ok installed'
 done
@@ -179,13 +188,9 @@ guard="$root/etc/dpkg/dpkg.cfg.d/ostree-guard"
 if [[ -e "$guard" || -L "$guard" ]]; then
   mv -- "$guard" "$work/ostree-guard.original"
 fi
-candidate_debs=()
-for deb in "$ukui_deb_dir"/*.deb; do
-  candidate_debs+=("$candidate_dir/$(basename "$deb")")
-done
 DEBIAN_FRONTEND=noninteractive DEBCONF_SYSTEMRC=/etc/debconf.conf \
   chroot "$root" dpkg -i "${candidate_debs[@]}"
-for package in ukui-greeter ukui-screensaver ukui-polkit; do
+for package in "${candidate_packages[@]}"; do
   actual=$(chroot "$root" dpkg-query -W '-f=${Version}' "$package")
   [[ $actual == "${expected_versions[$package]}" ]] || { echo "Unexpected candidate version for $package: $actual"; return 1; }
 done
@@ -282,7 +287,10 @@ find "$root/var/cache/apt/archives" -type f -name '*.deb' -delete
 # Regenerate the local cache against the package database after the purge.
 chroot "$root" apt-cache gencaches
 chroot "$root" dpkg-query -W '-f=${Package} ${Version}\n' > "$report_dir/manifest-after.txt"
-printf '%s\n' "ukui-greeter ${ukui_versions[ukui-greeter]}" "ukui-screensaver ${ukui_versions[ukui-screensaver]}" "ukui-polkit ${ukui_versions[ukui-polkit]}" > "$report_dir/ukui-candidate-versions.txt"
+: > "$report_dir/ukui-candidate-versions.txt"
+for package in "${candidate_packages[@]}"; do
+  printf '%s %s\n' "$package" "${expected_versions[$package]}" >> "$report_dir/ukui-candidate-versions.txt"
+done
 python3 - "$baseline" "$root/var/lib/dpkg/status" "$work/expected-removed" "$report_dir/ukui-candidate-versions.txt" > "$report_dir/package-diff.txt" <<'PY'
 import pathlib,re,sys
 sys.path.insert(0, 'scripts')
@@ -314,7 +322,13 @@ umount "$root/proc"
 umount "$root/dev"
 }
 python3 scripts/collect_review.py "$root"
+chroot "$root" dpkg-query -W '-f=${Status}\n' kylin-os-installer | grep -qx 'install ok installed'
 purge_packages "$root" "$work/lower/var/lib/dpkg/status" reports
+grep -Fxq "kylin-os-installer ${ukui_versions[kylin-os-installer]}" reports/ukui-candidate-versions.txt
+grep -Fq '20480' "$root/usr/share/kylin-os-installer/data/systemdatasize.sh"
+installer_libs=( "$root"/usr/lib/libKPartition.so* )
+(( ${#installer_libs[@]} > 0 )) || { echo 'Missing libKPartition.so in Live root'; exit 1; }
+grep -Fq 'disk size less than 30G!' "${installer_libs[@]}"
 du -x --apparent-size -B1 --max-depth=3 "$root" | sort -nr | sed -n '1,100p' > reports/rootfs-largest-dirs.tsv
 find "$root" -xdev -type f -size +10M -printf '%s\t%P\n' | sort -nr > reports/rootfs-largest-files.tsv
 if [[ $MODE == profile ]]; then

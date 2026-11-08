@@ -4,7 +4,7 @@
  
  void CropLabel::mouseReleaseEvent(QMouseEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      if(m_isPressed){
          m_pressedLeft = false;               //鼠标按下左侧
@@ -13,7 +13,7 @@
  
  bool CropLabel::isPressPointInCropRegion(QPoint mousePressPoint)
  {
-+    Q_UNUSED(mousePressPoint); 
++    Q_UNUSED(mousePressPoint);
 +
      return true;
  }
@@ -75,7 +75,7 @@
  
  
  void AptUtilHelper::onRecvApt(bool success, QStringList updateGroup, QString errorString, QString errorDesc) {
-+    Q_UNUSED(updateGroup); 
++    Q_UNUSED(updateGroup);
 +
      qDebug() << "onReceiveKumAptSignal" << success;
      if(success == false) {
@@ -86,7 +86,7 @@
  
  bool usbClassCheck(int bInterfaceClass, int bInterfaceSubClass)
  {
-+    Q_UNUSED(bInterfaceSubClass); 
++    Q_UNUSED(bInterfaceSubClass);
 +
      switch (bInterfaceClass) {
      case LIBUSB_CLASS_PER_INTERFACE:
@@ -97,7 +97,7 @@
  
  GlobalConfigSignal::GlobalConfigSignal(QObject *parent)
  {
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +
      if(QGSettings::isSchemaInstalled(KYLINSCANNER)){
          m_data = new QGSettings(KYLINSCANNER);
@@ -108,7 +108,7 @@
  
  void SaveFileBase::setPdfSize(QImage *tmp, QPdfWriter *pdfWriter, QString size)
  {
-+    Q_UNUSED(tmp); 
++    Q_UNUSED(tmp);
 +
      switch (toUnicode(size)) {
      case U("A0"):
@@ -146,7 +146,7 @@
      // 不再使用 exit(0)，让正常的关闭流程处理退出
  }
  void MainWidget::rotationChanged(bool isPCMode,int width,int height){
-+    Q_UNUSED(width); Q_UNUSED(height); 
++    Q_UNUSED(width); Q_UNUSED(height);
 +
      GlobalUserSignal::getInstance()->setCurrentMode(isPCMode);
      emit GlobalUserSignal::getInstance()->rotationChangedSig(isPCMode);
@@ -155,7 +155,7 @@
  
  void MainWidget::hideRectifyRunningDialog(bool isTrue)
  {
-+    Q_UNUSED(isTrue); 
++    Q_UNUSED(isTrue);
 +
      qDebug() << "hide rectify dialog";
      if (! m_rectifyRunningDialog->isHidden()) {
@@ -206,7 +206,7 @@
  
  void NoDeviceWidget::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QPainter painter(this);
      QPen pen;
@@ -292,7 +292,7 @@
  
  static void authCallback (SANE_String_Const resource, SANE_Char *username, SANE_Char *password)
  {
-+    Q_UNUSED(resource); Q_UNUSED(username); Q_UNUSED(password); 
++    Q_UNUSED(resource); Q_UNUSED(username); Q_UNUSED(password);
 +
      //    qDebug() << "auth_callback" << resource << username << password;
  }
@@ -364,7 +364,7 @@
   */
  int SaneObject::startScanning(UserSelectedInfo info)
  {
-+    Q_UNUSED(info); 
++    Q_UNUSED(info);
 +
      SANE_Status status = SANE_STATUS_GOOD;
      if(!g_sane_object->m_ParametersHaveSeted){
@@ -401,7 +401,7 @@
  
  void ScanSettingsWidget::nameCurrentTextChangedSlot(QString text)
  {
-+    Q_UNUSED(text); 
++    Q_UNUSED(text);
 +
      QString msg;
      if (m_saveNameEdit->text().contains(QChar('/'), Qt::CaseInsensitive)) {
@@ -411,7 +411,7 @@
      kdk_dia_data_free(node);
  
 -    int retDialog;
-+    
++
  
      AppList *maillist = getAppIdList(MailType);
  
@@ -419,7 +419,7 @@
  
  void ScanSettingsWidget::setLabelAttributes(QLabel *label, const QString &text, int labelHeight)
  {
-+    Q_UNUSED(labelHeight); 
++    Q_UNUSED(labelHeight);
 +
      label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
      label->setFixedWidth(ScanSettingsLabelWidth);
@@ -576,7 +576,7 @@
  
  void SuccessPageWidget::updateScanSettingsSlot(bool isWork)
  {
-+    Q_UNUSED(isWork); 
++    Q_UNUSED(isWork);
 +
      m_scanSettingsWidget->updateSettingsForDetectDevices();
  }
@@ -659,7 +659,7 @@
  
  static void authCallback (SANE_String_Const resource, SANE_Char *username, SANE_Char *password)
  {
-+    Q_UNUSED(resource); Q_UNUSED(username); Q_UNUSED(password); 
++    Q_UNUSED(resource); Q_UNUSED(username); Q_UNUSED(password);
 +
      //    qDebug() << "auth_callback" << resource << username << password;
  }

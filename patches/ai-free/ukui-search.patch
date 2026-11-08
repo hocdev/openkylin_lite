@@ -32,7 +32,7 @@ index 7d501ab..c7f1a50 100644
          kysdk-systime
          kysdk-datacollect
 -        kyai-data-management-client
-+        
++
          )
  
  foreach(PC_LIB IN ITEMS ${LIBUKUI_SEARCH_PC_PKGS})
@@ -497,7 +497,7 @@ index b5a1089..23d0f7c 100644
 -                m_aiIndexBtn->setEnabled(false);
 -            }
 -        }
-+        
++
  
  
          if (m_gsettings->keys().contains(WEB_ENGINE_KEY)) {
@@ -534,7 +534,7 @@ index b5a1089..23d0f7c 100644
 -            }
 -        });
 -        }
-+        
++
  
          connect(m_webEngineFrame->mCombox, QOverload<int>::of(&QComboBox::currentIndexChanged), this, [=] {
              if (m_gsettings && m_gsettings->keys().contains(WEB_ENGINE_KEY)) {
@@ -572,7 +572,7 @@ index b5a1089..23d0f7c 100644
 -        m_aiIndexLyt->addWidget(m_aiIndexBtn);
 -        m_mainLyt->addWidget(m_aiIndexFrame);
 -    }
-+    
++
  
  
      //添加搜索目录部分ui
@@ -586,7 +586,7 @@ index b5a1089..23d0f7c 100644
 -            m_aiIndexBtn->setChecked(isAiIndexOn);
 -            m_aiIndexBtn->blockSignals(false);
 -        }
-+        
++
      } else if (key == WEB_ENGINE_KEY) {
          QString engine = m_gsettings->get(WEB_ENGINE_KEY).toString();
          m_webEngineFrame->mCombox->blockSignals(true);

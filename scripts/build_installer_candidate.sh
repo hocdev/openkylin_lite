@@ -16,13 +16,14 @@ SOURCE_TARBALL_URL=${SOURCE_TARBALL_URL:-http://archive.build.openkylin.top/open
 SOURCE_TARBALL_SHA256=${SOURCE_TARBALL_SHA256:-189349021171f31d19539d41bed9955288104427ce35474beddb0a42cbac0042}
 
 workspace=$PWD
+export CMAKE_POLICY_VERSION_MINIMUM=3.10
 bash "$workspace/scripts/prepare_build_environment.sh"
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 apt-get -o Acquire::Retries=3 update
 apt-get install -y --no-install-recommends \
-  ca-certificates curl git build-essential devscripts python3 qttools5-dev-tools xz-utils
+  ca-certificates curl git build-essential devscripts libdistro-info-perl python3 qttools5-dev-tools xz-utils
 
 git init --initial-branch=upstream "$work/source"
 cd "$work/source"
@@ -47,8 +48,8 @@ else
 fi
 
 dpkg-source --before-build .
-git apply --check "$workspace/patches/installer/kylin-os-installer.patch"
-git apply "$workspace/patches/installer/kylin-os-installer.patch"
+git apply --check --ignore-space-change "$workspace/patches/installer/kylin-os-installer.patch"
+git apply --ignore-space-change "$workspace/patches/installer/kylin-os-installer.patch"
 bash "$workspace/scripts/apply_build_warning_patch.sh" "$SOURCE_PACKAGE" "$workspace"
 INSTALLER_SOURCE_DIR=$PWD python3 -m unittest discover -s "$workspace/tests" -p 'test_installer_runtime.py' -v
 
@@ -112,6 +113,7 @@ PYTHON
 
 dch --local +lite --distribution huanghe 'Lower minimum installation disk size from 50 GB to 30 GB.'
 apt-get build-dep -y --no-install-recommends ./
+python3 "$workspace/scripts/patch_build_tools.py"
 WARNING_SOURCE_DIR=$PWD WARNING_SOURCE_PACKAGE=$SOURCE_PACKAGE python3 -m unittest discover -s "$workspace/tests" -p test_build_warning_runtime.py -v
 dpkg-buildpackage -b -uc -us
 

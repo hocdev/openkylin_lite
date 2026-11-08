@@ -6,5 +6,7 @@
 *.md text eol=lf
 *.its text eol=lf
 *.loc text eol=lf
+*.h text eol=lf
+*.cmake text eol=lf
 .gitignore text eol=lf
 patches/gettext/COPYING text eol=lf

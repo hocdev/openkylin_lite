@@ -16,6 +16,15 @@ Yêu cầu: sửa toàn bộ cảnh báo build, giữ Firefox và tiếp tục g
 - Search: ghi đủ các trường header cache, xử lý EINTR/short write và loại bỏ file tạm riêng khi ghi thất bại. Không công bố cache lỗi. Bổ sung test mô phỏng ghi ngắn, bị ngắt, hết dung lượng và write trả 0; đóng gói các file cấu hình dịch vụ và symlink development từng bị dh_missing báo bỏ sót.
 - Orca: bỏ shlibs substvar của gói Python không còn module native AI, không sinh GNOME version substvars không được sử dụng, bỏ yêu cầu ngôn ngữ C/C++ dư trong Meson. Giữ nguyên SVG symbolic vì Scour thay đổi hình raster vượt ngưỡng; các SVG khác vẫn được tối ưu. Chuyển 10 thông báo nhiều tham số và các bên gọi sang mapping có tên, đồng thời chuyển các mục dịch có sẵn; giữ nguyên các mục fuzzy chưa hoạt động.
 - Dùng quy tắc GTK Builder upstream cụ thể khi trích xuất bản dịch Orca; khai báo rõ policy không khởi chạy dịch vụ trong container build.
+- Công cụ build: sửa cú pháp constructor Qt cũ trong header của container, bỏ gán thuộc tính IMPORTED chỉ-đọc ở target tài liệu KF5 và cập nhật tham số changelog cũ. DWZ chỉ nhận ELF có DWARF thật; file không có debug information không cần bước tối ưu này. ELF có debug nén được giải nén trước khi tối ưu, lỗi công cụ vẫn chặn build. Các thay đổi này không thay thư viện Qt/KF5 trong ISO.
+
+## Chẩn đoán readelf và file debug
+
+GNU readelf có thể báo `Unable to find program interpreter name` khi xử lý PT_INTERP trong ELF debug tách riêng; xem [Debian #1012107](https://bugs.debian.org/1012107). Log cũ không kèm tên file nên riêng thông báo đó không xác định được ELF nào gây ra hoặc chứng minh trình nạp chương trình trong ISO bị thiếu.
+
+Audit vẫn dùng readelf bình thường. Chỉ đúng chẩn đoán PT_INTERP đã biết mới được thử lại bằng `objdump -p`; bước này vẫn kiểm tra NEEDED và tiếp tục kiểm tra chuỗi loader AI. Chỉ chấp nhận khi objdump thành công và không phát sinh chẩn đoán. Nếu không đọc được ELF, build dừng với đường dẫn file và lỗi công cụ. Không có ngoại lệ bỏ qua thư mục debug hoặc toàn bộ ELF.
+
+Job verify-tests chạy trước các job build package, gồm test native tạo executable/debug ELF và ELF liên kết tới thư viện AI giả lập để xác nhận không nới lỏng audit.
 
 ## Kiểm chứng và phần còn phải xác minh
 

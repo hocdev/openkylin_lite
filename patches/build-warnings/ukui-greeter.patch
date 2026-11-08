@@ -29,7 +29,7 @@
  
  static int getValueFromSettings(const QString &userName, const QString &key, int defaultValue = 3)
  {
-+    Q_UNUSED(userName); 
++    Q_UNUSED(userName);
 +
      //从家目录下的配置文件中获取
  //    QString configPath = QString("/home/%1/" UKUI_BIOMETRIC_CONFIG_PATH).arg(userName);
@@ -40,7 +40,7 @@
  
  int BiometricProxy::GetFrameFd(int drvid)
  {
-+    Q_UNUSED(drvid); 
++    Q_UNUSED(drvid);
 +
      QDBusInterface *interface = new QDBusInterface("org.demo.pictureshow",
                                                     "/org/demo/pictureshow",
@@ -52,7 +52,7 @@
  
      gint fd,dup_fd;
 -    const gchar * response;
-+    
++
      fd = -1;
      dup_fd = -1;
      method_call_message = NULL;
@@ -62,7 +62,7 @@
  
  void CharsMoreWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
-+    Q_UNUSED(isVertical); 
++    Q_UNUSED(isVertical);
 +
      QMap<QWidget*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
@@ -73,7 +73,7 @@
  
  void CharsWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
-+    Q_UNUSED(isVertical); 
++    Q_UNUSED(isVertical);
 +
      QMap<KBButton*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
@@ -84,7 +84,7 @@
  
  void DragWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
-+    Q_UNUSED(isVertical); 
++    Q_UNUSED(isVertical);
 +
      setFixedHeight(KEYBOARD_DRAG_DEFAULT_HEIGHT*lfHeightScale);
      QMap<QLabel*, QRect>::iterator itGeometry = m_mapSubGeometrys.begin();
@@ -95,14 +95,14 @@
  
  void KBButton::setCtrlState(bool isCtrl)
  {
-+    Q_UNUSED(isCtrl); 
++    Q_UNUSED(isCtrl);
 +
  
  }
  
  void KBButton::setAltState(bool isAlt)
  {
-+    Q_UNUSED(isAlt); 
++    Q_UNUSED(isAlt);
 +
  
  }
@@ -112,7 +112,7 @@
  
  void KBTitle::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
-+    Q_UNUSED(isVertical); 
++    Q_UNUSED(isVertical);
 +
      setFixedHeight(KEYBOARD_TITLE_DEFAULT_HEIGHT*lfHeightScale);
      QMap<QPushButton*, QRect>::iterator itGeometry = m_mapSubGeometrys.begin();
@@ -123,7 +123,7 @@
  
  void LettersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
-+    Q_UNUSED(isVertical); 
++    Q_UNUSED(isVertical);
 +
      QMap<KBButton*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
@@ -134,7 +134,7 @@
  
  void NumbersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
-+    Q_UNUSED(isVertical); 
++    Q_UNUSED(isVertical);
 +
      QMap<QWidget*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
@@ -145,7 +145,7 @@
  
  void VirtualKeyboardWidget::resizeEvent(QResizeEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      adjustGeometry();
  }
@@ -201,7 +201,7 @@
   */
  QSize MonitorWatcher::getMonitorMaxSize(const QString &drm)
  {
-+    Q_UNUSED(drm); 
++    Q_UNUSED(drm);
 +
  //    int width, height;
  //    QFile drmModeFile(DRM_DIR + drm + "/modes");
@@ -236,7 +236,7 @@
  
  void GreeterScreen::debugOutputInfo(OutputsConfig outputConfig)
  {
-+    Q_UNUSED(outputConfig); 
++    Q_UNUSED(outputConfig);
 +
  //    DEBUG_LOG("screensize:%dx%d,%d",outputConfig.m_screenWidth, outputConfig.m_screenHeight,outputConfig.m_outputList.count());
  //    for (int koutput = 0; koutput < outputConfig.m_outputList.count(); koutput++) {
@@ -247,7 +247,7 @@
  
  void AgreementWindow::resizeEvent(QResizeEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
     // qDebug()<<""
      int m_width = 960,m_height = 722 - 88;
@@ -258,7 +258,7 @@
  
  void BatteryWidget::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QStyleOption opt;
      opt.init(this);
@@ -298,7 +298,7 @@
  
  void GreeterWindow::onGlobalKeyPress(const QString &key)
  {
-+    Q_UNUSED(key); 
++    Q_UNUSED(key);
 +
  }
  
@@ -321,7 +321,7 @@
  
  void GreeterWindow::onGlobalkeyRelease(const QString &key)
  {
-+    Q_UNUSED(key); 
++    Q_UNUSED(key);
 +
  //    if (key == "Escape") {
  //        key_exit_release();
@@ -330,7 +330,7 @@
  
  void GreeterWindow::dealMessage(QDBusMessage msg)
  {
-+    Q_UNUSED(msg); 
++    Q_UNUSED(msg);
 +
      setBatteryIcon(getBatteryIconName());
  }
@@ -347,7 +347,7 @@
  
  void GreeterWindow::updateNetIcon(int status)
  {
-+    Q_UNUSED(status); 
++    Q_UNUSED(status);
 +
  }
  
@@ -356,7 +356,7 @@
  
  void GreeterWindow::onPrepareForSleep(bool sleep)
  {
-+    Q_UNUSED(sleep); 
++    Q_UNUSED(sleep);
 +
      if(isTableMode && !(m_virtualKeyboard && m_virtualKeyboard->isVisible())) {
          showVirtualKeyboard();
@@ -365,7 +365,7 @@
  
  void GreeterWindow::key_tab_release(int key)
  {
-+    Q_UNUSED(key); 
++    Q_UNUSED(key);
 +
      if (at_plugins) {
          m_loginWnd->setFocusin(REMOVE);
@@ -400,7 +400,7 @@
  
  KTipLabel::KTipLabel(QString strText, QWidget *parent)
  {
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +
      m_strText = strText;
  }
@@ -420,7 +420,7 @@
  
  void LanguageWidget::onLanguageAdded(QString lang)
  {
-+    Q_UNUSED(lang); 
++    Q_UNUSED(lang);
 +
  
  
@@ -429,7 +429,7 @@
  
  bool LanguageWidget::eventFilter(QObject *obj, QEvent *event)
  {
-+    Q_UNUSED(obj); 
++    Q_UNUSED(obj);
 +
      //失去焦点时隐藏窗口
      if(event->type() == 23)
@@ -483,7 +483,7 @@
       */
 -    virtual void setBackground(QString strPicPath) {}
 +    virtual void setBackground(QString strPicPath) {
-+    Q_UNUSED(strPicPath); 
++    Q_UNUSED(strPicPath);
 +}
  
      /**
@@ -530,7 +530,7 @@
   */
  void LoginWindow::setLoggedIn(bool isLoggedIn)
  {
-+    Q_UNUSED(isLoggedIn); 
++    Q_UNUSED(isLoggedIn);
 +
      //m_isLoginLabel->setText(isLoggedIn ? tr("logged in") : "");
  }
@@ -540,7 +540,7 @@
      else if(time_left > 0 && time_left < 60)//请多少秒后重试
      {
 -        char ch[100]={0};
-+        
++
          m_messageLabel->setText(tr("Please try again in %1 seconds.").arg(time_left%60));
          m_messageLabelTip = (tr("Please try again in %1 seconds.").arg(time_left%60));
          m_passwordEdit->clearText();
@@ -551,7 +551,7 @@
  void Set4KScreenScale()
  {
 -    Display    *dpy;
-+    
++
      int w,h;
      x11_get_screen_size (&w, &h);
  
@@ -559,7 +559,7 @@
      TouchScreenSet::instance()->setTouchMapScreen();
      //屏幕自动旋转
      QObject::connect(AutoRotateScreen::instance(), &AutoRotateScreen::screenRotate, [=](AutoRotateScreen::RotateDir dir){
-+    Q_UNUSED(dir); 
++    Q_UNUSED(dir);
 +
          // 屏幕自动旋转后  对触摸屏进行坐标映射
          TouchScreenSet::instance()->setTouchMapScreen();
@@ -570,7 +570,7 @@
  
  void ModeButton::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QStylePainter p(this);
      QStyleOptionButton option;
@@ -581,7 +581,7 @@
  
  void MyTabWidget::paintEvent(QPaintEvent *p1)
  {
-+    Q_UNUSED(p1); 
++    Q_UNUSED(p1);
 +
      //绘制样式
      QStyleOption opt;
@@ -643,13 +643,13 @@
  
  void PowerManager::onGlobalKeyPress(const QString &key)
  {
-+    Q_UNUSED(key); 
++    Q_UNUSED(key);
 +
  }
  
  void PowerManager::onGlobalkeyRelease(const QString &key)
  {
-+    Q_UNUSED(key); 
++    Q_UNUSED(key);
 +
  //    if (key == "Escape") {
  //        this->hide();
@@ -660,7 +660,7 @@
                                              const QString &oldOwner,
                                              const QString &newOwner)
  {
-+    Q_UNUSED(oldOwner); 
++    Q_UNUSED(oldOwner);
 +
      if(name == DBUS_SERVICE)
      {
@@ -680,7 +680,7 @@
  
  void SessionsView::setCurrentSession(const QString &sessionName, bool entered)
  {
-+    Q_UNUSED(entered); 
++    Q_UNUSED(entered);
 +
      QString selectSessionName = "";
      for(int x = 0; x < m_sessionsModel->rowCount(); x++)
@@ -691,7 +691,7 @@
  
  bool SessionWindow::eventFilter(QObject *obj, QEvent *event)
  {
-+    Q_UNUSED(obj); Q_UNUSED(event); 
++    Q_UNUSED(obj); Q_UNUSED(event);
 +
      return false;
  }
@@ -763,7 +763,7 @@
  
  void UsersView::setCurrentUser(const QString &userName, bool entered)
  {
-+    Q_UNUSED(entered); 
++    Q_UNUSED(entered);
 +
      int x = 0;
      for(x = 0; x < usersModel->rowCount(); x++)
@@ -772,7 +772,7 @@
  
  void UsersView::onGlobalKeyRelease(const QString &key)
  {
-+    Q_UNUSED(key); 
++    Q_UNUSED(key);
 +
  
  }
@@ -781,7 +781,7 @@
  
  void UsersView::removeUserEntry(int row)
  {
-+    Q_UNUSED(row); 
++    Q_UNUSED(row);
 +
  
  }

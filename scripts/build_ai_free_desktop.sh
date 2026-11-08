@@ -4,12 +4,13 @@ export DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 LC_ALL=C.UTF-8
 export DEBFULLNAME='openKylin Lite' DEBEMAIL='openkylin-lite@users.noreply.github.com'
 export DEB_BUILD_OPTIONS=parallel=2
 workspace=$PWD
+export CMAKE_POLICY_VERSION_MINIMUM=3.10
 bash "$workspace/scripts/prepare_build_environment.sh"
 source_package=${SOURCE_PACKAGE:?SOURCE_PACKAGE is required}
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 apt-get -o Acquire::Retries=3 update
-apt-get install -y --no-install-recommends ca-certificates git build-essential devscripts python3 curl binutils
+apt-get install -y --no-install-recommends ca-certificates git build-essential devscripts libdistro-info-perl python3 curl binutils
 mapfile -t lock < <(python3 - "$source_package" <<'PY'
 import json, sys
 policy = json.load(open('config/ai-free-desktop.json'))
@@ -36,8 +37,8 @@ git checkout --detach FETCH_HEAD
 [[ $(git rev-parse HEAD) == "${lock[2]}" ]]
 [[ $(dpkg-parsechangelog -S Version) == "${lock[3]}" ]]
 dpkg-source --before-build .
-git apply --check "$workspace/patches/ai-free/$source_package.patch"
-git apply "$workspace/patches/ai-free/$source_package.patch"
+git apply --check --ignore-space-change "$workspace/patches/ai-free/$source_package.patch"
+git apply --ignore-space-change "$workspace/patches/ai-free/$source_package.patch"
 bash "$workspace/scripts/apply_build_warning_patch.sh" "$source_package" "$workspace"
 if [[ $source_package == orca ]]; then
   python3 "$workspace/scripts/patch_orca_translations.py" "$PWD"
@@ -106,10 +107,11 @@ apt-get build-dep -y --no-install-recommends ./
 for pc in /usr/lib/*/pkgconfig/poppler.pc /usr/lib/pkgconfig/poppler.pc; do
   [[ -f "$pc" ]] && sed -Ei 's/libcurl >= [0-9.]+/libcurl/g' "$pc"
 done
+python3 "$workspace/scripts/patch_build_tools.py"
 if [[ $source_package == ukui-search ]]; then
   WARNING_SOURCE_DIR=$PWD WARNING_SOURCE_PACKAGE=$source_package python3 -m unittest discover -s "$workspace/tests" -p test_build_warning_runtime.py -v
 fi
-CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
+CMAKE_POLICY_VERSION_MINIMUM=3.10 dpkg-buildpackage -b -uc -us
 output="$workspace/desktop-output/$source_package"
 mkdir -p "$output"
 mapfile -t selected < <(python3 - "$workspace/config/ai-free-desktop.json" "$source_package" <<'PY'

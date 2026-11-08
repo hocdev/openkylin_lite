@@ -5,12 +5,13 @@ export DEBFULLNAME='openKylin Lite'
 export DEBEMAIL='openkylin-lite@users.noreply.github.com'
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
 workspace=$PWD
+export CMAKE_POLICY_VERSION_MINIMUM=3.10
 bash "$workspace/scripts/prepare_build_environment.sh"
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 apt-get -o Acquire::Retries=3 update
-apt-get install -y --no-install-recommends ca-certificates curl git build-essential devscripts python3 xz-utils
+apt-get install -y --no-install-recommends ca-certificates curl git build-essential devscripts libdistro-info-perl python3 xz-utils
 bash scripts/build_default_settings_candidate.sh
 curl -fL --retry 4 --retry-delay 5 \
   -o "$work/source.tar.xz" \
@@ -20,16 +21,16 @@ mkdir "$work/source"
 tar -xJf "$work/source.tar.xz" --strip-components=1 -C "$work/source"
 cd "$work/source"
 dpkg-source --before-build .
-git apply --check "$workspace/patches/control-center/about-network.patch"
-git apply "$workspace/patches/control-center/about-network.patch"
-git apply --check "$workspace/patches/control-center/about-startup.patch"
-git apply "$workspace/patches/control-center/about-startup.patch"
-git apply --check "$workspace/patches/control-center/privacy.patch"
-git apply "$workspace/patches/control-center/privacy.patch"
-git apply --check "$workspace/patches/control-center/shell-startup.patch"
-git apply "$workspace/patches/control-center/shell-startup.patch"
-git apply --check "$workspace/patches/control-center/no-activation.patch"
-git apply "$workspace/patches/control-center/no-activation.patch"
+git apply --check --ignore-space-change "$workspace/patches/control-center/about-network.patch"
+git apply --ignore-space-change "$workspace/patches/control-center/about-network.patch"
+git apply --check --ignore-space-change "$workspace/patches/control-center/about-startup.patch"
+git apply --ignore-space-change "$workspace/patches/control-center/about-startup.patch"
+git apply --check --ignore-space-change "$workspace/patches/control-center/privacy.patch"
+git apply --ignore-space-change "$workspace/patches/control-center/privacy.patch"
+git apply --check --ignore-space-change "$workspace/patches/control-center/shell-startup.patch"
+git apply --ignore-space-change "$workspace/patches/control-center/shell-startup.patch"
+git apply --check --ignore-space-change "$workspace/patches/control-center/no-activation.patch"
+git apply --ignore-space-change "$workspace/patches/control-center/no-activation.patch"
 bash "$workspace/scripts/apply_build_warning_patch.sh" ukui-control-center "$workspace"
 cp "$workspace/patches/control-center/ntpdateprovider.h" registeredSession/plugins/about/
 cp "$workspace/patches/control-center/aboutasync.h" plugins/system/about/
@@ -80,7 +81,8 @@ mkdir "$work/security-path-test"
   make -j2
   dbus-run-session -- ./test-security-path
 )
-CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
+python3 "$workspace/scripts/patch_build_tools.py"
+CMAKE_POLICY_VERSION_MINIMUM=3.10 dpkg-buildpackage -b -uc -us
 deb=( "$work/ukui-control-center_"*_amd64.deb )
 [[ ${#deb[@]} == 1 && -f ${deb[0]} ]]
 # Validate generated dependency constraints against the ISO's runtime versions.

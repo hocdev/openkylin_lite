@@ -1,5 +1,6 @@
 import json
 import pathlib
+import re
 import unittest
 
 REPO_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -118,7 +119,11 @@ class InstallerPatchTests(unittest.TestCase):
         self.assertIn('group: openkylin-lite', workflow)
         self.assertIn('cancel-in-progress: true', workflow)
         self.assertIn('key: openkylin-source-v1-${{ env.SOURCE_SHA256 }}', workflow)
-        self.assertIn('needs: [verify-sources, ukui-password-candidates, installer-candidate, control-center-candidate, ai-free-desktop]', workflow)
+        needs = re.search(r'  remaster:\n\s+needs: \[([^\]]+)\]', workflow)
+        self.assertIsNotNone(needs)
+        self.assertTrue({'verify-tests', 'verify-sources', 'ukui-password-candidates',
+                         'installer-candidate', 'control-center-candidate', 'ai-free-desktop'}
+                        <= {name.strip() for name in needs.group(1).split(',')})
 
     def test_30gb_to_500gb_partition_sizing_invariants(self):
         for disk_gib in (30, 32, 40, 50, 64, 100, 500):

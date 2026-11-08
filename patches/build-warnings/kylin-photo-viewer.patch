@@ -15,7 +15,7 @@
  
  QList<QAction*> RotateMenuPlugin::menuActions(Types types, const QString &uri, const QStringList &selectionUris)
  {
-+    Q_UNUSED(uri); 
++    Q_UNUSED(uri);
 +
      QList<QAction*> actions;
      if (types == MenuPluginInterface::DirectoryView || types == MenuPluginInterface::DesktopWindow)
@@ -45,7 +45,7 @@
  
  void Rotation::processStart(const QString &cmd, QStringList arguments)
  {
-+    Q_UNUSED(cmd); Q_UNUSED(arguments); 
++    Q_UNUSED(cmd); Q_UNUSED(arguments);
 +
  #ifndef UNUI
      QProcess *m_process = new QProcess;
@@ -56,7 +56,7 @@
  
  void Core::changeImageShowSize(ImageShowStatus::ChangeShowSizeType type, QPoint focus)
  {
-+    Q_UNUSED(focus); 
++    Q_UNUSED(focus);
 +
      //如果此图正在保存
      if (m_thisImageIsSaving) {
@@ -74,7 +74,7 @@
  
  void Core::toPrintImage(QPrinter *printer)
  {
-+    Q_UNUSED(printer); 
++    Q_UNUSED(printer);
 +
  #ifndef UNUI
      if (m_paperFormat != "tiff" && m_paperFormat != "tif") {
@@ -83,7 +83,7 @@
  //打开失败，判断是否为拖拽打开失败--是的话，不进行切换
  bool Core::openFail(QString fullPath)
  {
-+    Q_UNUSED(fullPath); 
++    Q_UNUSED(fullPath);
 +
  #ifndef UNUI
      //注--此函数只有在打开失败的时候才进来，不影响正常的图片
@@ -100,7 +100,7 @@
  //释放鼠标
  void Core::realsePos(const QPoint &point)
  {
-+    Q_UNUSED(point); 
++    Q_UNUSED(point);
 +
      //判断裁剪框已经画好了，就不需要再次重绘
      if (m_hasCutBox) {
@@ -109,7 +109,7 @@
  
  CutRegion Core::calcCutRegionSelection(QPointF startPos, QSize cutSize, QImage nowImage)
  {
-+    Q_UNUSED(startPos); Q_UNUSED(cutSize); Q_UNUSED(nowImage); 
++    Q_UNUSED(startPos); Q_UNUSED(cutSize); Q_UNUSED(nowImage);
 +
  #ifndef UNUI
      CutRegion cutRegion;
@@ -136,7 +136,7 @@
      QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize)
      //这个是自动调用的。路径"image://screen"，如需要使用id等参数，如"image://screen/id"等
      {
-+    Q_UNUSED(size); 
++    Q_UNUSED(size);
 +
          qDebug()<<"请求图片 id="<<id <<" requestedSize="<<requestedSize << Variable::g_devicePixelRatio;
          if (tempImage.isNull()) {
@@ -147,7 +147,7 @@
  
  QImage MattingImageProvider::requestImage(const QString &id, QSize *size, const QSize &requestedSize)
  {
-+    Q_UNUSED(id); Q_UNUSED(size); Q_UNUSED(requestedSize); 
++    Q_UNUSED(id); Q_UNUSED(size); Q_UNUSED(requestedSize);
 +
      if (m_image.isNull()) {
          m_image.load("qrc:/res/res/damaged_img.png");
@@ -158,7 +158,7 @@
  
  void File::deleteImage(const QString &savepath)
  {
-+    Q_UNUSED(savepath); 
++    Q_UNUSED(savepath);
 +
  #ifndef UNUI
      if (!QFile::exists(savepath)) {
@@ -185,20 +185,17 @@
      return dst;
 --- a/src/model/processing/processing.cpp
 +++ b/src/model/processing/processing.cpp
-@@ -21,12 +21,12 @@
- static QPoint m_nextP = QPoint(-1, -1);        //记录变化的点
+@@ -22,11 +22,11 @@
  static QPoint m_regionStartP = QPoint(-1, -1); //记录框选起点
  static QPoint m_regionEndP = QPoint(-1, -1);   //记录框选终点
--static bool m_isReleasePaint = true;           //释放后翻转
+ static bool m_isReleasePaint = true;           //释放后翻转
 -static int m_xOffset;
 -static int m_yOffset;
-+static bool m_isReleasePaint = true;           //释放后翻转 
 +[[maybe_unused]] static int m_xOffset;
 +[[maybe_unused]] static int m_yOffset;
  static QPoint m_endPointCorrect =
--    QPoint(-1, -1); //发现终点值一直不对，目前没有找到具体是哪里调整了这个值，每次变化在4相似以内
+     QPoint(-1, -1); //发现终点值一直不对，目前没有找到具体是哪里调整了这个值，每次变化在4相似以内
 -static int m_currentType = -1; //默认-1
-+    QPoint(-1, -1); //发现终点值一直不对，目前没有找到具体是哪里调整了这个值，每次变化在4相似以内 
 +[[maybe_unused]] static int m_currentType = -1; //默认-1
  QImage Processing::processingImage(const ProcessingType &type, const QImage &image, const QVariant &args)
  {
@@ -207,7 +204,7 @@
  
  QPixmap Processing::localAmplification(const QPixmap &orgPix, QSize showSize, QPoint local, QSize widSize)
  {
-+    Q_UNUSED(orgPix); Q_UNUSED(showSize); Q_UNUSED(local); Q_UNUSED(widSize); 
++    Q_UNUSED(orgPix); Q_UNUSED(showSize); Q_UNUSED(local); Q_UNUSED(widSize);
 +
  #ifndef UNUI
      // orgPix——原图   showSize——目标大小   local——基于showSize的起始坐标   widSize——窗口尺寸
@@ -221,7 +218,7 @@
  //绘制框选区域
  QImage Processing::pictureRelease(const QImage &img, const QImage &originImage)
  {
-+    Q_UNUSED(originImage); 
++    Q_UNUSED(originImage);
 +
      //鼠标释放，重置第一次绘制裁剪时变量的值
      m_backPoint.setX(-1);
@@ -230,7 +227,7 @@
  
  QImage Processing::pictureDeepen(const QImage &img, const QSize &hightlightSize, const QPoint &point)
  {
-+    Q_UNUSED(img); Q_UNUSED(hightlightSize); Q_UNUSED(point); 
++    Q_UNUSED(img); Q_UNUSED(hightlightSize); Q_UNUSED(point);
 +
  #ifndef UNUI
      QImage image = img.copy();
@@ -244,7 +241,7 @@
  
  QImage Processing::pictureCutDeepen(const QImage &img, const QSize &imageSize)
  {
-+    Q_UNUSED(imageSize); 
++    Q_UNUSED(imageSize);
 +
      QImage image = img.copy();
      int key = Variable::PICTURE_DEEPEN_KEY;
@@ -261,7 +258,7 @@
  QList<cutBoxColor> Processing::pictureCutPainter(const QImage &img, int type, int backtype, const QPoint &startP,
                                                   QPoint &endP, QPoint &changeP, QPoint &backChangeP)
  {
-+    Q_UNUSED(backtype); 
++    Q_UNUSED(backtype);
 +
      QList<cutBoxColor> cutBoxChange;
  #ifndef UNUI
@@ -277,7 +274,7 @@
  QList<cutBoxColor> Processing::pictureCutMove(const QImage &img, const QPoint &startCutP, const QPoint &endCutP,
                                                int xOffset, int yOffset)
  {
-+    Q_UNUSED(img); Q_UNUSED(startCutP); Q_UNUSED(endCutP); Q_UNUSED(xOffset); Q_UNUSED(yOffset); 
++    Q_UNUSED(img); Q_UNUSED(startCutP); Q_UNUSED(endCutP); Q_UNUSED(xOffset); Q_UNUSED(yOffset);
 +
  #ifndef UNUI
      QList<cutBoxColor> cutBoxChange;
@@ -296,7 +293,7 @@
      QImage requestImage(const QString &id, QSize *size, const QSize &requestedSize) override
      //图片路径"image://name/id"
      {
-+    Q_UNUSED(size); Q_UNUSED(requestedSize); 
++    Q_UNUSED(size); Q_UNUSED(requestedSize);
 +
          if(id == "orig"){
              return m_origImage;
@@ -307,7 +304,7 @@
  //当前字号
  void BrushSettings::currFontSizeCombox(int currentFontSize)
  {
-+    Q_UNUSED(currentFontSize); 
++    Q_UNUSED(currentFontSize);
 +
      //    recordDate.m_textSet.fontSize = currentFontSize;
      recordDate.m_textSet.fontSize = m_fontSizeComBox->value();
@@ -318,7 +315,7 @@
  
  void ColorDialog::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QPainter painter(this);
      QPainterPath path;
@@ -338,7 +335,7 @@
  
  void KyView::slotIntelHVModeChanged(deviceMode sig)
  {
-+    Q_UNUSED(sig); 
++    Q_UNUSED(sig);
 +
      hLayoutFlag = hOrVMode->defaultModeCapture();
      this->setWindowSize();
@@ -347,7 +344,7 @@
  //拖拽主窗口--各控件需要改变位置或尺寸
  void KyView::resizeEvent(QResizeEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      titlebarChange();
      openImageChange();
@@ -358,7 +355,7 @@
  }
  void MultiTiffToolWid::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QPainter painter(this);
      painter.setRenderHint(QPainter::Antialiasing); // 反锯齿;
@@ -387,7 +384,7 @@
  
  void PainterThick::mousePressEvent(QMouseEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      this->setChecked(true);
  }
@@ -396,7 +393,7 @@
  
  void PainterThick::resetColorSize(int diameter)
  {
-+    Q_UNUSED(diameter); 
++    Q_UNUSED(diameter);
 +
      m_diameter = m_diameter;
  }
@@ -445,7 +442,7 @@
  
  void ReplaceBackgroundWidget::getFlipAndOrigImage(QImage flipImage, QImage origImage)
  {
-+    Q_UNUSED(origImage); 
++    Q_UNUSED(origImage);
 +
      //重设缩放比显示
      int defaultProportion = 100 * m_showImageWidSize.width() / flipImage.width();
@@ -454,7 +451,7 @@
  
  void ReplaceBackgroundWidget::resizeEvent(QResizeEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      m_rightStackWidget->setFixedSize(250, this->height());
      //m_rightStackWidget->setMinimumWidth(226);
@@ -463,7 +460,7 @@
  
  void ReplaceBackgroundWidget::mousePressEvent(QMouseEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      if(m_colorDialog && m_colorDialog->isVisible()) {
          m_colorDialog->hide();
@@ -474,7 +471,7 @@
  // 修改后的宽度变化处理函数
  void ResizeImageDialog::widthChanged(QString value)
  {
-+    Q_UNUSED(value); 
++    Q_UNUSED(value);
 +
      // 调用统一的验证函数
      validateInputs();
@@ -483,7 +480,7 @@
  // 修改后的高度变化处理函数
  void ResizeImageDialog::heightChanged(QString value)
  {
-+    Q_UNUSED(value); 
++    Q_UNUSED(value);
 +
      // 调用统一的验证函数
      validateInputs();
@@ -494,7 +491,7 @@
  
  void ScanImageWidget::resizeEvent(QResizeEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      m_isEnlarged = false;
      sizeChanged( QSize(this->width()-32-32,this->height()-24-16-m_toolWid->height()-6),32,24);
@@ -503,7 +500,7 @@
  }
  void ScanImageWidget::getFlipAndOrigImage(QImage flipImage, QImage origImage)
  {
-+    Q_UNUSED(origImage); 
++    Q_UNUSED(origImage);
 +
      m_printImage = flipImage;
      m_tempImg = flipImage;
@@ -514,7 +511,7 @@
  
  void ShowImageWidget::sideState(int num)
  {
-+    Q_UNUSED(num); 
++    Q_UNUSED(num);
 +
      //Q_EMIT changeSideSize(num);
  }
@@ -531,7 +528,7 @@
  
  void ShowImageWidget::resizeEvent(QResizeEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      if (displayMode == DisplayMode::OCRMode) {
          m_showImage->resize(this->width() / 2, this->height() - m_widChangeHeight);
@@ -564,13 +561,11 @@
              painter->save();
 --- a/src/view/sizedate.h
 +++ b/src/view/sizedate.h
-@@ -128,13 +128,13 @@
- static const int WIDGETSIZE_MAX = 16777215; //删除固定窗口约束，需设置窗口size为此值
+@@ -129,12 +129,12 @@
  static const int TITLE_TRANSPARENT = 178;   //标题栏透明度
  static QImage tempImage = QImage();
--static QImage origTempImage = QImage();     //记录大图的原图
+ static QImage origTempImage = QImage();     //记录大图的原图
 -static bool isShowOrigImage = false;        //是否需要显示大图的原图
-+static QImage origTempImage = QImage();     //记录大图的原图 
 +[[maybe_unused]] static bool isShowOrigImage = false;        //是否需要显示大图的原图
  static QColor tempColor = QColor(255, 255, 255, 0);
  static QStringList platForm = {"pc"};                            //当前模式 /*"V10SP1-edu"*/"normal"
@@ -623,7 +618,7 @@
  
  void ToolBar::changeEditIcon(QPixmap pix)
  {
-+    Q_UNUSED(pix); 
++    Q_UNUSED(pix);
 +
  #ifdef USE_ONNXRUNTIME
      QPixmap icon1(":/res/res/ai/ai.svg");

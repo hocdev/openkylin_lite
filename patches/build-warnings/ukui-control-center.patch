@@ -21,7 +21,7 @@
  // 修改其他用户密码
  bool group_manager_server::changeOtherUserPasswd(QString username, QString pwd)
  {
-+    Q_UNUSED(username); Q_UNUSED(pwd); 
++    Q_UNUSED(username); Q_UNUSED(pwd);
 +
      return true;
  }
@@ -52,7 +52,7 @@
  // 设置用户头像
  bool group_manager_server::setIconFile(QString username, QString objpath, QString filename)
  {
-+    Q_UNUSED(username); 
++    Q_UNUSED(username);
 +
      //密码校验
      if (!authoriyEdit()){
@@ -97,7 +97,7 @@
  }
  
  void HoverWidget::mousePressEvent(QMouseEvent *event) {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      emit widgetClicked(_name);
  }
@@ -107,7 +107,7 @@
  
  void InfoButton::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QPalette pal = this->palette();
      pal.setColor(QPalette::Base, m_backgroundColor);
@@ -116,7 +116,7 @@
  
  void InfoButton::enterEvent(QEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      m_foregroundColor = FOREGROUND_COLOR_HOVER;
      this->repaint();
@@ -124,7 +124,7 @@
  
  void InfoButton::leaveEvent(QEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      m_foregroundColor = FOREGROUND_COLOR_NORMAL;
      this->repaint();
@@ -146,7 +146,7 @@
  
  void MaskLabel::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QPainter painter(this);
      painter.setRenderHint(QPainter::Antialiasing);
@@ -157,7 +157,7 @@
  
  void EyeBtn::mouseReleaseEvent(QMouseEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      setIconStatus(!mIsHidden);
  
@@ -177,7 +177,7 @@
  
  TristateLabel::TristateLabel(const QString &text, QWidget *parent)
  {
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +
      setText(abridge(text));
      adjustSize();
@@ -199,7 +199,7 @@
  
  void Uslider::leaveEvent(QEvent *ev)
  {
-+    Q_UNUSED(ev); 
++    Q_UNUSED(ev);
 +
      isMouseCliked = false;
  }
@@ -210,12 +210,12 @@
      connect(this, &changeUserGroup::needRefresh, this, &changeUserGroup::needRefreshSlot);
  
      connect(mUserGroupLineEdit,&QLineEdit::textChanged,[=](QString txt){
-+    Q_UNUSED(txt); 
++    Q_UNUSED(txt);
 +
          refreshCertainBtnStatus();
      });
      connect(mUserGroupIdLineEdit,&QLineEdit::textChanged,[=](QString txt){
-+    Q_UNUSED(txt); 
++    Q_UNUSED(txt);
 +
          refreshCertainBtnStatus();
      });
@@ -233,7 +233,7 @@
          }
      }
      connect(mUserGroupNumbersModel, &QStandardItemModel::itemChanged, this, [=](QStandardItem *item){
-+    Q_UNUSED(item); 
++    Q_UNUSED(item);
 +
          qDebug() << "checkbox clicked";
          _boxModified = true;
@@ -264,7 +264,7 @@
          checkbox->move(label->x() + FACEWIDTH/2 + FACEWIDTH/2/1.414, logoWidgets->y());
  
          connect(button, &QPushButton::clicked, [=](bool checked) {
-+    Q_UNUSED(checked); 
++    Q_UNUSED(checked);
 +
              // 未显示复选框，点击图片按钮，设置头像
              if (!checkbox->isVisible()) {
@@ -297,7 +297,7 @@
  
  void ChangeUserPwd::setupStatus(QString n)
  {
-+    Q_UNUSED(n); 
++    Q_UNUSED(n);
 +
  
      curPwdTip = QString();
@@ -310,7 +310,7 @@
  public:
 -    SettingFrame(QWidget *parent){}
 +    SettingFrame(QWidget *parent){
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +}
      ~SettingFrame() {}
  
@@ -330,7 +330,7 @@
  
  void CircleLabel::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
     QPainter palinter(this);
  
@@ -348,7 +348,7 @@
  public:
 -    SettingFrame(QWidget *parent){}
 +    SettingFrame(QWidget *parent){
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +}
      ~SettingFrame() {}
  
@@ -409,7 +409,7 @@
      connect(m_btnSure, &QPushButton::clicked, this, &SecurityKeySetDlg::onBtnSure);
  
      connect(m_editSecurityKey, &QLineEdit::textEdited, [=](QString txt){
-+    Q_UNUSED(txt); 
++    Q_UNUSED(txt);
 +
          refreshConfirmBtnStatus();
      });
@@ -438,7 +438,7 @@
  
  void UserInfo::onBindStatusChanged(QString user, QString method, int bind)
  {
-+    Q_UNUSED(method); Q_UNUSED(bind); 
++    Q_UNUSED(method); Q_UNUSED(bind);
 +
      if (user == mUserName) {
          QStringList authMethodList = m_pMulFactorDbus->GetBoundFactorMethods(mUserName);
@@ -470,7 +470,7 @@
  
      //用户类型发生变化，重置状态
      connect(this, &UserInfo::userTypeChanged, utils, [=](QString n){
-+    Q_UNUSED(n); 
++    Q_UNUSED(n);
 +
          QStringList loginedUsers = getLoginedUsers();
          qDebug() << "update userType"<< user.username << loginedUsers.contains(user.username);
@@ -479,7 +479,7 @@
  
      QList<AnswerInfo> securityQuestion;
      connect(dialog, &CreateUserNew::bindSecurityQuestion, this, [&](QString name, QList<AnswerInfo> answerInfo){
-+    Q_UNUSED(name); 
++    Q_UNUSED(name);
 +
          securityQuestion = answerInfo;
      });
@@ -488,7 +488,7 @@
          QDBusPendingCall call = userSettingDbus->asyncCall("createUser", name, fullname, accounttype, DEFAULTFACE);
          QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(call, this);
          connect(watcher, &QDBusPendingCallWatcher::finished, this, [&, name, pwd, securityQuestion, passwordTips](QDBusPendingCallWatcher *call){
-+    Q_UNUSED(call); 
++    Q_UNUSED(call);
 +
              const qint64 uid = getUserUid(name);
              if (!securityQuestion.isEmpty()) {
@@ -506,7 +506,7 @@
  
  void UserInfo::showChangeUserLogoDialog(QString username, UtilsForUserinfo *utilsUser)
  {
-+    Q_UNUSED(utilsUser); 
++    Q_UNUSED(utilsUser);
 +
      if (allUserInfoMap.keys().contains(username)) {
          UserInfomation user = allUserInfoMap.value(username);
@@ -539,7 +539,7 @@
  
  void DefaultApp::load(ComboxWidget *widget, AppInfoService* appInfoService, const char *mimeType, const QString &type)
  {
-+    Q_UNUSED(type); 
++    Q_UNUSED(type);
 +
      if (widget == nullptr || appInfoService == nullptr || mimeType == nullptr)
          return;
@@ -550,7 +550,7 @@
  
  void Boot::failureTimesChangedSlot(int index)
  {
-+    Q_UNUSED(index); 
++    Q_UNUSED(index);
 +
      if (!authoriyGrub()){
          m_pFailuersFrame->comboBox()->blockSignals(true);
@@ -559,7 +559,7 @@
  
  void Boot::changeBootDelay(int index)
  {
-+    Q_UNUSED(index); 
++    Q_UNUSED(index);
 +
      if (!authoriyGrub()){
          m_pGrubBootDelayFrame->comboBox()->blockSignals(true);
@@ -570,7 +570,7 @@
  
  void LoadingWidget::closeEvent(QCloseEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      if (m_pTimerLoading) {
          if(m_pTimerLoading->isActive())
@@ -585,11 +585,11 @@
 -
 -  void writeValueTo(QVariantMap &map) override {}
 +  void readValueFrom(const QVariantMap &map) override {
-+    Q_UNUSED(map); 
++    Q_UNUSED(map);
 +}
 +
 +  void writeValueTo(QVariantMap &map) override {
-+    Q_UNUSED(map); 
++    Q_UNUSED(map);
 +}
  
    void restoreToDefault() override {};
@@ -613,7 +613,7 @@
      });
  
      connect(m_execLineEdit, &QLineEdit::textChanged, [=](QString text){
-+    Q_UNUSED(text); 
++    Q_UNUSED(text);
 +
          if (mExec.endsWith("desktop")
              || (!g_file_test(mExec.toLatin1().data(),
@@ -622,7 +622,7 @@
  
  void AddShortcutDialog::setTitleText(QString text)
  {
-+    Q_UNUSED(text); 
++    Q_UNUSED(text);
 +
  
  }
@@ -653,7 +653,7 @@
  
          connect(addDialog, &AddShortcutDialog::shortcutInfoSignal,
                  [=](QString path, QString name, QString exec, QString key){
-+    Q_UNUSED(path); 
++    Q_UNUSED(path);
 +
              createNewShortcut(path, name, exec, key, true, true);
              m_shortcutInterface->call("updateShortcut");
@@ -662,7 +662,7 @@
          UkccCommon::buriedSettings("Shortcut", QString("edit"), QString("clicked"));
          connect(addDialog, &AddShortcutDialog::shortcutInfoSignal, this,
                  [=](QString path, QString name, QString exec, QString key){
-+    Q_UNUSED(path); 
++    Q_UNUSED(path);
 +
              customAddDialogSlot(addDialog, nameLineEdit, bingdingLineEdit,
                                  nameLabel, bingdingLabel, mKeyEntry,
@@ -673,7 +673,7 @@
  
      // 重置按钮
      connect(m_fontDefaultButton, &QPushButton::clicked, [=](bool checked){
-+    Q_UNUSED(checked); 
++    Q_UNUSED(checked);
 +
          resetDefaultSlot();
      });
@@ -684,7 +684,7 @@
  
  FontUnit::FontUnit(const ViewData* viewData, QString installPath, QWidget *parent)
  {
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +
      m_applyFont = false;
      m_installPath = installPath;
@@ -702,7 +702,7 @@
  void FontUnit::setupConnect()
  {
      connect(m_styleSettings , &QGSettings::changed, this, [=](const QString &key) {
-+    Q_UNUSED(key); 
++    Q_UNUSED(key);
 +
          styleSettingChangeSlot();
      });
@@ -711,7 +711,7 @@
  
  void FontUnit::enterEvent(QEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      m_isMouseOpt = true;
      this->repaint();
@@ -719,7 +719,7 @@
  
  void FontUnit::leaveEvent(QEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      m_isMouseOpt = false;
      this->update();
@@ -790,7 +790,7 @@
  
  GlobalTheme::GlobalTheme(QObject *parent)
  {
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +
      d_ptr = new GlobalThemePrivate;
  }
@@ -801,7 +801,7 @@
  
  QPixmap GlobalThemeHelper::getThemeThumbnail(const QString &theme)
  {
-+    Q_UNUSED(theme); 
++    Q_UNUSED(theme);
 +
      return QPixmap();
  }
@@ -812,7 +812,7 @@
  
  void MySlider::leaveEvent(QEvent *ev)
  {
-+    Q_UNUSED(ev); 
++    Q_UNUSED(ev);
 +
      isMouseCliked = false;
  }
@@ -890,7 +890,7 @@
  
  void ThemeIconLabel::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QPainter painter(this);
      painter.setRenderHint(QPainter::Antialiasing);
@@ -999,7 +999,7 @@
  
  void OutputConfig::rotationDirectionSlot(QString rotationDirection)
  {
-+    Q_UNUSED(rotationDirection); 
++    Q_UNUSED(rotationDirection);
 +
      mRotation->blockSignals(true);
      mRotation->setCurrentIndex(mRotation->findData(mOutput->rotation()));
@@ -1057,7 +1057,7 @@
  
  void DatetimeUi::addOtherTimezone(const QString &timezone, const QString &timezoneName)
  {
-+    Q_UNUSED(timezoneName); 
++    Q_UNUSED(timezoneName);
 +
      TimeBtn *timeBtn = nullptr;
      if (linkShanghaiTzList.contains(timezone)) {
@@ -1121,14 +1121,14 @@
  
  int SysdbusRegister::changeOtherUserPasswd(QString username, QString pwd)
  {
-+    Q_UNUSED(username); Q_UNUSED(pwd); 
++    Q_UNUSED(username); Q_UNUSED(pwd);
 +
      return -1;
  }
  
  int SysdbusRegister::createUser(QString name, QString fullname, int accounttype, QString faceicon, QString pwd)
  {
-+    Q_UNUSED(name); Q_UNUSED(fullname); Q_UNUSED(accounttype); Q_UNUSED(faceicon); Q_UNUSED(pwd); 
++    Q_UNUSED(name); Q_UNUSED(fullname); Q_UNUSED(accounttype); Q_UNUSED(faceicon); Q_UNUSED(pwd);
 +
      return -1;
  }
@@ -1139,12 +1139,12 @@
  
 -void SysdbusRegister::setDisplayBrightness(QString brightness, QString edidHash, QString i2cBus) {}
 +void SysdbusRegister::setDisplayBrightness(QString brightness, QString edidHash, QString i2cBus) {
-+    Q_UNUSED(brightness); Q_UNUSED(edidHash); Q_UNUSED(i2cBus); 
++    Q_UNUSED(brightness); Q_UNUSED(edidHash); Q_UNUSED(i2cBus);
 +}
  
  int SysdbusRegister::getDisplayBrightness(QString edidHash, QString i2cBus)
  {
-+    Q_UNUSED(edidHash); Q_UNUSED(i2cBus); 
++    Q_UNUSED(edidHash); Q_UNUSED(i2cBus);
 +
      return -2;
  }
@@ -1214,7 +1214,7 @@
  
  bool DatetimeInterface::setNtpServer(QString server)
  {
-+    Q_UNUSED(server); 
++    Q_UNUSED(server);
 +
      PolkitQt1::Authority::Result result;
      result = PolkitQt1::Authority::instance()->checkAuthorizationSync(
@@ -1515,7 +1515,7 @@
  
  InternalStyle::InternalStyle(const QString &styleName, QObject *parent) : QProxyStyle(styleName)
  {
-+    Q_UNUSED(parent); 
++    Q_UNUSED(parent);
 +
  
  }
@@ -1526,7 +1526,7 @@
  
  void LeftsidebarWidget::paintEvent(QPaintEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      QStyleOption opt;
      opt.init(this);
@@ -1537,7 +1537,7 @@
  
  void MainWindow::keyReleaseEvent(QKeyEvent *event)
  {
-+    Q_UNUSED(event); 
++    Q_UNUSED(event);
 +
      mFirstKey = 0;
  }
@@ -1555,7 +1555,7 @@
  }
  
  void MainWindow::switchPage(QString moduleName, QString jumpMoudle, QString jumpText) {
-+    Q_UNUSED(jumpText); 
++    Q_UNUSED(jumpText);
 +
      //开始跳转
      QObject* pluginObj = ModulesFactory::getPluginObjectByName(moduleName);

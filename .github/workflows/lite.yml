@@ -43,6 +43,17 @@ jobs:
               echo "Deleted $conclusion push run $id"
             done <<< "$ids"
           done
+  verify-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Verify scripts and native ELF audit regressions
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils build-essential shellcheck
+          shellcheck scripts/*.sh
+          python3 -m unittest discover -s tests -v
   verify-sources:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -59,7 +70,7 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
   remaster:
-    needs: [verify-sources, ukui-password-candidates, installer-candidate, control-center-candidate, ai-free-desktop]
+    needs: [verify-tests, verify-sources, ukui-password-candidates, installer-candidate, control-center-candidate, ai-free-desktop]
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
@@ -146,6 +157,7 @@ jobs:
           fi
 
   ukui-password-candidates:
+    needs: [verify-tests]
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
@@ -189,6 +201,7 @@ jobs:
           retention-days: 7
 
   ai-free-desktop:
+    needs: [verify-tests]
     runs-on: ubuntu-24.04
     timeout-minutes: 90
     container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
@@ -218,6 +231,7 @@ jobs:
           retention-days: 7
 
   control-center-candidate:
+    needs: [verify-tests]
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741
@@ -242,6 +256,7 @@ jobs:
           retention-days: 7
 
   installer-candidate:
+    needs: [verify-tests]
     runs-on: ubuntu-24.04
     timeout-minutes: 35
     container: openkylin/openkylin@sha256:078676bf0d39f0efe0f240d925e10fc11a22e5e2b1dcb163eec4ed511bd17741

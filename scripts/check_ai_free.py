@@ -1,5 +1,6 @@
 """Fail closed on AI packages, runtime links and model payloads in built images."""
 from pathlib import Path
+import os
 import re
 import subprocess
 import sys
@@ -25,6 +26,30 @@ def check_packages(installed):
                 raise ValueError(f'{name}: AI reference in {field}: {blocked}')
 
 
+def dynamic_headers(path):
+    # readelf processes PT_INTERP even for --dynamic. Detached debug ELFs can
+    # retain program headers without interpreter bytes (binutils Debian #1012107).
+    # Keep readelf for architecture-independent inspection; only that exact
+    # diagnostic can fall back to objdump. Every other failure stays fatal.
+    environment = dict(os.environ, LC_ALL='C')
+    result = subprocess.run(['readelf', '-d', str(path)], capture_output=True,
+                            text=True, errors='replace', env=environment)
+    if result.returncode == 0 and not result.stderr.strip():
+        return result.stdout
+    known = 'readelf: Error: Unable to find program interpreter name'
+    diagnostics = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+    if diagnostics and all(line == known for line in diagnostics):
+        fallback = subprocess.run(['objdump', '-p', str(path)], capture_output=True,
+                                  text=True, errors='replace', env=environment)
+        if fallback.returncode == 0 and not fallback.stderr.strip():
+            print(f'PT_INTERP metadata unavailable; dependencies audited with objdump: {path}')
+            return fallback.stdout
+        raise ValueError(f'Cannot audit ELF {path}: objdump exit {fallback.returncode}: '
+                         f'{fallback.stderr.strip()}')
+    raise ValueError(f'Cannot audit ELF {path}: readelf exit {result.returncode}: '
+                     f'{result.stderr.strip()}')
+
+
 def check_payload(root, excluded=()):
     count = 0
     for path in root.rglob('*'):
@@ -46,7 +71,7 @@ def check_payload(root, excluded=()):
         if magic != b'\x7fELF':
             continue
         count += 1
-        dynamic = subprocess.check_output(['readelf', '-d', str(path)], text=True)
+        dynamic = dynamic_headers(path)
         if FORBIDDEN_LINK.search(dynamic):
             raise ValueError(f'ELF still links an AI runtime: {path}')
         # Also detect known runtime-loaded OCR/inference libraries.

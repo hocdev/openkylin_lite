@@ -10,6 +10,60 @@ from test_installer_patch import simulate_systemdatasize
 
 @unittest.skipUnless(os.environ.get('INSTALLER_SOURCE_DIR'), 'requires patched installer source')
 class InstallerRuntimeTests(unittest.TestCase):
+    def test_diagnostic_copy_logs_are_english(self):
+        root = pathlib.Path(os.environ['INSTALLER_SOURCE_DIR'])
+        script = (root / 'scripts/prepare/16copy-basic-filesystem').read_text(encoding='utf-8')
+        for message in ('Copying basic filesystem...', 'Processing squashfs...',
+                        'Squashfs processing complete', 'Filesystem copy complete'):
+            self.assertIn('msg "' + message + '"', script)
+        for path in (root / 'scripts').rglob('*'):
+            if path.is_file() and path.suffix != '.orig':
+                self.assertNotRegex(path.read_text(encoding='utf-8'), r'msg "[^"\n]*[\u4e00-\u9fff]')
+
+    def test_language_suffix_is_normalized(self):
+        source = pathlib.Path(os.environ['INSTALLER_SOURCE_DIR']) / 'scripts/utils'
+        script = source.read_text(encoding='utf-8')
+        block = script[script.index('installer_language=$(get_value language)'):script.index('\nset_backup()')]
+        for value, expected in (('en_US.UTF-8', 'en_US'), ('en_US@variant', 'en_US'), ('zh_CN', 'zh_CN')):
+            result = subprocess.run(['bash', '-c',
+                'get_value() { echo "$TEST_VALUE"; };\n' + block + '\necho "$LANGUAGES"'],
+                env={**os.environ, 'TEST_VALUE': value}, text=True, capture_output=True, check=True)
+            self.assertEqual(result.stdout.strip(), expected)
+
+    def test_optional_data_size_accepts_false_but_rejects_invalid_input(self):
+        root = pathlib.Path(os.environ['INSTALLER_SOURCE_DIR'])
+        for name in ('autopart.sh', 'autopart-efi.sh'):
+            script = (root / 'scripts' / name).read_text(encoding='utf-8')
+            block = script[script.index('data_customize_size=0'):script.index('data_device=$(get_value data-device)')]
+            for value, expected in (('false', '1000'), ('', '1000'), ('0', '1000'), ('250', '250')):
+                result = subprocess.run(['bash', '-c',
+                    'get_value() { printf "%s" "$TEST_VALUE"; }\n'
+                    + 'data_size=1000; free_size=30000\n' + block + '\necho "$data_size"',
+                    ], env={**os.environ, 'TEST_VALUE': value}, text=True, capture_output=True)
+                self.assertEqual(result.returncode, 0, result.stderr)
+                self.assertEqual(result.stdout.strip(), expected)
+                self.assertEqual(result.stderr, '')
+            result = subprocess.run(['bash', '-c', 'get_value() { echo invalid; };\n' + block],
+                                    text=True, capture_output=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn('Invalid data-customize-size', result.stderr)
+
+    def test_optional_dpms_and_mount_are_not_called_when_absent(self):
+        source = pathlib.Path(os.environ['INSTALLER_SOURCE_DIR']) / 'scripts/prepare/01set-dpms'
+        script = source.read_text(encoding='utf-8').split('case ${LANGUAGES}')[0]
+        mocks = '''
+xset() { if [[ "$*" == q ]]; then echo 'DPMS extension not supported'; else echo "xset $*"; fi; }
+mountpoint() { return 1; }
+umount() { echo unexpected-unmount >&2; return 1; }
+sync() { :; }
+sleep() { :; }
+'''
+        result = subprocess.run(['bash', '-c', mocks + script],
+                                env={**os.environ, 'DISPLAY': ':0'}, text=True, capture_output=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(result.stdout.strip(), 'xset s off')
+        self.assertEqual(result.stderr, '')
+
     def test_real_partition_script_matches_validated_budgets(self):
         source = pathlib.Path(os.environ['INSTALLER_SOURCE_DIR']) / 'data/systemdatasize.sh'
         script = source.read_text()

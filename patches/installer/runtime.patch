@@ -1,0 +1,441 @@
+diff --git a/scripts/autopart-efi.sh b/scripts/autopart-efi.sh
+--- a/scripts/autopart-efi.sh
++++ b/scripts/autopart-efi.sh
+@@ -126,7 +126,11 @@
+ 
+ data_customize_size=0
+ data_customize_size=$(get_value data-customize-size) || data_customize_size=0
+-if [ $data_customize_size -gt 0 ]; then
++case "$data_customize_size" in
++    ''|false) data_customize_size=0 ;;
++    *[!0-9]*) echo "Invalid data-customize-size: $data_customize_size" >&2; exit 1 ;;
++esac
++if [ "$data_customize_size" -gt 0 ]; then
+ 	data_size=${data_customize_size}
+ 	root_size=$(( free_size - data_size ))
+ fi
+diff --git a/scripts/autopart.sh b/scripts/autopart.sh
+--- a/scripts/autopart.sh
++++ b/scripts/autopart.sh
+@@ -119,7 +119,11 @@
+ 
+ data_customize_size=0
+ data_customize_size=$(get_value data-customize-size) || data_customize_size=0
+-if [ $data_customize_size -gt 0 ]; then
++case "$data_customize_size" in
++    ''|false) data_customize_size=0 ;;
++    *[!0-9]*) echo "Invalid data-customize-size: $data_customize_size" >&2; exit 1 ;;
++esac
++if [ "$data_customize_size" -gt 0 ]; then
+         data_size=${data_customize_size}
+         root_size=$(( free_size - data_size ))
+ fi
+diff --git a/scripts/k.sh b/scripts/k.sh
+--- a/scripts/k.sh
++++ b/scripts/k.sh
+@@ -102,4 +102,4 @@
+ 
+ do_inchroot
+ 
+-msg "k.sh 运行结束"
++msg "k.sh finished"
+diff --git a/scripts/oem.sh b/scripts/oem.sh
+--- a/scripts/oem.sh
++++ b/scripts/oem.sh
+@@ -303,7 +303,7 @@
+     
+     for i in ${packages_list_remove[*]}; do
+         if dpkg -l | grep -q $i; then
+-            msg "移除 $i"
++            msg "Removing $i"
+             apt purge -y $i || true
+         fi
+     done
+diff --git a/scripts/remove-deb.sh b/scripts/remove-deb.sh
+--- a/scripts/remove-deb.sh
++++ b/scripts/remove-deb.sh
+@@ -8,4 +8,4 @@
+ }
+ 
+ do_inchroot_remove_deb
+-msg "运行remove deb 脚本结束"
++msg "Package removal script finished"
+diff --git a/scripts/utils b/scripts/utils
+--- a/scripts/utils
++++ b/scripts/utils
+@@ -33,7 +33,10 @@
+     echo "${value1%)*}"
+ }
+ 
+-readonly LANGUAGES=$(get_value language)
++# Configuration can contain en_US.UTF-8 or en_US@modifier.
++installer_language=$(get_value language)
++installer_language=${installer_language%%.*}
++readonly LANGUAGES=${installer_language%%@*}
+ 
+ set_backup() {
+     backup_dev=$1
+@@ -44,19 +47,19 @@
+ SNAPSHOT_ENABLED=1" >$backup_root/etc/.bootinfo
+     mkdir -p $backup_root/backup/current
+     mkdir -p $backup_root/backup/snapshots
+-    msg "设置备份还原分区完成"
++    msg "Recovery partition setup complete"
+ }
+ 
+ # 卸载文件系统
+ umount_all() {
+-    msg "正在卸载文件系统..."
++    msg "Unmounting filesystems..."
+     sync
+     umount -l /target || true
+     if mount | grep -q /backup; then
+         umount -l /backup || true
+     fi
+     umount -l /kylin-sysroot || true
+-    msg "卸载完成"
++    msg "Unmount complete"
+ }
+ 
+ do_mipsel_loongson_2f() {
+@@ -705,7 +708,7 @@
+             echo "$(date +'%b %d %H:%M:%S') ${filename}"
+             . "$i"
+         else
+-            msg "跳过 $i"
++            msg "Skipping $i"
+         fi
+     done
+ }
+@@ -723,7 +726,7 @@
+                     . "$i" >>${LOG_FILE} 2>&1
+             fi
+         else
+-            msg "跳过 $i"
++            msg "Skipping $i"
+         fi
+     done
+ }
+diff --git a/scripts/z.sh b/scripts/z.sh
+--- a/scripts/z.sh
++++ b/scripts/z.sh
+@@ -428,7 +428,7 @@
+ # 拷贝日志
+ do_copy_log() {
+   new_sysroot_dir=$(get_value new-root)
+-  msg "正在拷贝安装日志..."
++  msg "Copying installation logs..."
+   cp -r /var/log/installer/ $new_sysroot_dir/var/log/
+   
+   if [[ -f $new_sysroot_dir/var/log/installer/ky-installer.cfg ]]; then
+@@ -643,12 +643,12 @@
+   fi
+ 
+   #umount /target/backup
+-  msg "正在进行系统备份..."
++  msg "Backing up the system..."
+   new_sysroot_dir=$(get_value new-root)
+   deploy_hashvalue_backup=$(get_value deploy_hashvalue_backup)
+   ## 工厂备份
+   /usr/bin/backup-factory --factorybackup $new_sysroot_dir $deploy_hashvalue_backup || true
+-  msg "系统备份完成"
++  msg "System backup complete"
+ 
+   
+   #还原出厂备份中的审核模式
+diff --git a/scripts/after/21setup-auditmode b/scripts/after/21setup-auditmode
+--- a/scripts/after/21setup-auditmode
++++ b/scripts/after/21setup-auditmode
+@@ -21,7 +21,7 @@
+ 
+ ### TODO, 重复代码
+ # groups zz adm cdrom sudo dip plugdev lpadmin sambashare
+-msg "设置用户 ${USERNAME}"
++msg "Setting up user ${USERNAME}"
+ chroot $new_sysroot_path useradd -u ${KUID} -m -s /bin/bash "${USERNAME}"
+ chroot $new_sysroot_path sh -c "echo ${USERNAME}:${PASSWORD} | chpasswd"
+ 
+diff --git a/scripts/in_chroot/00setup-timezone b/scripts/in_chroot/00setup-timezone
+--- a/scripts/in_chroot/00setup-timezone
++++ b/scripts/in_chroot/00setup-timezone
+@@ -21,7 +21,7 @@
+ 
+ echo "${TIMEZONE}"  >/etc/timezone
+ 
+-msg "设置时区为 ${TIMEZONE}"
++msg "Setting timezone to ${TIMEZONE}"
+ ln -sf /usr/share/zoneinfo/"${TIMEZONE}" /etc/localtime
+ 
+ # 写入硬件时间
+diff --git a/scripts/in_chroot/03setup-locale b/scripts/in_chroot/03setup-locale
+--- a/scripts/in_chroot/03setup-locale
++++ b/scripts/in_chroot/03setup-locale
+@@ -36,7 +36,7 @@
+ lo_LA.UTF-8 UTF-8
+ ur_PK.UTF-8 UTF-8" >> /etc/locale.gen
+ 
+-msg "设置语言为 ${LANGUAGE}"
++msg "Setting language to ${LANGUAGE}"
+ echo "LANG=${LANGUAGE}.UTF-8" >/etc/default/locale
+ if [[ "${LANGUAGE}" = "zh_CN" ]]; then
+     echo "LANGUAGE=\"zh_CN:zh\"" >> /etc/default/locale
+diff --git a/scripts/in_chroot/21setup-user b/scripts/in_chroot/21setup-user
+--- a/scripts/in_chroot/21setup-user
++++ b/scripts/in_chroot/21setup-user
+@@ -65,7 +65,7 @@
+ fi
+ 
+ 
+-msg "设置用户 ${USERNAME}"
++msg "Setting up user ${USERNAME}"
+ useradd -m -s /bin/bash -u ${KUID} "${USERNAME}"
+ usermod -c "${USERNAME}" "${USERNAME}"
+ echo "${USERNAME}:${PASSWORD}" | chpasswd
+diff --git a/scripts/in_chroot/30update-initramfs b/scripts/in_chroot/30update-initramfs
+--- a/scripts/in_chroot/30update-initramfs
++++ b/scripts/in_chroot/30update-initramfs
+@@ -9,7 +9,7 @@
+ 
+ #if [[ $(uname -m) =~ 'sw_64' ]]; then
+ #    if [[ -f /usr/sbin/update-initramfs ]]; then
+-#    	msg "更新 initramfs"
++#    	msg "Updating initramfs"
+ #		apt purge -y casper || echo "卸载casper包失败"
+ #    	update-initramfs -u
+ #    	sync
+@@ -31,7 +31,7 @@
+     if egrep -qi '3A5000' /proc/cpuinfo; then
+ 	echo "this is 3A5000,update-initramfs in the after apt purge casper"	
+     else
+-    	msg "更新 initramfs"
++    	msg "Updating initramfs"
+ 	apt purge -y casper || echo "卸载casper包失败"
+     	update-initramfs -u
+     	sync
+diff --git a/scripts/in_chroot/95install-extra-packages b/scripts/in_chroot/95install-extra-packages
+--- a/scripts/in_chroot/95install-extra-packages
++++ b/scripts/in_chroot/95install-extra-packages
+@@ -10,7 +10,7 @@
+ 
+ ### automatically install the packages listed in the /cdrom/.kylin-post-packages
+ if [[ -f /cdrom/.kylin-post-packages ]]; then
+-    msg "安装光盘源列表包"
++    msg "Installing CD-ROM source list package"
+     /bin/sh -c "unset DEBIAN_HAS_FRONTEND && apt-get install -y $(cat /cdrom/.kylin-post-packages | grep -v ^\# | xargs)"
+ fi
+ 
+diff --git a/scripts/in_chroot/99remove-packages b/scripts/in_chroot/99remove-packages
+--- a/scripts/in_chroot/99remove-packages
++++ b/scripts/in_chroot/99remove-packages
+@@ -42,7 +42,7 @@
+ 
+ for i in ${packages_list_remove[*]}; do
+     if dpkg -l | grep -q $i; then
+-        msg "移除 $i"
++        msg "Removing $i"
+         apt purge -y $i
+     fi
+ done
+diff --git a/scripts/prepare/00umount b/scripts/prepare/00umount
+--- a/scripts/prepare/00umount
++++ b/scripts/prepare/00umount
+@@ -28,13 +28,30 @@
+ #sync
+ #sleep 1
+ #umount  /var/lib/os-prober/mount || true
+-umount -l /var/lib/os-prober || true
++if mountpoint -q /var/lib/os-prober; then
++    umount -l /var/lib/os-prober || true
++fi
+ 
++
++# Qt graphics descriptors are inherited by Bash; keep them out of LVM.
++installer_pvdisplay() (
++    for fd_path in /proc/$BASHPID/fd/*; do
++        fd=${fd_path##*/}
++        case "$(readlink "$fd_path")" in
++            /dev/udmabuf|*memfd:lp_dma_buf*)
++                if [[ $fd =~ ^[0-9]+$ && $fd -gt 2 ]]; then
++                    eval "exec ${fd}>&-"
++                fi
++                ;;
++        esac
++    done
++    pvdisplay "$@"
++)
+ 
+ delete_lvm() {
+     local DEVICE=$1
+-    vg_path="/dev/$(pvdisplay -c | grep -i "$DEVICE" | awk -F ":" '{print $2}')" || true
+-    pv_name=$(pvdisplay -c | grep -i "$DEVICE" | awk -F ":" '{print $1}') || true
++    vg_path="/dev/$(installer_pvdisplay -c | grep -i "$DEVICE" | awk -F ":" '{print $2}')" || true
++    pv_name=$(installer_pvdisplay -c | grep -i "$DEVICE" | awk -F ":" '{print $1}') || true
+     
+     if [ -n "$pv_name" ]; then
+         if [ -f "$vg_path" ]; then
+diff --git a/scripts/prepare/01set-dpms b/scripts/prepare/01set-dpms
+--- a/scripts/prepare/01set-dpms
++++ b/scripts/prepare/01set-dpms
+@@ -6,12 +6,17 @@
+ 
+ if [[ ! -z "$DISPLAY" ]]; then
+   # 防止屏幕熄灭
+-  xset s off -dpms
++  xset s off
++  if LC_ALL=C xset q | grep -q 'DPMS is'; then
++    xset -dpms
++  fi
+ fi
+ 
+ sync
+ sleep 1
+-umount  /var/lib/os-prober/mount || true
++if mountpoint -q /var/lib/os-prober/mount; then
++  umount /var/lib/os-prober/mount || true
++fi
+ 
+ case ${LANGUAGES} in
+         'zh_CN')
+diff --git a/scripts/prepare/16copy-basic-filesystem b/scripts/prepare/16copy-basic-filesystem
+--- a/scripts/prepare/16copy-basic-filesystem
++++ b/scripts/prepare/16copy-basic-filesystem
+@@ -279,7 +279,7 @@
+ 	echo "installer-progress-next=31" >>${INSTALLER_PROGRESS}
+ 
+ fi
+-msg "正在拷贝基础文件系统..."
++msg "Copying basic filesystem..."
+ # 判断使用最小系统镜像或 ghost
+ deal_squashfs
+ if [[ "${is_ghost}" == "true" ]]; then
+@@ -306,10 +306,10 @@
+ 	if [ -f /cdrom/casper/filesystem.squashfs ]; then
+ 		mkdir -p /target/sqfs
+ 		mkdir -p /target/sqfs/data
+-		msg "正在处理squashfs..."
++		msg "Processing squashfs..."
+ 		rsync -aHAX /cdrom/casper/filesystem.squashfs /target/sqfs/data || do_error copy
+ 		sync
+-		msg "squashfs处理完成"
++		msg "Squashfs processing complete"
+ 
+ 		mkdir -p /target/sqfs/rofs
+ 		mount /target/sqfs/data/filesystem.squashfs /target/sqfs/rofs
+@@ -322,7 +322,7 @@
+ 	echo "installer-progress=31" >${INSTALLER_PROGRESS}
+ 	echo "installer-progress-next=52" >>${INSTALLER_PROGRESS}
+ fi
+-msg "文件系统拷贝完成"
++msg "Filesystem copy complete"
+ sync
+ 
+ 
+@@ -506,41 +506,41 @@
+         echo "installer-progress=52" >${INSTALLER_PROGRESS}
+         echo "installer-progress-next=76" >>${INSTALLER_PROGRESS}
+         #拷贝kare文件到部署目录中，以便开机能看到预装的kare应用
+-        msg "开始处理kare"
++        msg "Processing kare"
+ 	if [[ -f $new_root/sysroot/sqfs/data/filesystem.squashfs ]];then
+ 		mkdir -p $new_root/sysroot/sqfs/rofs
+ 		mount $new_root/sysroot/sqfs/data/filesystem.squashfs $new_root/sysroot/sqfs/rofs
+ 		
+-        	msg "挂载squashfs"
++        	msg "Mounting squashfs"
+ 		if [[ -d $new_root/sysroot/sqfs/rofs/kare-applications ]];then
+-        		msg "开始处理/kare-applications"
++        		msg "Processing /kare-applications"
+ 			rsync -aHAX $new_root/sysroot/sqfs/rofs/kare-applications $new_root/opt/
+-        		msg "处理/kare-applications完成"
++        		msg "Processing /kare-applications complete"
+ 		fi
+ 		if [[ -d $new_root/sysroot/sqfs/rofs/opt/kare ]];then
+-        		msg "开始处理/opt/kare"
++        		msg "Processing /opt/kare"
+ 			rsync -aHAX  $new_root/sysroot/sqfs/rofs/opt/kare $new_root/opt/
+-        		msg "处理/opt/kare完成"
++        		msg "Processing /opt/kare complete"
+ 		fi
+         	if [[ -d $new_root/sysroot/sqfs/rofs/etc/kare ]];then
+-        		msg "开始处理/etc/kare"
++        		msg "Processing /etc/kare"
+                 	rsync -aHAX $new_root/sysroot/sqfs/rofs/etc/kare $new_root/etc/
+-        		msg "处理/etc/kare完成"
++        		msg "Processing /etc/kare complete"
+         	fi
+         	if [[ -d $new_root/sysroot/sqfs/rofs/var/kare-shadow ]];then
+-        		msg "开始处理/var/kare-shadow"
++        		msg "Processing /var/kare-shadow"
+                 	rsync -aHAX $new_root/sysroot/sqfs/rofs/var/kare-shadow $new_root/var/
+-        		msg "处理/var/kare-shadow"
++        		msg "Processing /var/kare-shadow"
+         	fi
+         	if [[ -d $new_root/sysroot/sqfs/rofs/opt/kare-applications ]];then
+-        		msg "开始处理/opt/kare-applications"
++        		msg "Processing /opt/kare-applications"
+                 	rsync -aHAX $new_root/sysroot/sqfs/rofs/opt/kare-applications $new_root/opt/
+-        		msg "处理/opt/kare-applications完成"
++        		msg "Processing /opt/kare-applications complete"
+         	fi
+         	if [[ -d $new_root/sysroot/sqfs/rofs/opt/kaiming ]];then
+-        		msg "开始处理/opt/kaiming"
++        		msg "Processing /opt/kaiming"
+                 	rsync -aHAX $new_root/sysroot/sqfs/rofs/opt/kaiming $new_root/opt/
+-        		msg "处理/opt/kaiming完成"
++        		msg "Processing /opt/kaiming complete"
+         	fi
+                 sync
+ 		umount $new_root/sysroot/sqfs/rofs || echo "umount $new_root/sysroot/sqfs/rofs failed"
+@@ -550,39 +550,39 @@
+ 		rm -rf $new_root/sysroot/sqfs || echo "rm -f $new_root/sysroot/sqfs failed"
+ 	else
+         	if [[ -d /kare-applications ]];then
+-        		msg "开始处理/kare-applications"
++        		msg "Processing /kare-applications"
+                 	rsync -aHAX /kare-applications $new_root/opt/
+-        		msg "处理/kare-applications完成"
++        		msg "Processing /kare-applications complete"
+         	fi
+         	if [[ -d /opt/kare ]];then
+-        		msg "开始处理/opt/kare"
++        		msg "Processing /opt/kare"
+                 	rsync -aHAX /opt/kare $new_root/opt/
+-        		msg "处理/opt/kare完成"
++        		msg "Processing /opt/kare complete"
+         	fi
+         	if [[ -d /etc/kare ]];then
+-        		msg "开始处理/etc/kare"
++        		msg "Processing /etc/kare"
+                 	rsync -aHAX /etc/kare $new_root/etc/
+-        		msg "处理/etc/kare完成"
++        		msg "Processing /etc/kare complete"
+         	fi
+         	if [[ -d /var/kare-shadow ]];then
+-        		msg "开始处理/var/kare-shadow"
++        		msg "Processing /var/kare-shadow"
+                 	rsync -aHAX /var/kare-shadow $new_root/var/
+-        		msg "处理/var/kare-shadow"
++        		msg "Processing /var/kare-shadow"
+         	fi
+         	if [[ -d /opt/kare-applications ]];then
+-        		msg "开始处理/opt/kare-applications"
++        		msg "Processing /opt/kare-applications"
+                 	rsync -aHAX /opt/kare-applications $new_root/opt/
+-        		msg "处理/opt/kare-applications完成"
++        		msg "Processing /opt/kare-applications complete"
+         	fi
+         	if [[ -d /opt/kaiming ]];then
+-        		msg "开始处理/opt/kaiming"
++        		msg "Processing /opt/kaiming"
+                 	rsync -aHAX /opt/kaiming $new_root/opt/
+-        		msg "处理/opt/kaiming完成"
++        		msg "Processing /opt/kaiming complete"
+         	fi
+                 sync
+ 	fi
+ 	sync
+-        msg "kare处理完成"
++        msg "Kare processing complete"
+ fi
+ 
+ # 保留data

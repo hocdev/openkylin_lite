@@ -102,3 +102,23 @@ Chưa chạy workflow trên GitHub, chưa giải nén ISO, chưa đo dung lượ
 
 Đỉnh dung lượng ở bước tạo ISO vẫn tồn tại: ISO gốc + squashfs mới + ISO mới. OverlayFS không giải phóng dữ liệu gốc chỉ vì app đã bị xóa; phần đó chỉ biến mất trong squashfs mới. Chưa đo đỉnh dung lượng bằng lần chạy thật.
 
+
+### Installer logs and lightweight desktop
+
+The installer candidate applies `patches/installer/runtime.patch` after the disk-size patch.
+It handles the optional `data-customize-size=false` value in BIOS and UEFI partitioning,
+normalizes locale suffixes, uses English diagnostic messages, checks DPMS/mount availability,
+and closes inherited graphics descriptors before querying LVM. Localized progress messages
+remain available.
+
+During remastering, `scripts/apply_lightweight_desktop.py` configures both the Live root
+and the installed OSTree snapshot. It removes PAG wallpaper animations only when a static
+same-stem image exists, disables UKUI special effects and KWin blur/window animations,
+and preserves compositing. Schema compilation is required before packaging.
+These changes still require an ISO build and a VM installation test to verify the UI end to end.
+
+The About page now paints its bundled UKUI logo before asynchronous metadata queries.
+English sessions migrate standard Chinese XDG folders (including `模板`) to their English
+counterparts via Xsession and desktop autostart, covering Live and installed sessions.
+Existing custom XDG paths are preserved; conflicting files remain in the old folder rather
+than being overwritten. Other session languages are unchanged.

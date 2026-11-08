@@ -466,6 +466,11 @@ purge_packages "$snapshot" "$work/ostree-status-before" reports/ostree
 for snapshot_database in "${temporary_databases[@]}"; do
   rm -f -- "$snapshot_database"
 done
+# Apply to both roots before committing the installed tree.
+for desktop_root in "$root" "$snapshot"; do
+  python3 scripts/apply_lightweight_desktop.py "$desktop_root"
+  chroot "$desktop_root" glib-compile-schemas --strict /usr/share/glib-2.0/schemas
+done
 mv "$snapshot/etc" "$snapshot/usr/etc"
 
 # Create a parentless commit so the original package payload is not retained

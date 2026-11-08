@@ -29,6 +29,8 @@ git apply --check "$workspace/patches/control-center/shell-startup.patch"
 git apply "$workspace/patches/control-center/shell-startup.patch"
 git apply --check "$workspace/patches/control-center/no-activation.patch"
 git apply "$workspace/patches/control-center/no-activation.patch"
+git apply --check "$workspace/patches/control-center/about-logo.patch"
+git apply "$workspace/patches/control-center/about-logo.patch"
 cp "$workspace/patches/control-center/ntpdateprovider.h" registeredSession/plugins/about/
 cp "$workspace/patches/control-center/aboutasync.h" plugins/system/about/
 cp "$workspace/patches/control-center/aboutasync.h" shell/

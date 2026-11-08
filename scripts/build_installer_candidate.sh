@@ -48,6 +48,8 @@ fi
 dpkg-source --before-build .
 git apply --check "$workspace/patches/installer/kylin-os-installer.patch"
 git apply "$workspace/patches/installer/kylin-os-installer.patch"
+git apply --check "$workspace/patches/installer/runtime.patch"
+git apply "$workspace/patches/installer/runtime.patch"
 INSTALLER_SOURCE_DIR=$PWD python3 -m unittest discover -s "$workspace/tests" -p 'test_installer_runtime.py' -v
 
 python3 - <<'PYTHON'

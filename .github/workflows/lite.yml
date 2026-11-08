@@ -43,6 +43,16 @@ jobs:
               echo "Deleted $conclusion push run $id"
             done <<< "$ids"
           done
+  regression-tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+      - name: Test on Linux with real binutils
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y binutils
+          python3 -m unittest discover -s tests -v
   verify-sources:
     runs-on: ubuntu-24.04
     timeout-minutes: 10
@@ -59,7 +69,7 @@ jobs:
           retention-days: 3
           if-no-files-found: warn
   remaster:
-    needs: [verify-sources, ukui-password-candidates, installer-candidate, control-center-candidate, ai-free-desktop]
+    needs: [regression-tests, verify-sources, ukui-password-candidates, installer-candidate, control-center-candidate, ai-free-desktop]
     runs-on: ubuntu-24.04
     timeout-minutes: 330
     permissions:
@@ -103,7 +113,6 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y xorriso squashfs-tools shellcheck aria2 ostree binutils
           shellcheck scripts/*.sh
-          python3 -m unittest discover -s tests -v
       - name: Restore original ISO cache
         id: iso-cache
         uses: actions/cache/restore@v5

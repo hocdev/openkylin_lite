@@ -3,6 +3,7 @@ from pathlib import Path
 import os
 import re
 import subprocess
+import struct
 import sys
 
 from ai_policy import dependency_names, is_ai_package
@@ -16,6 +17,68 @@ MODEL_SUFFIXES = {'.onnx', '.gguf', '.ggml', '.tflite', '.safetensors', '.traine
 FIREFOX_PAYLOAD = ('opt/apps/net.mozilla.firefox', 'var/opt/apps/net.mozilla.firefox')
 
 
+def is_split_debug(path):
+    """Inspect section headers without asking readelf to parse a missing PT_INTERP.
+
+    Only accept files whose allocated sections have no payload except notes.
+    All offsets and counts are checked before reading; malformed files fail closed.
+    """
+    try:
+        with path.open('rb') as stream:
+            size = os.fstat(stream.fileno()).st_size
+
+            def read(offset, length):
+                if offset < 0 or length < 0 or offset + length > size:
+                    raise ValueError('ELF range outside file')
+                stream.seek(offset)
+                data = stream.read(length)
+                if len(data) != length:
+                    raise ValueError('Truncated ELF')
+                return data
+
+            ident = read(0, 16)
+            if ident[:4] != b'\x7fELF' or ident[4] not in (1, 2) or ident[5] not in (1, 2):
+                return False
+            endian = '<' if ident[5] == 1 else '>'
+            header_format = endian + ('HHIIIIIHHHHHH' if ident[4] == 1 else 'HHIQQQIHHHHHH')
+            section_format = endian + ('IIIIIIIIII' if ident[4] == 1 else 'IIQQQQIIQQ')
+            header = struct.unpack(header_format, read(16, struct.calcsize(header_format)))
+            offset, stride, count, names_index = header[5], header[10], header[11], header[12]
+            section_size = struct.calcsize(section_format)
+            if not offset or stride != section_size:
+                return False
+
+            def section(index):
+                return struct.unpack(section_format, read(offset + index * stride, section_size))
+
+            zero = section(0)
+            count = count or zero[5]
+            if names_index == 0xffff:
+                names_index = zero[6]
+            if not 0 < count <= 100000 or not 0 < names_index < count or offset + count * stride > size:
+                return False
+            names_section = section(names_index)
+            if names_section[1] != 3 or names_section[5] > 16 * 1024 * 1024:
+                return False
+            names = read(names_section[4], names_section[5])
+            missing = set()
+            for index in range(1, count):
+                entry = section(index)
+                name_offset, kind, flags = entry[:3]
+                if name_offset >= len(names) or names.find(b'\0', name_offset) < 0:
+                    return False
+                name = names[name_offset:names.index(b'\0', name_offset)]
+                if flags & 2 and kind not in (7, 8):  # SHF_ALLOC; NOTE or NOBITS
+                    return False
+                if kind != 8 and entry[4] + entry[5] > size:
+                    return False
+                if name in (b'.interp', b'.dynamic') and kind == 8:
+                    missing.add(name)
+            return missing == {b'.interp', b'.dynamic'}
+    except (OSError, ValueError, struct.error):
+        return False
+
+
 def read_dynamic(path):
     """Handle stripped debug companions without masking malformed runtime ELFs."""
     env = {**os.environ, 'LC_ALL': 'C'}
@@ -24,13 +87,7 @@ def read_dynamic(path):
     diagnostics = result.stderr.strip().splitlines()
     known = 'readelf: Error: Unable to find program interpreter name'
     if diagnostics and all(line.strip() == known for line in diagnostics):
-        sections = subprocess.run(['readelf', '-SW', str(path)], text=True,
-                                  capture_output=True, env=env)
-        # objcopy --only-keep-debug preserves headers but removes these payloads.
-        # Require structural evidence, never exempt files by name or location.
-        if (sections.returncode == 0 and not sections.stderr.strip()
-                and re.search(r'\]\s+\.interp\s+NOBITS\s', sections.stdout)
-                and re.search(r'\]\s+\.dynamic\s+NOBITS\s', sections.stdout)):
+        if is_split_debug(path):
             return result.stdout
     if result.returncode or diagnostics:
         raise ValueError(f'Cannot audit ELF {path}: {result.stderr.strip() or result.returncode}')

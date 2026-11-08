@@ -12,7 +12,7 @@ FORBIDDEN_LINK = re.compile(r'lib(?:kyai|kylin-ai|kylin-(?:.*nlp|.*speech|.*visi
 MODEL_SUFFIXES = {'.onnx', '.gguf', '.ggml', '.tflite', '.safetensors', '.traineddata'}
 # Stock web browser bundles private translation runtime (Bergamot / ONNX runtime)
 # which is isolated to the browser application and not part of the system desktop AI stack.
-IGNORED_PAYLOAD_DIRS = {'net.mozilla.firefox'}
+FIREFOX_PAYLOAD = ('opt/apps/net.mozilla.firefox', 'var/opt/apps/net.mozilla.firefox')
 
 
 def check_packages(installed):
@@ -25,10 +25,10 @@ def check_packages(installed):
                 raise ValueError(f'{name}: AI reference in {field}: {blocked}')
 
 
-def check_payload(root):
+def check_payload(root, excluded=()):
     count = 0
     for path in root.rglob('*'):
-        if any(part in IGNORED_PAYLOAD_DIRS for part in path.parts):
+        if any(path == directory or directory in path.parents for directory in excluded):
             continue
         if path.is_symlink():
             # Do not dereference absolute image symlinks on the build host.
@@ -37,6 +37,8 @@ def check_payload(root):
             continue
         if not path.is_file():
             continue
+        if FORBIDDEN_LINK.search(path.name) or re.search(r'libonnxruntime.*\.so', path.name):
+            raise ValueError(f'AI runtime payload remains: {path}')
         if path.suffix.lower() in MODEL_SUFFIXES:
             raise ValueError(f'Inference/OCR model payload remains: {path}')
         with path.open('rb') as stream:
@@ -54,13 +56,18 @@ def check_payload(root):
     print(f'AI payload audit passed ({count} ELF files).')
 
 
-if __name__ == '__main__':
-    root = Path(sys.argv[1])
+def check_image(root):
     status = root / 'var/lib/dpkg/status'
     if status.is_file():
         check_packages(read_status(status.read_text()))
     # Restrict image traversal to installed payload, excluding /proc, /dev,
     # /sys and the separately audited OSTree repository.
-    for directory in ('usr', 'opt', 'etc'):
+    excluded = tuple(root / path for path in FIREFOX_PAYLOAD)
+    print('Scope: system AI; Firefox private payload explicitly retained.')
+    for directory in ('usr', 'opt', 'etc', 'var/opt', 'var/lib'):
         if (root / directory).is_dir():
-            check_payload(root / directory)
+            check_payload(root / directory, excluded)
+
+
+if __name__ == '__main__':
+    check_image(Path(sys.argv[1]))

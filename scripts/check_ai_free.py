@@ -15,6 +15,9 @@ MODEL_SUFFIXES = {'.onnx', '.gguf', '.ggml', '.tflite', '.safetensors', '.traine
 # Stock web browser bundles private translation runtime (Bergamot / ONNX runtime)
 # which is isolated to the browser application and not part of the system desktop AI stack.
 FIREFOX_PAYLOAD = ('opt/apps/net.mozilla.firefox', 'var/opt/apps/net.mozilla.firefox')
+# Linux kernel device firmware blobs (in /usr/lib/firmware and /lib/firmware)
+# execute on peripheral hardware rather than host userland and have no host runtime links.
+FIRMWARE_PAYLOAD = ('usr/lib/firmware', 'lib/firmware')
 
 
 def is_split_debug(path):
@@ -140,8 +143,8 @@ def check_image(root):
     if status.is_file():
         check_packages(read_status(status.read_text()))
     # Restrict image traversal to installed payload, excluding /proc, /dev,
-    # /sys and the separately audited OSTree repository.
-    excluded = tuple(root / path for path in FIREFOX_PAYLOAD)
+    # /sys, peripheral device firmware, and the separately audited OSTree repository.
+    excluded = tuple(root / path for path in FIREFOX_PAYLOAD + FIRMWARE_PAYLOAD)
     print('Scope: system AI; Firefox private payload explicitly retained.')
     for directory in ('usr', 'opt', 'etc', 'var/opt', 'var/lib'):
         if (root / directory).is_dir():

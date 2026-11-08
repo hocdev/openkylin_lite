@@ -60,6 +60,26 @@ class AiPolicyTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, 'model payload'):
                 check_image(root)
 
+    def test_firmware_exception_is_limited_to_image_application_paths(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            fw_dir = root / 'usr/lib/firmware/qcom/apq8096'
+            fw_dir.mkdir(parents=True)
+            (fw_dir / 'model.onnx').write_bytes(b'model')
+            (fw_dir / 'libonnxruntime.so').write_bytes(b'\x7fELF')
+            check_image(root)
+            with self.assertRaisesRegex(ValueError, 'model payload|runtime payload'):
+                check_payload(root)
+
+    def test_same_firmware_directory_name_elsewhere_is_not_exempt(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            app = root / 'usr/share/firmware'
+            app.mkdir(parents=True)
+            (app / 'model.onnx').write_bytes(b'model')
+            with self.assertRaisesRegex(ValueError, 'model payload'):
+                check_image(root)
+
     def test_standalone_runtime_is_rejected_without_elf_dependencies(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

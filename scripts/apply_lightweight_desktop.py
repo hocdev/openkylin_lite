@@ -12,6 +12,8 @@ def apply(root):
     helper = root / 'usr/lib/openkylin-lite/normalize-user-dirs.py'
     helper.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(Path(__file__).with_name('normalize_user_dirs.py'), helper)
+    shutil.copyfile(Path(__file__).with_name('live_session_guard.py'),
+                    helper.with_name('live-session-guard.py'))
     hook = root / 'etc/X11/Xsession.d/46openkylin-lite-user-dirs'
     hook.parent.mkdir(parents=True, exist_ok=True)
     hook.write_text(
@@ -23,6 +25,10 @@ def apply(root):
         '[Desktop Entry]\nType=Application\nName=User directory language\n'
         'Exec=python3 /usr/lib/openkylin-lite/normalize-user-dirs.py\n'
         'NoDisplay=true\n', encoding='utf-8')
+    autostart.with_name('openkylin-lite-live-guard.desktop').write_text(
+        '[Desktop Entry]\nType=Application\nName=Live session stability\n'
+        'Exec=python3 /usr/lib/openkylin-lite/live-session-guard.py\n'
+        'OnlyShowIn=UKUI;\nNoDisplay=true\n', encoding='utf-8')
     # Peony 4.24 automatically plays a same-stem PAG beside a static wallpaper.
     # Remove only animation assets with a verified static fallback.
     for directory in ('usr/share/backgrounds', 'usr/share/wallpapers'):

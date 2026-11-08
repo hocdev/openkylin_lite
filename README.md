@@ -122,3 +122,21 @@ English sessions migrate standard Chinese XDG folders (including `模板`) to th
 counterparts via Xsession and desktop autostart, covering Live and installed sessions.
 Existing custom XDG paths are preserved; conflicting files remain in the old folder rather
 than being overwritten. Other session languages are unchanged.
+
+### Live idle stability and ELF diagnostics
+
+`live_session_guard.py` runs only with the exact `boot=casper` kernel argument.
+It disables automatic panel hiding, idle screensaver activation, display sleep and
+idle suspend for the temporary Live session, leaving installed-session policy and
+manual screen locking intact. After the session manager has had 30 seconds to recover
+an absent panel, it attempts a restart, at most three times per session. It never kills
+a running panel. Diagnostics are kept in
+`~/.local/state/openkylin-lite/live-session.log` (rotated, bounded size).
+This mitigates idle/resume and exited-panel failures; a running but invisible panel
+still needs live graphics/session diagnostics to establish its cause.
+
+The ELF audit captures readelf diagnostics and accepts the missing-interpreter message
+only when section headers prove that both `.interp` and `.dynamic` are `NOBITS` debug
+payloads. Other failures include the affected file path and stop the audit; runtime-link
+and string scans remain enabled. The real split-debug regression test runs under Linux
+binutils in the ISO workflow.

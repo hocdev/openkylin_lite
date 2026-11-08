@@ -1,5 +1,6 @@
 """Fail closed on AI packages, runtime links and model payloads in built images."""
 from pathlib import Path
+import os
 import re
 import subprocess
 import sys
@@ -13,6 +14,27 @@ MODEL_SUFFIXES = {'.onnx', '.gguf', '.ggml', '.tflite', '.safetensors', '.traine
 # Stock web browser bundles private translation runtime (Bergamot / ONNX runtime)
 # which is isolated to the browser application and not part of the system desktop AI stack.
 FIREFOX_PAYLOAD = ('opt/apps/net.mozilla.firefox', 'var/opt/apps/net.mozilla.firefox')
+
+
+def read_dynamic(path):
+    """Handle stripped debug companions without masking malformed runtime ELFs."""
+    env = {**os.environ, 'LC_ALL': 'C'}
+    result = subprocess.run(['readelf', '-dW', str(path)], text=True,
+                            capture_output=True, env=env)
+    diagnostics = result.stderr.strip().splitlines()
+    known = 'readelf: Error: Unable to find program interpreter name'
+    if diagnostics and all(line.strip() == known for line in diagnostics):
+        sections = subprocess.run(['readelf', '-SW', str(path)], text=True,
+                                  capture_output=True, env=env)
+        # objcopy --only-keep-debug preserves headers but removes these payloads.
+        # Require structural evidence, never exempt files by name or location.
+        if (sections.returncode == 0 and not sections.stderr.strip()
+                and re.search(r'\]\s+\.interp\s+NOBITS\s', sections.stdout)
+                and re.search(r'\]\s+\.dynamic\s+NOBITS\s', sections.stdout)):
+            return result.stdout
+    if result.returncode or diagnostics:
+        raise ValueError(f'Cannot audit ELF {path}: {result.stderr.strip() or result.returncode}')
+    return result.stdout
 
 
 def check_packages(installed):
@@ -46,7 +68,7 @@ def check_payload(root, excluded=()):
         if magic != b'\x7fELF':
             continue
         count += 1
-        dynamic = subprocess.check_output(['readelf', '-d', str(path)], text=True)
+        dynamic = read_dynamic(path)
         if FORBIDDEN_LINK.search(dynamic):
             raise ValueError(f'ELF still links an AI runtime: {path}')
         # Also detect known runtime-loaded OCR/inference libraries.

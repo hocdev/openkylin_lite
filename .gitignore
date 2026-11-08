@@ -3,3 +3,5 @@
 *.iso
 *.squashfs
 __pycache__/
+
+build-reports/

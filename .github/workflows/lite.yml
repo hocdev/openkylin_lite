@@ -1,7 +1,7 @@
 name: openKylin Lite
 on:
   push:
-    branches: [main, codex/ukui-password, codex/ai-free-desktop]
+    branches: [main, codex/ukui-password, codex/ai-free-desktop, codex/build-warning-cleanup]
   workflow_dispatch:
     inputs:
       mode:
@@ -172,7 +172,15 @@ jobs:
           SOURCE_PACKAGE: ${{ matrix.source || matrix.package }}
           SOURCE_TAG: ${{ matrix.tag }}
           SOURCE_COMMIT: ${{ matrix.commit }}
-        run: bash scripts/build_ukui_password.sh
+        run: bash scripts/build_with_report.sh scripts/build_ukui_password.sh
+      - name: Save build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-warnings-password-${{ matrix.package }}
+          path: build-reports/
+          retention-days: 3
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v6
         with:
           name: ${{ matrix.package }}-password-candidate
@@ -193,7 +201,15 @@ jobs:
       - name: Rebuild desktop without AI
         env:
           SOURCE_PACKAGE: ${{ matrix.source }}
-        run: bash scripts/build_ai_free_desktop.sh
+        run: bash scripts/build_with_report.sh scripts/build_ai_free_desktop.sh
+      - name: Save build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-warnings-desktop-${{ matrix.source }}
+          path: build-reports/
+          retention-days: 3
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v6
         with:
           name: ai-free-desktop-${{ matrix.source }}
@@ -209,7 +225,15 @@ jobs:
       - uses: actions/checkout@v6
       - name: Build control center with nonblocking Settings startup
         shell: bash
-        run: bash scripts/build_control_center_candidate.sh
+        run: bash scripts/build_with_report.sh scripts/build_control_center_candidate.sh
+      - name: Save build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-warnings-control-center
+          path: build-reports/
+          retention-days: 3
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v6
         with:
           name: ukui-control-center-candidate
@@ -231,7 +255,15 @@ jobs:
           SOURCE_COMMIT: 15008beb5f39ccf33f920e03e6bcef24c2826b22
           SOURCE_TARBALL_URL: http://archive.build.openkylin.top/openkylin/pool/main/k/kylin-os-installer/kylin-os-installer_0.2.2-0k1.16.tar.xz
           SOURCE_TARBALL_SHA256: 189349021171f31d19539d41bed9955288104427ce35474beddb0a42cbac0042
-        run: bash scripts/build_installer_candidate.sh
+        run: bash scripts/build_with_report.sh scripts/build_installer_candidate.sh
+      - name: Save build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: build-warnings-installer
+          path: build-reports/
+          retention-days: 3
+          if-no-files-found: warn
       - uses: actions/upload-artifact@v6
         with:
           name: kylin-os-installer-candidate

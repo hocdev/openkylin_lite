@@ -1,0 +1,70 @@
+--- a/debian/control
++++ b/debian/control
+@@ -36,8 +36,7 @@
+ Section: libdevel
+ Architecture: any
+ Depends: libukui-file-metadata1 (= ${binary:Version}),
+-         ${misc:Depends},
+-         ${shlibs:Depends},
++         ${misc:Depends}
+ Description: The file metadata utils of UKUI desktop environment(development files).
+ 
+ Package: libukui-file-metadata-bin
+--- a/src/extractor-plugin.cpp
++++ b/src/extractor-plugin.cpp
+@@ -108,21 +108,21 @@
+     cleanedString = cleanedString.remove(QLatin1Char('{'));
+     cleanedString = cleanedString.remove(QLatin1Char('}'));
+ 
+-    QStringList contactStrings = string.split(QLatin1Char(','), QString::SkipEmptyParts);
++    QStringList contactStrings = string.split(QLatin1Char(','), Qt::SkipEmptyParts);
+     if (contactStrings.size() == 1) {
+-        contactStrings = string.split(QLatin1Char(';'), QString::SkipEmptyParts);
++        contactStrings = string.split(QLatin1Char(';'), Qt::SkipEmptyParts);
+     }
+ 
+     if (contactStrings.size() == 1) {
+-        contactStrings = string.split(QStringLiteral(" ft "), QString::SkipEmptyParts);
++        contactStrings = string.split(QStringLiteral(" ft "), Qt::SkipEmptyParts);
+     }
+ 
+     if (contactStrings.size() == 1) {
+-        contactStrings = string.split(QStringLiteral(" feat. "), QString::SkipEmptyParts);
++        contactStrings = string.split(QStringLiteral(" feat. "), Qt::SkipEmptyParts);
+     }
+ 
+     if (contactStrings.size() == 1) {
+-        contactStrings = string.split(QStringLiteral(" feat "), QString::SkipEmptyParts);
++        contactStrings = string.split(QStringLiteral(" feat "), Qt::SkipEmptyParts);
+     }
+ 
+     QStringList list;
+--- a/src/extractors/binary-parser.cpp
++++ b/src/extractors/binary-parser.cpp
+@@ -4955,9 +4955,9 @@
+     uint alast = 0;
+     uint blast = 0;
+     while(a < e) {
+-        qDebug() << hex << alast << blast;
+-        qDebug() << hex << "*a=" << *a << "alast=" << alast << "folded=" << foldCase(*a, alast);
+-        qDebug() << hex << "*b=" << *b << "blast=" << blast << "folded=" << foldCase(*b, blast);
++        qDebug() << Qt::hex << alast << blast;
++        qDebug() << Qt::hex << "*a=" << *a << "alast=" << alast << "folded=" << foldCase(*a, alast);
++        qDebug() << Qt::hex << "*b=" << *b << "blast=" << blast << "folded=" << foldCase(*b, blast);
+         int diff = foldCase(*a, alast) - foldCase(*b, blast);
+         if((diff))
+             return diff;
+--- a/src/extractors/taglib-extractor.cpp
++++ b/src/extractors/taglib-extractor.cpp
+@@ -70,9 +70,9 @@
+ {
+     TagLib::AudioProperties* audioProp = file->audioProperties();
+     if (audioProp && (result->inputFlags() & ExtractionResult::ExtractMetaData)) {
+-        if (audioProp->length()) {
++        if (audioProp->lengthInSeconds()) {
+             // What about the xml duration?
+-            result->add(Property::Duration, audioProp->length());
++            result->add(Property::Duration, audioProp->lengthInSeconds());
+         }
+ 
+         if (audioProp->bitrate()) {

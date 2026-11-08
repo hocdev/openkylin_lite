@@ -5,6 +5,7 @@ export DEBFULLNAME='openKylin Lite'
 export DEBEMAIL='openkylin-lite@users.noreply.github.com'
 export LANG=C.UTF-8 LC_ALL=C.UTF-8
 workspace=$PWD
+bash "$workspace/scripts/prepare_build_environment.sh"
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
@@ -29,6 +30,7 @@ git apply --check "$workspace/patches/control-center/shell-startup.patch"
 git apply "$workspace/patches/control-center/shell-startup.patch"
 git apply --check "$workspace/patches/control-center/no-activation.patch"
 git apply "$workspace/patches/control-center/no-activation.patch"
+bash "$workspace/scripts/apply_build_warning_patch.sh" ukui-control-center "$workspace"
 cp "$workspace/patches/control-center/ntpdateprovider.h" registeredSession/plugins/about/
 cp "$workspace/patches/control-center/aboutasync.h" plugins/system/about/
 cp "$workspace/patches/control-center/aboutasync.h" shell/

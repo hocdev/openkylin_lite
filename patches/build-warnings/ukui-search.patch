@@ -1,0 +1,74 @@
+--- a/libchinese-segmentation/cppjieba/DatTrie.hpp
++++ b/libchinese-segmentation/cppjieba/DatTrie.hpp
+@@ -154,7 +154,7 @@
+ #endif
+     }
+ 
+-    const double Find(const string & key, std::size_t length, std::size_t node_pos) const {
++    double Find(const string & key, std::size_t length, std::size_t node_pos) const {
+ #ifdef USE_DARTS_CLONE
+         JiebaDAT::result_pair_type find_result;
+         dat_.exactMatchSearch(key.c_str(), find_result, length, node_pos);
+--- a/libchinese-segmentation/cppjieba/limonp/StringUtil.hpp
++++ b/libchinese-segmentation/cppjieba/limonp/StringUtil.hpp
+@@ -109,12 +109,12 @@
+ }
+ 
+ inline std::string& LTrim(std::string &s) {
+-  s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::ptr_fun<unsigned, bool>(IsSpace))));
++  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned c) { return !IsSpace(c); }));
+   return s;
+ }
+ 
+ inline std::string& RTrim(std::string &s) {
+-  s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::ptr_fun<unsigned, bool>(IsSpace))).base(), s.end());
++  s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned c) { return !IsSpace(c); }).base(), s.end());
+   return s;
+ }
+ 
+@@ -123,12 +123,12 @@
+ }
+ 
+ inline std::string& LTrim(std::string & s, char x) {
+-  s.erase(s.begin(), std::find_if(s.begin(), s.end(), std::not1(std::bind2nd(std::equal_to<char>(), x))));
++  s.erase(s.begin(), std::find_if(s.begin(), s.end(), [x](char c) { return c != x; }));
+   return s;
+ }
+ 
+ inline std::string& RTrim(std::string & s, char x) {
+-  s.erase(std::find_if(s.rbegin(), s.rend(), std::not1(std::bind2nd(std::equal_to<char>(), x))).base(), s.end());
++  s.erase(std::find_if(s.rbegin(), s.rend(), [x](char c) { return c != x; }).base(), s.end());
+   return s;
+ }
+ 
+--- a/libchinese-segmentation/hanzi-to-pinyin.cpp
++++ b/libchinese-segmentation/hanzi-to-pinyin.cpp
+@@ -191,7 +191,7 @@
+ #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+             QStringList tmpList = info.split(',', Qt::SkipEmptyParts); //去重(保持原顺序)
+ #else
+-            QStringList tmpList = info.split(',', QString::SkipEmptyParts); //去重(保持原顺序)
++            QStringList tmpList = info.split(',', Qt::SkipEmptyParts); //去重(保持原顺序)
+ #endif
+             QStringList tmpValue;
+             for (auto &str : tmpList) {
+@@ -285,7 +285,7 @@
+ #if QT_VERSION >= QT_VERSION_CHECK(5, 15, 0)
+             QStringList tmpList = info.split(',', Qt::SkipEmptyParts); //去重(保持原顺序)
+ #else
+-            QStringList tmpList = info.split(',', QString::SkipEmptyParts); //去重(保持原顺序)
++            QStringList tmpList = info.split(',', Qt::SkipEmptyParts); //去重(保持原顺序)
+ #endif
+             QStringList tmpValue;
+             for (auto &str : tmpList) {
+--- a/search-ukcc-plugin/search.cpp
++++ b/search-ukcc-plugin/search.cpp
+@@ -183,7 +183,7 @@
+         connect(m_indexMethodBtnGroup, &QButtonGroup::buttonToggled,[ = ](QAbstractButton* button, bool checked) {
+             int id = m_indexMethodBtnGroup->id(button);
+ #else
+-        connect(m_indexMethodBtnGroup, QOverload<int, bool>::of(&QButtonGroup::buttonToggled),[ = ](int id, bool checked) {
++        connect(m_indexMethodBtnGroup, &QButtonGroup::idToggled,[ = ](int id, bool checked) {
+ #endif
+             if (id == -3) {//fuzzyBtn's id
+                 if (checked) {

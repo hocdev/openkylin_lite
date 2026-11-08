@@ -1,0 +1,71 @@
+--- a/bioauth/src/biodevices.cpp
++++ b/bioauth/src/biodevices.cpp
+@@ -400,7 +400,7 @@
+                 QString filename = "/proc/" + QString::number(ppid) + "/cmdline";
+                 QFile file(filename);
+                 if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+-                    qDebug() << "Can't open the file!" << endl;
++                    qDebug() << "Can't open the file!" << Qt::endl;
+                 }
+                 QByteArray text = file.readAll();
+                 file.close();
+@@ -432,7 +432,7 @@
+                 QString filename = "/proc/" + QString::number(ppid) + "/cmdline";
+                 QFile file(filename);
+                 if (!file.open(QIODevice::ReadOnly | QIODevice::Text)) {
+-                    qDebug() << "Can't open the file!" << endl;
++                    qDebug() << "Can't open the file!" << Qt::endl;
+                 }
+                 QByteArray text = file.readAll();
+                 file.close();
+--- a/bioauth/src/loginoptionswidget.cpp
++++ b/bioauth/src/loginoptionswidget.cpp
+@@ -523,7 +523,7 @@
+ 
+ void LoginOptionsWidget::updatePixmap()
+ {
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_waitingPixmap = m_waitingPixmap.transformed(matrix, Qt::FastTransformation);
+     if (m_curLoginOptType == LOGINOPT_TYPE_QRCODE)
+--- a/polkit-agent/src/kalabel.cpp
++++ b/polkit-agent/src/kalabel.cpp
+@@ -50,7 +50,7 @@
+ {
+     QFontMetrics fontMetrics(font);
+     //如果当前字体下，字符串长度大于指定宽度
+-    if (fontMetrics.width(strInfo) > width) {
++    if (fontMetrics.horizontalAdvance(strInfo) > width) {
+         strInfo = QFontMetrics(font).elidedText(strInfo, Qt::ElideRight, width);
+     }
+     return strInfo;
+--- a/polkit-agent/src/mainwindow.cpp
++++ b/polkit-agent/src/mainwindow.cpp
+@@ -37,7 +37,7 @@
+ #include <grp.h>
+ #include <libintl.h>
+ #include <locale.h>
+-#include <QMatrix>
++#include <QTransform>
+ #include "bioauthwidget.h"
+ #include <QHBoxLayout>
+ #include <QAction>
+@@ -233,7 +233,7 @@
+ 
+ void MainWindow::updateLoadingPixmap()
+ {
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_loadingPixmap = m_loadingPixmap.transformed(matrix, Qt::FastTransformation);
+     ui->loadingUkeyBtn->setIcon(QIcon(m_loadingPixmap));
+@@ -1309,7 +1309,7 @@
+     ui->btnLoading->show();
+     ui->lePassword->setDisabled(true);
+     ui->lePassword->setReadOnly(true);
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_waitingPixmap = m_waitingPixmap.transformed(matrix, Qt::FastTransformation);
+     ui->btnLoading->setIcon(m_waitingPixmap);

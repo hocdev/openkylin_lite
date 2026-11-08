@@ -1,0 +1,501 @@
+--- a/src/crop.cpp
++++ b/src/crop.cpp
+@@ -167,7 +167,7 @@
+     }
+ }
+ 
+-void CropLabel::mouseReleaseEvent(QMouseEvent *event)
++void CropLabel::mouseReleaseEvent(QMouseEvent *event [[maybe_unused]])
+ {
+     if(m_isPressed){
+         m_pressedLeft = false;               //鼠标按下左侧
+@@ -311,7 +311,7 @@
+     return origin;
+ }
+ 
+-bool CropLabel::isPressPointInCropRegion(QPoint mousePressPoint)
++bool CropLabel::isPressPointInCropRegion(QPoint mousePressPoint [[maybe_unused]])
+ {
+     return true;
+ }
+--- a/src/custom_push_button.cpp
++++ b/src/custom_push_button.cpp
+@@ -44,13 +44,13 @@
+ 
+ void CustomPushButton::setTextLimitShrink(const QString &text, int width)
+ {
+-    this->setMinimumWidth(qMin(this->fontMetrics().width(text), width));
++    this->setMinimumWidth(qMin(this->fontMetrics().horizontalAdvance(text), width));
+     setFullText(text);
+ }
+ 
+ void CustomPushButton::setTextLimitExpand(const QString &text)
+ {
+-    int textWidth = this->fontMetrics().width(text);
++    int textWidth = this->fontMetrics().horizontalAdvance(text);
+     this->setMaximumWidth(textWidth);
+     setFullText(text);
+ }
+@@ -70,7 +70,7 @@
+ {
+     int margin = 32;
+     QFontMetrics fm = this->fontMetrics();
+-    int dif = fm.width(m_fullText) + margin - this->width() ;
++    int dif = fm.horizontalAdvance(m_fullText) + margin - this->horizontalAdvance() ;
+     if (dif > 0) {
+         QString showText = fm.elidedText(m_fullText, Qt::ElideRight, this->width() - margin);
+         kdk::KPushButton::setText(showText);
+--- a/src/device/device_information.cpp
++++ b/src/device/device_information.cpp
+@@ -195,8 +195,8 @@
+             }
+         }
+     }
+-    QSet<QString> resSet = res.toSet();
+-    QStringList debPackages = resSet.toList();
++    QSet<QString> resSet = QSet<QString>(res.cbegin(), res.cend());
++    QStringList debPackages = resSet.values();
+     for (auto package : debPackages) {
+         if (package.contains("\n")) {
+             auto pkglist = package.split("\n");
+--- a/src/device/ukui_apt.cpp
++++ b/src/device/ukui_apt.cpp
+@@ -86,7 +86,7 @@
+ }
+ 
+ 
+-void AptUtilHelper::onRecvApt(bool success, QStringList updateGroup, QString errorString, QString errorDesc) {
++void AptUtilHelper::onRecvApt(bool success, QStringList updateGroup [[maybe_unused]], QString errorString, QString errorDesc) {
+     qDebug() << "onReceiveKumAptSignal" << success;
+     if(success == false) {
+         //Error
+--- a/src/device/usbFinder.cpp
++++ b/src/device/usbFinder.cpp
+@@ -224,7 +224,7 @@
+ 
+ 
+ 
+-bool usbClassCheck(int bInterfaceClass, int bInterfaceSubClass)
++bool usbClassCheck(int bInterfaceClass, int bInterfaceSubClass [[maybe_unused]])
+ {
+     switch (bInterfaceClass) {
+     case LIBUSB_CLASS_PER_INTERFACE:
+--- a/src/globalsignal.cpp
++++ b/src/globalsignal.cpp
+@@ -291,7 +291,7 @@
+     return instance;
+ }
+ 
+-GlobalConfigSignal::GlobalConfigSignal(QObject *parent)
++GlobalConfigSignal::GlobalConfigSignal(QObject *parent [[maybe_unused]])
+ {
+     if(QGSettings::isSchemaInstalled(KYLINSCANNER)){
+         m_data = new QGSettings(KYLINSCANNER);
+--- a/src/imageBaseOP/savefilebase.cpp
++++ b/src/imageBaseOP/savefilebase.cpp
+@@ -169,7 +169,7 @@
+     }
+ }
+ 
+-void SaveFileBase::setPdfSize(QImage *tmp, QPdfWriter *pdfWriter, QString size)
++void SaveFileBase::setPdfSize(QImage *tmp [[maybe_unused]], QPdfWriter *pdfWriter, QString size)
+ {
+     switch (toUnicode(size)) {
+     case U("A0"):
+--- a/src/include/customlabel.cpp
++++ b/src/include/customlabel.cpp
+@@ -42,13 +42,13 @@
+ 
+ void CustomLabel::setTextLimitShrink(const QString &text, int width)
+ {
+-    this->setMinimumWidth(qMin(this->fontMetrics().width(text), width));
++    this->setMinimumWidth(qMin(this->fontMetrics().horizontalAdvance(text), width));
+     setFullText(text);
+ }
+ 
+ void CustomLabel::setTextLimitExpand(const QString &text)
+ {
+-    int textWidth = this->fontMetrics().width(text);
++    int textWidth = this->fontMetrics().horizontalAdvance(text);
+     this->setMaximumWidth(textWidth);
+     setFullText(text);
+ }
+@@ -68,7 +68,7 @@
+ {
+     int margin = 32;
+     QFontMetrics fm = this->fontMetrics();
+-    int dif = fm.width(m_fullText) + margin - this->width() ;
++    int dif = fm.horizontalAdvance(m_fullText) + margin - this->horizontalAdvance() ;
+     if (dif > 0) {
+         QString showText = fm.elidedText(m_fullText, Qt::ElideRight, this->width() - margin);
+         QLabel::setText(showText);
+--- a/src/mainwidget.cpp
++++ b/src/mainwidget.cpp
+@@ -72,7 +72,7 @@
+     }
+     // 不再使用 exit(0)，让正常的关闭流程处理退出
+ }
+-void MainWidget::rotationChanged(bool isPCMode,int width,int height){
++void MainWidget::rotationChanged(bool isPCMode,int width [[maybe_unused]],int height [[maybe_unused]]){
+     GlobalUserSignal::getInstance()->setCurrentMode(isPCMode);
+     emit GlobalUserSignal::getInstance()->rotationChangedSig(isPCMode);
+ }
+@@ -762,7 +762,7 @@
+     }
+ }
+ 
+-void MainWidget::hideRectifyRunningDialog(bool isTrue)
++void MainWidget::hideRectifyRunningDialog(bool isTrue [[maybe_unused]])
+ {
+     qDebug() << "hide rectify dialog";
+     if (! m_rectifyRunningDialog->isHidden()) {
+--- a/src/newdevicelistpage.cpp
++++ b/src/newdevicelistpage.cpp
+@@ -227,7 +227,7 @@
+     QString lever = m_nameToLever.value(names.at(0));
+     m_selectedDeviceName->setText(devName);
+     bool hasDriver = false;
+-    int index;
++    int index = -1;
+     QString driverName = QString(tr("Driver Name:"));
+     // 判断该设备在云端是否有驱动可以自动安装
+     for (int i = 0; i < m_devInfoList.length(); ++i)
+@@ -307,6 +307,9 @@
+         }
+ 
+     }else {
++        if (index < 0 || index >= m_devInfoList.size()) {
++            return;
++        }
+         this->close();
+         QString type;
+         if(m_devInfoList.at(index).type == DeviceType::PRINTER){
+--- a/src/nodevicewidget.cpp
++++ b/src/nodevicewidget.cpp
+@@ -27,7 +27,7 @@
+     init();
+ }
+ 
+-void NoDeviceWidget::paintEvent(QPaintEvent *event)
++void NoDeviceWidget::paintEvent(QPaintEvent *event [[maybe_unused]])
+ {
+     QPainter painter(this);
+     QPen pen;
+--- a/src/runningdialog.cpp
++++ b/src/runningdialog.cpp
+@@ -41,12 +41,12 @@
+ 
+     if (isDarkTheme()) {
+         QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(0, 0, 0));
+-        setAutoFillBackground(true);
+-        setPalette(pal);
+-    } else {
+-        QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(255, 255, 255));
++        pal.setColor(QPalette::Window, QColor(0, 0, 0));
++        setAutoFillBackground(true);
++        setPalette(pal);
++    } else {
++        QPalette pal(palette());
++        pal.setColor(QPalette::Window, QColor(255, 255, 255));
+         setAutoFillBackground(true);
+         setPalette(pal);
+     }
+@@ -127,12 +127,12 @@
+ 
+     if (isDarkTheme()) {
+         QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(0, 0, 0));
+-        setAutoFillBackground(true);
+-        setPalette(pal);
+-    } else {
+-        QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(255, 255, 255));
++        pal.setColor(QPalette::Window, QColor(0, 0, 0));
++        setAutoFillBackground(true);
++        setPalette(pal);
++    } else {
++        QPalette pal(palette());
++        pal.setColor(QPalette::Window, QColor(255, 255, 255));
+         setAutoFillBackground(true);
+         setPalette(pal);
+     }
+@@ -246,13 +246,13 @@
+ {
+     if (isDarkTheme()) {
+         QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(0, 0, 0));
+-        setAutoFillBackground(true);
+-        setPalette(pal);
+-
+-    } else {
+-        QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(255, 255, 255));
++        pal.setColor(QPalette::Window, QColor(0, 0, 0));
++        setAutoFillBackground(true);
++        setPalette(pal);
++
++    } else {
++        QPalette pal(palette());
++        pal.setColor(QPalette::Window, QColor(255, 255, 255));
+         setAutoFillBackground(true);
+         setPalette(pal);
+     }
+--- a/src/saneobject.cpp
++++ b/src/saneobject.cpp
+@@ -1,3 +1,4 @@
++#include <algorithm>
+ /*
+ * Copyright (C) 2021, KylinSoft Co., Ltd.
+ *
+@@ -329,7 +330,7 @@
+         }
+         if(g_sane_object->stopSaneReadFlag == true){
+             if(g_sane_object->userInfo.type.compare(QApplication::tr("ADF Duplex"), Qt::CaseInsensitive) == 0 || g_sane_object->userInfo.type.compare("ADF Duplex", Qt::CaseInsensitive) == 0){
+-                status = status = sane_start(g_device);
++                status = sane_start(g_device);
+                 while(status == SANE_STATUS_GOOD){
+                     status = sane_read(g_device, g_buf, g_BufSize, &len);
+                 }
+@@ -384,7 +385,7 @@
+ 
+ }
+ 
+-static void authCallback (SANE_String_Const resource, SANE_Char *username, SANE_Char *password)
++static void authCallback (SANE_String_Const resource [[maybe_unused]], SANE_Char *username [[maybe_unused]], SANE_Char *password [[maybe_unused]])
+ {
+     //    qDebug() << "auth_callback" << resource << username << password;
+ }
+@@ -563,7 +564,7 @@
+     /// 1. Caused by specific drives, such as `lenovo-image-g-series_1.0-16_arm64`, so we need Vendor developers to handle it
+     /// 2. This will take a long time
+ 
+-    memset(device_list, 0x00, sizeof(device_list));
++    *device_list = nullptr;
+ 
+     SANE_Status status = sane_get_devices(device_list, SANE_FALSE);
+ 
+@@ -948,7 +949,7 @@
+         }
+     }
+     // reverse sort
+-    qSort(resolutions.begin(), resolutions.end(), [](const QString & s1, const QString & s2) {
++    std::sort(resolutions.begin(), resolutions.end(), [](const QString & s1, const QString & s2) {
+         // Get numbers from QString, and then sort
+ 
+         int numberS1 = g_sane_object->getNumbersFromQString(s1);
+@@ -1019,7 +1020,7 @@
+     qDebug() << "resolutions = " << resolutions;
+ 
+     // reverse sort
+-    qSort(resolutions.begin(), resolutions.end(), [](const QString & s1, const QString & s2) {
++    std::sort(resolutions.begin(), resolutions.end(), [](const QString & s1, const QString & s2) {
+         // Get numbers from QString, and then sort
+ 
+         int numberS1 = g_sane_object->getNumbersFromQString(s1);
+@@ -1294,7 +1295,7 @@
+ 
+     SANE_String val_string_source;
+     SANE_String val_string_color;
+-    SANE_Word val_size;
++    SANE_Word val_size = 0;
+     SANE_Word val_resolution;
+     opt = getOptdescByName(device, option_name, &optnum);
+ 
+@@ -1359,7 +1360,7 @@
+                 qDebug() << "min = " << opt->constraint.range->min
+                          << "max = " << opt->constraint.range->max
+                          << "size_range = " << size_range;
+-                if (val_size >= 420)
++                if (size_range >= 420)
+                     sizes << "A2";
+                 if (size_range >= 297)
+                     sizes << "A3";
+@@ -2260,7 +2261,7 @@
+  * @param info parameters setted by user
+  * @return scanning result
+  */
+-int SaneObject::startScanning(UserSelectedInfo info)
++int SaneObject::startScanning(UserSelectedInfo info [[maybe_unused]])
+ {
+     SANE_Status status = SANE_STATUS_GOOD;
+     if(!g_sane_object->m_ParametersHaveSeted){
+--- a/src/scandialog.cpp
++++ b/src/scandialog.cpp
+@@ -48,12 +48,12 @@
+ 
+     if(isDarkTheme()){
+         QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(0, 0, 0));
++        pal.setColor(QPalette::Window, QColor(0, 0, 0));
+         setAutoFillBackground(true);
+         setPalette(pal);
+     }else{
+         QPalette pal(palette());
+-        pal.setColor(QPalette::Background, QColor(255, 255, 255));
++        pal.setColor(QPalette::Window, QColor(255, 255, 255));
+         setAutoFillBackground(true);
+         setPalette(pal);
+     }
+--- a/src/scansettingswidget.cpp
++++ b/src/scansettingswidget.cpp
+@@ -313,7 +313,7 @@
+     qDebug() << "userInfo.format = " << text;
+ }
+ 
+-void ScanSettingsWidget::nameCurrentTextChangedSlot(QString text)
++void ScanSettingsWidget::nameCurrentTextChangedSlot(QString text [[maybe_unused]])
+ {
+     QString msg;
+     if (m_saveNameEdit->text().contains(QChar('/'), Qt::CaseInsensitive)) {
+@@ -1307,7 +1307,7 @@
+     }
+ }
+ 
+-void ScanSettingsWidget::setLabelAttributes(QLabel *label, const QString &text, int labelHeight)
++void ScanSettingsWidget::setLabelAttributes(QLabel *label, const QString &text, int labelHeight [[maybe_unused]])
+ {
+     label->setAlignment(Qt::AlignLeft | Qt::AlignVCenter);
+     label->setFixedWidth(ScanSettingsLabelWidth);
+@@ -1317,7 +1317,7 @@
+ 
+     QFontMetrics fontMetrics(label->font());
+ 
+-    if (fontMetrics.width(text) > label->width()) {
++    if (fontMetrics.horizontalAdvance(text) > label->horizontalAdvance()) {
+         QString elideText = QFontMetrics(label->font()).elidedText(text, Qt::ElideRight, elideWidth);
+         label->setText(elideText);
+         label->setToolTip(text);
+@@ -1333,7 +1333,7 @@
+     button->setStyleSheet("QPushButton{text-align:left;}");
+     QFontMetrics fontMetrics(button->font());
+ 
+-    if (fontMetrics.width(text) > elideWidth) {
++    if (fontMetrics.horizontalAdvance(text) > elideWidth) {
+         QString elideText = QFontMetrics(button->font()).elidedText(text, Qt::ElideRight, elideWidth);
+         button->setText(elideText);
+         button->setToolTip(text);
+@@ -1348,7 +1348,7 @@
+ {
+     QFontMetrics fontMetrics(label->font());
+ 
+-    if (fontMetrics.width(text) > elideWidth) {
++    if (fontMetrics.horizontalAdvance(text) > elideWidth) {
+         QString elideText = QFontMetrics(label->font()).elidedText(text, Qt::ElideRight, elideWidth);
+         label->setText(elideText);
+         label->setToolTip(text);
+--- a/src/showimagewidget.cpp
++++ b/src/showimagewidget.cpp
+@@ -704,7 +704,7 @@
+             if (g_sane_object->cropFlag == 1) {
+                 return QObject::eventFilter(obj,event);
+             }
+-            if (wheelEvent->delta()>0) {
++            if (wheelEvent->angleDelta().y()>0) {
+                 zoominNormalImage();
+             } else {
+                 zoomoutNormalImage();
+@@ -973,7 +973,7 @@
+     qDebug() << "Rotate begin";
+     *m_stackImage = m_normalImage->copy();
+     m_imageStack.push(*m_stackImage);
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(270);
+     *m_normalImage = m_normalImage->transformed(matrix);
+     rotationFlag = !rotationFlag;
+--- a/src/showimagewidget.h
++++ b/src/showimagewidget.h
+@@ -34,7 +34,7 @@
+ #include <QResizeEvent>
+ #include <QKeyEvent>
+ #include <QStack>
+-#include <QMatrix>
++#include <QTransform>
+ #include <QThread>
+ #include "imageBaseOP/loadimage.h"
+ #include <QMovie>
+--- a/src/showocrwidget.cpp
++++ b/src/showocrwidget.cpp
+@@ -95,10 +95,10 @@
+ void showOcrWidget::style_changed(){
+      QPalette pal(m_ocrTextEditContainer->palette());
+     if(isDarkTheme()){
+-        pal.setColor(QPalette::Background,Qt::black);
++        pal.setColor(QPalette::Window,Qt::black);
+ 
+     }else{
+-        pal.setColor(QPalette::Background,Qt::white);
++        pal.setColor(QPalette::Window,Qt::white);
+     }
+     m_ocrTextEditContainer->setAutoFillBackground(true);
+     m_ocrTextEditContainer->setPalette(pal);
+--- a/src/showocrwidget.h
++++ b/src/showocrwidget.h
+@@ -16,7 +16,7 @@
+ *
+ */
+ #ifndef SHOWOCNWIDGET_H
+-#define SHOWOCRWIDGET_H
++#define SHOWOCNWIDGET_H
+ 
+ #include <QWidget>
+ #include <QTimer>
+--- a/src/successpagewidget.cpp
++++ b/src/successpagewidget.cpp
+@@ -62,7 +62,7 @@
+     m_leftStackSuccessPageWidget->setCurrentWidget(m_leftImageHandleSuccessPageWidget);
+ }
+ 
+-void SuccessPageWidget::updateScanSettingsSlot(bool isWork)
++void SuccessPageWidget::updateScanSettingsSlot(bool isWork [[maybe_unused]])
+ {
+     m_scanSettingsWidget->updateSettingsForDetectDevices();
+ }
+--- a/src/usbhotplugthread.cpp
++++ b/src/usbhotplugthread.cpp
+@@ -174,6 +174,7 @@
+ bool UsbHotplugThread::usbDeviceRemove(QString qstr){
+     QString path = QString("/sys") + qstr.right(qstr.size() - 1 - qstr.indexOf('@'));
+ 
++    return false; // No removal result has been obtained.
+ }
+ 
+ QStringList UsbHotplugThread::getConnectedScanner()
+@@ -214,7 +215,7 @@
+     udev_enumerate_unref(enumerate);
+ 
+     udev_unref(udev);
+-    res = res.toSet().toList();
++    res = QSet<QString>(res.cbegin(), res.cend()).values();
+     return res;
+ }
+ 
+@@ -256,7 +257,7 @@
+     udev_enumerate_unref(enumerate);
+ 
+     udev_unref(udev);
+-    res = res.toSet().toList();
++    res = QSet<QString>(res.cbegin(), res.cend()).values();
+     return res;
+ }
+ 
+@@ -329,7 +330,7 @@
+     }
+ }
+ 
+-static void authCallback (SANE_String_Const resource, SANE_Char *username, SANE_Char *password)
++static void authCallback (SANE_String_Const resource [[maybe_unused]], SANE_Char *username [[maybe_unused]], SANE_Char *password [[maybe_unused]])
+ {
+     //    qDebug() << "auth_callback" << resource << username << password;
+ }
+@@ -347,7 +348,7 @@
+ 
+     qDebug() << "Get all scan devices, please waiting ...";
+ 
+-    memset(device_list, 0x00, sizeof(device_list));
++    *device_list = nullptr;
+     status = sane_get_devices(device_list, SANE_FALSE);
+ 
+     if (status) {

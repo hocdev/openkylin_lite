@@ -1,3 +1,10 @@
 *.sh text eol=lf
 *.yml text eol=lf
-*.patch text eol=lf whitespace=-blank-at-eol
+# Unified diff context must retain its leading space before upstream tabs.
+*.patch text eol=lf whitespace=-blank-at-eol,-space-before-tab
+*.py text eol=lf
+*.md text eol=lf
+*.its text eol=lf
+*.loc text eol=lf
+.gitignore text eol=lf
+patches/gettext/COPYING text eol=lf

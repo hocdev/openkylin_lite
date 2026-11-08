@@ -1,0 +1,454 @@
+--- a/src/common/xdgdesktopfile.cpp
++++ b/src/common/xdgdesktopfile.cpp
+@@ -556,7 +556,7 @@
+             return QStringList();
+     }
+ 
+-    return q->value(used_key).toString().split(QLatin1Char(';'), QString::SkipEmptyParts);
++    return q->value(used_key).toString().split(QLatin1Char(';'), Qt::SkipEmptyParts);
+ }
+ 
+ 
+@@ -643,11 +643,11 @@
+         QString sect =  path.section(QLatin1Char('/'),0,0);
+         if (sect != section) {
+             section = sect;
+-            stream << QLatin1Char('[') << section << QLatin1Char(']') << endl;
++            stream << QLatin1Char('[') << section << QLatin1Char(']') << Qt::endl;
+ 
+         }
+         QString key = path.section(QLatin1Char('/'), 1);
+-        stream << key << QLatin1Char('=') << i.value().toString() << endl;
++        stream << key << QLatin1Char('=') << i.value().toString() << Qt::endl;
+         ++i;
+     }
+     return true;
+@@ -857,7 +857,7 @@
+ 
+ QStringList XdgDesktopFile::mimeTypes() const
+ {
+-    return value(mimeTypeKey).toString().split(QLatin1Char(';'), QString::SkipEmptyParts);
++    return value(mimeTypeKey).toString().split(QLatin1Char(';'), Qt::SkipEmptyParts);
+ }
+ 
+ 
+@@ -1418,7 +1418,7 @@
+         key.prepend(section);
+ 
+         if (value.contains(QLatin1Char(';'))) {
+-            map.insert(key, value.split(QLatin1Char(';'), QString::SkipEmptyParts));
++            map.insert(key, value.split(QLatin1Char(';'), Qt::SkipEmptyParts));
+         } else {
+             map.insert(key, value);
+         }
+@@ -1509,7 +1509,7 @@
+             m_fileCache.insert(f.absoluteFilePath(), df);
+         }
+ 
+-        const QStringList mimes = df->value(mimeTypeKey).toString().split(QLatin1Char(';'), QString::SkipEmptyParts);
++        const QStringList mimes = df->value(mimeTypeKey).toString().split(QLatin1Char(';'), Qt::SkipEmptyParts);
+ 
+         for (const QString &mime : mimes) {
+             int pref = df->value(initialPreferenceKey, 0).toInt();
+@@ -1561,7 +1561,7 @@
+         if (!df)
+             continue;
+ 
+-        const QStringList mimes = df->value(mimeTypeKey).toString().split(QLatin1Char(';'), QString::SkipEmptyParts);
++        const QStringList mimes = df->value(mimeTypeKey).toString().split(QLatin1Char(';'), Qt::SkipEmptyParts);
+ 
+         for (const QString &mime : mimes) {
+             int pref = df->value(initialPreferenceKey, 0).toInt();
+--- a/src/common/xdgdirs.cpp
++++ b/src/common/xdgdirs.cpp
+@@ -252,7 +252,7 @@
+ QStringList XdgDirs::dataDirs(const QString &postfix)
+ {
+     QString d = QFile::decodeName(qgetenv("XDG_DATA_DIRS"));
+-    QStringList dirs = d.split(QLatin1Char(':'), QString::SkipEmptyParts);
++    QStringList dirs = d.split(QLatin1Char(':'), Qt::SkipEmptyParts);
+ 
+     if (dirs.isEmpty()) {
+         dirs.append(QString::fromLatin1("/usr/local/share"));
+@@ -280,7 +280,7 @@
+     if (env.isEmpty()) {
+         dirs.append(QString::fromLatin1("/etc/xdg"));
+     } else {
+-        dirs = env.split(QLatin1Char(':'), QString::SkipEmptyParts);
++        dirs = env.split(QLatin1Char(':'), Qt::SkipEmptyParts);
+     }
+ 
+     cleanAndAddPostfix(dirs, postfix);
+--- a/src/screensaver/musicdatabase.cpp
++++ b/src/screensaver/musicdatabase.cpp
+@@ -623,6 +623,7 @@
+     {
+         return DB_OP_SUCC;
+     }
++    return DB_OP_SUCC;
+ }
+ 
+ int MusicDataBase::getSongInfoListFromLocalMusicByKeyword(QList<musicDataStruct> &resList, const QString &keyword)
+@@ -1182,6 +1183,7 @@
+     {
+         return DB_OP_SUCC;
+     }
++    return DB_OP_SUCC;
+ }
+ 
+ int MusicDataBase::addMusicToHistoryMusic(const QString& filePath)
+@@ -2335,6 +2337,7 @@
+             }
+         }
+     }
++    return DB_OP_GET_FAILED;
+ }
+ 
+ QString MusicDataBase::inPutStringHandle(const QString& input)
+--- a/src/screensaver/musicfileinformation.cpp
++++ b/src/screensaver/musicfileinformation.cpp
+@@ -249,7 +249,7 @@
+         return str;
+     }
+ 
+-    int h = properties->length() / 3600;
++    int h = properties->lengthInSeconds() / 3600;
+     if( h <= 0)
+     {
+         musicdataStruct.time = "";
+@@ -298,9 +298,9 @@
+         avformat_close_input(&pFormatCtx);
+         avformat_free_context(pFormatCtx);
+     }
+-    QString hour = QString("%1").arg(properties->length() / 3600, 2, 10, QChar('0'));
+-    QString minutes = QString("%1").arg(properties->length() % 3600 / 60, 2, 10, QChar('0'));
+-    QString seconds = QString("%1").arg(properties->length() % 60, 2, 10, QChar('0'));
++    QString hour = QString("%1").arg(properties->lengthInSeconds() / 3600, 2, 10, QChar('0'));
++    QString minutes = QString("%1").arg(properties->lengthInSeconds() % 3600 / 60, 2, 10, QChar('0'));
++    QString seconds = QString("%1").arg(properties->lengthInSeconds() % 60, 2, 10, QChar('0'));
+ 
+     if(h > 0) {
+         musicdataStruct.time = QString("%1:%2:%3").arg(hour).arg(minutes).arg(seconds);
+@@ -309,8 +309,8 @@
+         musicdataStruct.time = QString("%1:%2").arg(minutes).arg(seconds);
+     }
+ 
+-//    int seconds = properties->length() % 60;
+-//    int minutes = (properties->length() - seconds) / 60;
++//    int seconds = properties->lengthInSeconds() % 60;
++//    int minutes = (properties->lengthInSeconds() - seconds) / 60;
+ //    QTime time(0,minutes,seconds);
+ ////    QString musicTime = QString::number(minutes)+":"+QString("%1").arg(seconds, 2, 10, QChar('0'));
+ //    QString musicTime = time.toString("mm:ss");
+--- a/src/screensaver/screensaver.cpp
++++ b/src/screensaver/screensaver.cpp
+@@ -2278,6 +2278,9 @@
+ QString Screensaver::getLongFormatDate(int type)
+ {
+     kdk_logn_dateinfo *dateInfo = kdk_system_login_lock_dateinfo(getenv("USER"));
++    if (!dateInfo) {
++        return QString();
++    }
+     if (type == DATE) {
+         QString date = dateInfo->date;
+         QString week = dateInfo->week;
+@@ -2298,6 +2301,8 @@
+         }
+         return time;
+     }
++    kdk_free_logn_dateinfo(dateInfo);
++    return QString();
+ }
+ 
+ void Screensaver::onScreensaverDatetimeEnableChanged(bool isEnable, const QString &strUserName)
+--- a/src/screensaver/sleeptime.cpp
++++ b/src/screensaver/sleeptime.cpp
+@@ -160,7 +160,7 @@
+ {
+     bool is_over_length = false;
+     QFontMetrics fontMetrics(label->font());
+-    int fontSize = fontMetrics.width(string);
++    int fontSize = fontMetrics.horizontalAdvance(string);
+     QString str = string;
+     if (fontSize > (label->width() - 5)) {
+         str = fontMetrics.elidedText(string, Qt::ElideRight, label->width());
+--- a/src/screensaver/timethumbnailwidget.cpp
++++ b/src/screensaver/timethumbnailwidget.cpp
+@@ -68,6 +68,9 @@
+ QString TimeThumbnailWidget::getLongFormatDate(int type)
+ {
+     kdk_logn_dateinfo *dateInfo = kdk_system_login_lock_dateinfo(getenv("USER"));
++    if (!dateInfo) {
++        return QString();
++    }
+     if (type == DATETYPE) {
+         QString date = dateInfo->date;
+         QString week = dateInfo->week;
+@@ -82,6 +85,8 @@
+         }
+         return time;
+     }
++    kdk_free_logn_dateinfo(dateInfo);
++    return QString();
+ }
+ 
+ void TimeThumbnailWidget::update_datatime()
+--- a/src/ukccplugins/screensaver/screensaverui.cpp
++++ b/src/ukccplugins/screensaver/screensaverui.cpp
+@@ -618,7 +618,7 @@
+     }
+ 
+     QFontMetrics fontMetrics(sourcePathLine->font());
+-    int fontSize = fontMetrics.width(text);
++    int fontSize = fontMetrics.horizontalAdvance(text);
+     if (fontSize > sourcePathLine->width()) {
+        sourcePathLine->setText(fontMetrics.elidedText(text, Qt::ElideRight, sourcePathLine->width()));
+        sourcePathLine->setToolTip(text);
+@@ -799,7 +799,7 @@
+     }
+ 
+     QFontMetrics fontMetrics(m_musicPathLine->font());
+-    int fontSize = fontMetrics.width(path);
++    int fontSize = fontMetrics.horizontalAdvance(path);
+     if (fontSize > m_musicPathLine->width()) {
+        m_musicPathLine->setText(fontMetrics.elidedText(path, Qt::ElideRight, m_musicPathLine->width()));
+        m_musicPathLine->setToolTip(path);
+@@ -829,10 +829,10 @@
+ 
+ void ScreensaverUi::setPhotoPath(QStringList paths)
+ {
+-    QSet<QString> oldSet = m_currentPhotoSource.toSet();
+-    QSet<QString> newSet = paths.toSet();
+-    QStringList deleteSource = (oldSet - newSet).toList();
+-    QStringList addSource = (newSet - oldSet).toList();
++    QSet<QString> oldSet = QSet<QString>(m_currentPhotoSource.cbegin(), m_currentPhotoSource.cend());
++    QSet<QString> newSet = QSet<QString>(paths.cbegin(), paths.cend());
++    QStringList deleteSource = (oldSet - newSet).values();
++    QStringList addSource = (newSet - oldSet).values();
+     if (!deleteSource.isEmpty()) {
+         for (const QString& folderPath : deleteSource) {
+             for (int i = 0; i < m_photoSourceLayout->count(); ++i) {
+@@ -1011,7 +1011,7 @@
+             Q_EMIT customPathChanged(selectedfile);
+         }
+     });
+-    connect(switchModeGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int id) {
++    connect(switchModeGroup, &QButtonGroup::idClicked, this, [=](int id) {
+         if (id == 0) {
+             Q_EMIT switchRandomChanged(false);
+         } else {
+@@ -1029,7 +1029,7 @@
+     connect(textLineEdit, &QLineEdit::textChanged, this, [=](){
+         Q_EMIT customTextChanged(textLineEdit->text());
+     });
+-    connect(textPositionGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int id) {
++    connect(textPositionGroup, &QButtonGroup::idClicked, this, [=](int id) {
+         if (id == 0) {
+             Q_EMIT textCenteredChanged(false);
+         } else {
+--- a/src/widgets/authdialog.cpp
++++ b/src/widgets/authdialog.cpp
+@@ -581,7 +581,7 @@
+ 
+ void AuthDialog::updateLoadingPixmap()
+ {
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_ukeyLoadingPixmap = m_ukeyLoadingPixmap.transformed(matrix, Qt::FastTransformation);
+     m_ukeyLoadingButton->setIcon(QIcon(m_ukeyLoadingPixmap));
+@@ -909,7 +909,7 @@
+ 
+ void AuthDialog::updatePixmap()
+ {
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_waitingPixmap = m_waitingPixmap.transformed(matrix, Qt::FastTransformation);
+     if (m_uCurLoginOptType == LOGINOPT_TYPE_QRCODE) {
+@@ -1238,7 +1238,7 @@
+ 
+ void AuthDialog::updatePamLoadingPixmap()
+ {
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_pamUkeyLoadingPixmap = m_pamUkeyLoadingPixmap.transformed(matrix, Qt::FastTransformation);
+     if (m_pamUkeyLoadingButton) {
+--- a/src/widgets/blockwidget.cpp
++++ b/src/widgets/blockwidget.cpp
+@@ -477,7 +477,7 @@
+ {
+     QFontMetrics fontMetrics(font);
+     // 如果当前字体下，字符串长度大于指定宽度
+-    if (fontMetrics.width(strInfo) > width) {
++    if (fontMetrics.horizontalAdvance(strInfo) > width) {
+         strInfo = QFontMetrics(font).elidedText(strInfo, Qt::ElideRight, width);
+     }
+     return strInfo;
+--- a/src/widgets/customlabel.cpp
++++ b/src/widgets/customlabel.cpp
+@@ -83,7 +83,7 @@
+ {
+     QFontMetrics fontMetrics(font);
+     // 如果当前字体下，字符串长度大于指定宽度
+-    if (fontMetrics.width(strInfo) > width) {
++    if (fontMetrics.horizontalAdvance(strInfo) > width) {
+         strInfo = QFontMetrics(font).elidedText(strInfo, Qt::ElideRight, width);
+     }
+     return strInfo;
+@@ -155,7 +155,7 @@
+ {
+     if (!isVisible())
+         return;
+-    int textWidth = fontMetrics().width(text());
++    int textWidth = fontMetrics().horizontalAdvance(text());
+     if (m_scrollOffset - m_speed < -textWidth) {
+         m_scrollOffset = width() - contentsMargins().left() - contentsMargins().right(); // 重置位置
+     } else {
+--- a/src/widgets/grab-x11.cpp
++++ b/src/widgets/grab-x11.cpp
+@@ -157,6 +157,8 @@
+             memcpy(&id, ret_prop, 4); // 类型传换
+         qDebug() << "window pid: " << id;
+     }
++    XFree(ret_prop);
++    return id;
+ }
+ 
+ static Bool Window_Is_Viewable(Display *dpy, Window win)
+--- a/src/widgets/iconedit.cpp
++++ b/src/widgets/iconedit.cpp
+@@ -369,7 +369,7 @@
+ {
+     m_iconButton->setEnabled(true);
+     m_iconButton->setAttribute(Qt::WA_TransparentForMouseEvents, true);
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_waitingPixmap = m_waitingPixmap.transformed(matrix, Qt::FastTransformation);
+     m_iconButton->setIcon(QIcon(m_waitingPixmap));
+@@ -421,7 +421,7 @@
+                 = m_edit->width() - m_edit->textMargins().left() - m_edit->textMargins().right() - nAlignWidth;
+             QFontMetrics fontMetrics(m_edit->font());
+             // 如果当前字体下，字符串长度大于指定宽度
+-            int nActualWidth = fontMetrics.width(strPlaceholderText);
++            int nActualWidth = fontMetrics.horizontalAdvance(strPlaceholderText);
+             // qDebug() << "edit text width:" << m_edit->width() << nTextWidth << nActualWidth << strPlaceholderText;
+             if (nActualWidth > nTextWidth) {
+                 setKToolTip(strPlaceholderText);
+--- a/src/widgets/kyiconbutton.cpp
++++ b/src/widgets/kyiconbutton.cpp
+@@ -37,7 +37,7 @@
+ {
+     QFontMetrics fontMetrics(font);
+     // 如果当前字体下，字符串长度大于指定宽度
+-    if (fontMetrics.width(strInfo) > width) {
++    if (fontMetrics.horizontalAdvance(strInfo) > width) {
+         strInfo = QFontMetrics(font).elidedText(strInfo, Qt::ElideRight, width);
+     }
+     return strInfo;
+@@ -78,7 +78,7 @@
+ 
+         QPainter p(this);
+ 
+-        p.setRenderHint(QPainter::HighQualityAntialiasing);
++        p.setRenderHint(QPainter::Antialiasing);
+         p.setRenderHint(QPainter::Antialiasing);
+         p.setRenderHint(QPainter::TextAntialiasing);
+         p.setRenderHint(QPainter::SmoothPixmapTransform);
+--- a/src/widgets/mynetworkwidget.cpp
++++ b/src/widgets/mynetworkwidget.cpp
+@@ -118,7 +118,7 @@
+     }
+ 
+     QPalette pal = qApp->palette();
+-    pal.setBrush(QPalette::Background, Qt::white);
++    pal.setBrush(QPalette::Window, Qt::white);
+     //    m_kylinNM->setPalette(pal);
+     tabWidget->widget(0)->setPalette(pal);
+     tabWidget->widget(1)->setPalette(pal);
+--- a/src/widgets/resetpwdwidget.cpp
++++ b/src/widgets/resetpwdwidget.cpp
+@@ -179,7 +179,7 @@
+     m_pSureEdit = new IconEdit(m_modelLockDialog, m_pSureWidget, RESETPWDEDIT);
+     m_pSureEdit->setFixedSize(240, 40);
+     QPalette palett(palette());
+-    palett.setColor(QPalette::Background, Qt::white);
++    palett.setColor(QPalette::Window, Qt::white);
+     m_pSureEdit->setPalette(palett);
+     m_pSureEdit->setPrompt(tr("Confirm your password"));
+     connect(m_pSureEdit, &IconEdit::textChanged, [=](QString str) {
+--- a/src/widgets/screensaverwidget.cpp
++++ b/src/widgets/screensaverwidget.cpp
+@@ -43,7 +43,7 @@
+     }
+ 
+     QPalette pal(palette());
+-    pal.setColor(QPalette::Background, Qt::black); // 设置背景黑色
++    pal.setColor(QPalette::Window, Qt::black); // 设置背景黑色
+     setAutoFillBackground(true);
+     setPalette(pal);
+ 
+@@ -59,7 +59,7 @@
+             screensaver->startSwitchImages();
+ 
+             QPalette plt;
+-            plt.setBrush(QPalette::Background, Qt::black);
++            plt.setBrush(QPalette::Window, Qt::black);
+             setPalette(plt);
+ 
+             connect(screensaver, &ScreenSaver::imagePathChanged, this, &ScreenSaverWidget::onBackgroundChanged);
+--- a/src/widgets/securityquestionanswer.cpp
++++ b/src/widgets/securityquestionanswer.cpp
+@@ -70,6 +70,7 @@
+ bool SecurityQuestionAnswer::isActivatable()
+ {
+ 
++    return isValid();
+ }
+ 
+ QList<QuestionInfo> SecurityQuestionAnswer::GetPresetSecurityQuestions(QString language)
+--- a/src/widgets/talkswidget.cpp
++++ b/src/widgets/talkswidget.cpp
+@@ -43,7 +43,7 @@
+     m_pAnswerEdit->setFixedSize(240, 40);
+     m_pAnswerEdit->setAttribute(Qt::WA_InputMethodEnabled, true);
+     QPalette pal(palette());
+-    pal.setColor(QPalette::Background, Qt::white);
++    pal.setColor(QPalette::Window, Qt::white);
+     m_pAnswerEdit->setPalette(pal);
+     connect(m_pAnswerEdit, &IconEdit::textChanged, this, [=](const QString &text){
+         Q_EMIT textChanged(text);
+--- a/src/widgets/timewidget.cpp
++++ b/src/widgets/timewidget.cpp
+@@ -117,6 +117,9 @@
+     QByteArray ba = m_modelLockDialog->currentUserName().toLatin1();
+     userName = ba.data();
+     kdk_logn_dateinfo *dateInfo = kdk_system_login_lock_dateinfo(userName);
++    if (!dateInfo) {
++        return QString();
++    }
+     if (type == DATE) {
+         QString date = dateInfo->date;
+         QString week = dateInfo->week;
+@@ -137,6 +140,8 @@
+         }
+         return time;
+     }
++    kdk_free_logn_dateinfo(dateInfo);
++    return QString();
+ }
+ 
+ void TimeWidget::update_datatime()
+--- a/src/widgets/verifykyidwidget.cpp
++++ b/src/widgets/verifykyidwidget.cpp
+@@ -40,7 +40,7 @@
+     m_pKylinIdEdit = new IconEdit(m_modelLockDialog, this, KYLINIDEDIT);
+     m_pKylinIdEdit->setFixedSize(240, 40);
+     QPalette palett(palette());
+-    palett.setColor(QPalette::Background, Qt::white);
++    palett.setColor(QPalette::Window, Qt::white);
+     m_pKylinIdEdit->setPalette(palett);
+     m_pKylinIdEdit->setPrompt(tr("Enter your Kylin ID account"));
+     kylinIdLayout->addWidget(m_pKylinIdEdit);

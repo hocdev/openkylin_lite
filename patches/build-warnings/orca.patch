@@ -1,0 +1,47 @@
+--- a/debian/control
++++ b/debian/control
+@@ -35,8 +35,7 @@
+ 
+ Package: orca
+ Architecture: any
+-Depends: ${shlibs:Depends},
+-         ${misc:Depends},
++Depends: ${misc:Depends},
+          ${python3:Depends},
+          gir1.2-glib-2.0,
+          gir1.2-gtk-3.0,
+--- a/debian/control.in
++++ b/debian/control.in
+@@ -31,8 +31,7 @@
+ 
+ Package: orca
+ Architecture: any
+-Depends: ${shlibs:Depends},
+-         ${misc:Depends},
++Depends: ${misc:Depends},
+          ${python3:Depends},
+          gir1.2-glib-2.0,
+          gir1.2-gtk-3.0,
+--- a/debian/rules
++++ b/debian/rules
+@@ -10,3 +10,11 @@
+ override_dh_auto_install:
+ 	dh_auto_install
+ 	rm -f debian/tmp/etc/speech-dispatcher/speechd.conf
++
++# Orca consumes no GNOME version substvars.
++override_dh_gnome:
++	dh_gnome --no-gnome-versions
++
++# Keep the upstream symbolic icon: Scour changes its rasterized appearance.
++override_dh_scour:
++	dh_scour -Xorca-symbolic.svg
+--- a/meson.build
++++ b/meson.build
+@@ -107,6 +107,5 @@
+ subdir('po')
+ subdir('src')
+ 
+-add_languages('c', 'cpp', required: true)
+ 
+ summary(summary)

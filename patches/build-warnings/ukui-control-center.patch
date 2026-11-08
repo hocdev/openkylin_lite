@@ -1,0 +1,1277 @@
+--- a/changeUserPwd/main.cpp
++++ b/changeUserPwd/main.cpp
+@@ -359,12 +359,12 @@
+     //
+     ret = pam_chauthtok(pamh, 0);
+     if (ret == PAM_SUCCESS){
+-        if (error_msg != "") {
++        if (error_msg != nullptr && error_msg[0] != '\0') {
+             printf("%s\n", error_msg);
+             free(error_msg);
+         }
+     } else {
+-        if (error_msg == "") {
++        if (error_msg == nullptr || error_msg[0] == '\0') {
+             printf("Unable to modify password!\n");
+         } else {
+             printf("%s\n", error_msg);
+--- a/group-manager-server/group_manager_server.cpp
++++ b/group-manager-server/group_manager_server.cpp
+@@ -329,7 +329,7 @@
+ }
+ 
+ // 修改其他用户密码
+-bool group_manager_server::changeOtherUserPasswd(QString username, QString pwd)
++bool group_manager_server::changeOtherUserPasswd(QString username [[maybe_unused]], QString pwd [[maybe_unused]])
+ {
+     return true;
+ }
+@@ -381,7 +381,7 @@
+         pclose(fp);
+         fp = NULL;
+     }else{
+-        qDebug()<<"popen文件打开失败"<<endl;
++        qDebug()<<"popen文件打开失败"<<Qt::endl;
+     }
+     return QString(ba);
+ }
+@@ -398,10 +398,10 @@
+         if (status == false) {
+             QString noPwdLoginUser = getNoPwdLoginStatus();
+             qDebug() << "noPwdLoginUser:" << noPwdLoginUser;
+-            QStringList tmp = noPwdLoginUser.split(":", QString::SkipEmptyParts);
++            QStringList tmp = noPwdLoginUser.split(":", Qt::SkipEmptyParts);
+ 
+             QString noPasswdUsers = tmp.at(tmp.count()-1);
+-            QStringList noPasswdUsersList = noPasswdUsers.split(",", QString::SkipEmptyParts);
++            QStringList noPasswdUsersList = noPasswdUsers.split(",", Qt::SkipEmptyParts);
+             foreach (QString noPasswdUser, noPasswdUsersList) {
+                 noPasswdUser.remove(QChar('\n'), Qt::CaseInsensitive);
+                 qDebug() << "nopasswduser:" << noPasswdUser;
+@@ -445,7 +445,7 @@
+ }
+ 
+ // 设置用户头像
+-bool group_manager_server::setIconFile(QString username, QString objpath, QString filename)
++bool group_manager_server::setIconFile(QString username [[maybe_unused]], QString objpath, QString filename)
+ {
+     //密码校验
+     if (!authoriyEdit()){
+--- a/libukcc/interface/ukcccommon.cpp
++++ b/libukcc/interface/ukcccommon.cpp
+@@ -130,7 +130,7 @@
+     QStringList keys = kwinSettings.childGroups();
+ 
+     kwinSettings.beginGroup("Plugins");
+-    bool kwin = kwinSettings.value("blurEnabled", kwin).toBool();
++    bool kwin = kwinSettings.value("blurEnabled", true).toBool();
+ 
+     if (!kwinSettings.childKeys().contains("blurEnabled")) {
+         kwin = true;
+--- a/libukcc/widgets/Button/fixbutton.cpp
++++ b/libukcc/widgets/Button/fixbutton.cpp
+@@ -35,7 +35,7 @@
+ void FixButton::paintEvent(QPaintEvent *event)
+ {
+     QFontMetrics fontMetrics(this->font());
+-    int fontSize = fontMetrics.width(mStr);
++    int fontSize = fontMetrics.horizontalAdvance(mStr);
+     int showTextSize = this->width() - 32;
+     if (fontSize > showTextSize) {
+         this->setText(fontMetrics.elidedText(mStr, Qt::ElideRight, showTextSize), false);
+--- a/libukcc/widgets/HoverWidget/hoverwidget.cpp
++++ b/libukcc/widgets/HoverWidget/hoverwidget.cpp
+@@ -59,6 +59,6 @@
+     style()->drawPrimitive(QStyle::PE_Widget, &opt, &p, this);
+ }
+ 
+-void HoverWidget::mousePressEvent(QMouseEvent *event) {
++void HoverWidget::mousePressEvent(QMouseEvent *event [[maybe_unused]]) {
+     emit widgetClicked(_name);
+ }
+--- a/libukcc/widgets/InfoButton/infobutton.cpp
++++ b/libukcc/widgets/InfoButton/infobutton.cpp
+@@ -66,7 +66,7 @@
+     }
+ }
+ 
+-void InfoButton::paintEvent(QPaintEvent *event)
++void InfoButton::paintEvent(QPaintEvent *event [[maybe_unused]])
+ {
+     QPalette pal = this->palette();
+     pal.setColor(QPalette::Base, m_backgroundColor);
+@@ -98,13 +98,13 @@
+ 
+ }
+ 
+-void InfoButton::enterEvent(QEvent *event)
++void InfoButton::enterEvent(QEvent *event [[maybe_unused]])
+ {
+     m_foregroundColor = FOREGROUND_COLOR_HOVER;
+     this->repaint();
+ }
+ 
+-void InfoButton::leaveEvent(QEvent *event)
++void InfoButton::leaveEvent(QEvent *event [[maybe_unused]])
+ {
+     m_foregroundColor = FOREGROUND_COLOR_NORMAL;
+     this->repaint();
+--- a/libukcc/widgets/Label/fixlabel.cpp
++++ b/libukcc/widgets/Label/fixlabel.cpp
+@@ -42,7 +42,7 @@
+ void FixLabel::paintEvent(QPaintEvent *event)
+ {
+     QFontMetrics fontMetrics(this->font());
+-    int fontSize = fontMetrics.width(mStr);
++    int fontSize = fontMetrics.horizontalAdvance(mStr);
+     if (fontSize > this->width()) {
+         this->setText(fontMetrics.elidedText(mStr, Qt::ElideRight, this->width()), false);
+         this->setToolTip(mStr);
+--- a/libukcc/widgets/Label/masklabel.cpp
++++ b/libukcc/widgets/Label/masklabel.cpp
+@@ -65,7 +65,7 @@
+     return QPixmap::fromImage(img);
+ }
+ 
+-void MaskLabel::paintEvent(QPaintEvent *event)
++void MaskLabel::paintEvent(QPaintEvent *event [[maybe_unused]])
+ {
+     QPainter painter(this);
+     painter.setRenderHint(QPainter::Antialiasing);
+--- a/libukcc/widgets/Label/passwordlabel.cpp
++++ b/libukcc/widgets/Label/passwordlabel.cpp
+@@ -55,7 +55,7 @@
+ 
+ }
+ 
+-void EyeBtn::mouseReleaseEvent(QMouseEvent *event)
++void EyeBtn::mouseReleaseEvent(QMouseEvent *event [[maybe_unused]])
+ {
+     setIconStatus(!mIsHidden);
+ 
+@@ -146,7 +146,7 @@
+         mPassword->setFixedWidth(charWidth*mPassword->text().size() + 16);
+         qDebug() << "increase" << (charWidth*mPassword->text().size() + 16);
+     } else {
+-        int fontSize = fontMetrics.width(mPassword->text());
++        int fontSize = fontMetrics.horizontalAdvance(mPassword->text());
+         mPassword->setFixedWidth(fontSize+16);
+         qDebug() << "shorten" << (fontSize + 16);
+     }
+--- a/libukcc/widgets/Label/tristatelabel.cpp
++++ b/libukcc/widgets/Label/tristatelabel.cpp
+@@ -45,7 +45,7 @@
+ }
+ 
+ 
+-TristateLabel::TristateLabel(const QString &text, QWidget *parent)
++TristateLabel::TristateLabel(const QString &text, QWidget *parent [[maybe_unused]])
+ {
+     setText(abridge(text));
+     adjustSize();
+--- a/libukcc/widgets/SettingWidget/radiobuttonwidget.cpp
++++ b/libukcc/widgets/SettingWidget/radiobuttonwidget.cpp
+@@ -49,7 +49,7 @@
+     mainLayout->setSpacing(16);
+     mainLayout->addLayout(radioLayout);
+     this->setLayout(mainLayout);
+-    connect(m_buttonGroup, QOverload<int>::of(&QButtonGroup::buttonClicked),
++    connect(m_buttonGroup, &QButtonGroup::idClicked,
+             this, &RadioButtonWidget::buttonClicked);
+ }
+ 
+--- a/libukcc/widgets/Uslider/uslider.cpp
++++ b/libukcc/widgets/Uslider/uslider.cpp
+@@ -121,7 +121,7 @@
+         return QSlider::wheelEvent(ev);
+ }
+ 
+-void Uslider::leaveEvent(QEvent *ev)
++void Uslider::leaveEvent(QEvent *ev [[maybe_unused]])
+ {
+     isMouseCliked = false;
+ }
+--- a/plugins/account/userinfo/changeusergroup.cpp
++++ b/plugins/account/userinfo/changeusergroup.cpp
+@@ -267,10 +267,10 @@
+     connect(mConfirmButton, &QPushButton::clicked, this, &changeUserGroup::saveUserGroupInfoSlot);
+     connect(this, &changeUserGroup::needRefresh, this, &changeUserGroup::needRefreshSlot);
+ 
+-    connect(mUserGroupLineEdit,&QLineEdit::textChanged,[=](QString txt){
++    connect(mUserGroupLineEdit,&QLineEdit::textChanged,[=](QString txt [[maybe_unused]]){
+         refreshCertainBtnStatus();
+     });
+-    connect(mUserGroupIdLineEdit,&QLineEdit::textChanged,[=](QString txt){
++    connect(mUserGroupIdLineEdit,&QLineEdit::textChanged,[=](QString txt [[maybe_unused]]){
+         refreshCertainBtnStatus();
+     });
+     connect(mUserGroupIdLineEdit, &QLineEdit::textEdited,[=](){
+@@ -407,7 +407,7 @@
+     bool isOverLength = false;
+     QFontMetrics fontMetrics(lineEdit->font());
+     int labelLength= lineEdit->width();
+-    int fontLength = fontMetrics.width(string);
++    int fontLength = fontMetrics.horizontalAdvance(string);
+     QString str = string;
+     qDebug() << "fontLength:" << fontLength << ";labelLength:" << labelLength;
+     if (fontLength > labelLength-15) {
+@@ -479,7 +479,7 @@
+             item->setEnabled(false);
+         }
+     }
+-    connect(mUserGroupNumbersModel, &QStandardItemModel::itemChanged, this, [=](QStandardItem *item){
++    connect(mUserGroupNumbersModel, &QStandardItemModel::itemChanged, this, [=](QStandardItem *item [[maybe_unused]]){
+         qDebug() << "checkbox clicked";
+         _boxModified = true;
+         refreshCertainBtnStatus();
+--- a/plugins/account/userinfo/changeusergroup.h
++++ b/plugins/account/userinfo/changeusergroup.h
+@@ -70,7 +70,7 @@
+ {
+     Q_OBJECT
+ public:
+-    explicit FrameBox(QWidget *parent) {};
++    explicit FrameBox(QWidget *parent [[maybe_unused]]) {};
+     ~FrameBox() {};
+ 
+ protected:
+--- a/plugins/account/userinfo/changeuserlogo.cpp
++++ b/plugins/account/userinfo/changeuserlogo.cpp
+@@ -186,7 +186,7 @@
+         button->move(logoWidgets->x()+(logoWidgets->width() -button->width())/2, logoWidgets->y()+(logoWidgets->height() -button->height())/2);
+         checkbox->move(label->x() + FACEWIDTH/2 + FACEWIDTH/2/1.414, logoWidgets->y());
+ 
+-        connect(button, &QPushButton::clicked, [=](bool checked) {
++        connect(button, &QPushButton::clicked, [=](bool checked [[maybe_unused]]) {
+             // 未显示复选框，点击图片按钮，设置头像
+             if (!checkbox->isVisible()) {
+                 // show dialog更新头像
+--- a/plugins/account/userinfo/changeuserpwd.cpp
++++ b/plugins/account/userinfo/changeuserpwd.cpp
+@@ -571,13 +571,13 @@
+ 
+ void ChangeUserPwd::updatePixmap()
+ {
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_waitingPixmap = m_waitingPixmap.transformed(matrix, Qt::FastTransformation);
+     confirmBtn->setIcon(m_waitingPixmap);
+ }
+ 
+-void ChangeUserPwd::setupStatus(QString n)
++void ChangeUserPwd::setupStatus(QString n [[maybe_unused]])
+ {
+ 
+     curPwdTip = QString();
+--- a/plugins/account/userinfo/changeusertype.cpp
++++ b/plugins/account/userinfo/changeusertype.cpp
+@@ -38,7 +38,7 @@
+ class SettingFrame : public QFrame
+ {
+ public:
+-    SettingFrame(QWidget *parent){}
++    SettingFrame(QWidget *parent [[maybe_unused]]){}
+     ~SettingFrame() {}
+ 
+ protected:
+@@ -209,7 +209,7 @@
+ #if QT_VERSION <= QT_VERSION_CHECK(5, 12, 0)
+     connect(m_pTypesBtnGroup), static_cast<void (QButtonGroup::*)(int, bool)>(&QButtonGroup::buttonToggled), [=](int id, bool status){
+ #else
+-    connect(m_pTypesBtnGroup, QOverload<int, bool>::of(&QButtonGroup::buttonToggled), [=](int id, bool status){
++    connect(m_pTypesBtnGroup, &QButtonGroup::idToggled, [=](int id, bool status){
+ #endif
+         if (id != oldid){
+             if (status){
+--- a/plugins/account/userinfo/circlelabel.cpp
++++ b/plugins/account/userinfo/circlelabel.cpp
+@@ -44,12 +44,12 @@
+     update();
+ }
+ 
+-void CircleLabel::paintEvent(QPaintEvent *event)
++void CircleLabel::paintEvent(QPaintEvent *event [[maybe_unused]])
+ {
+    QPainter palinter(this);
+ 
+    palinter.setRenderHint(QPainter::Antialiasing, true);
+-   palinter.setRenderHint(QPainter::HighQualityAntialiasing);
++   palinter.setRenderHint(QPainter::Antialiasing);
+    palinter.setRenderHint(QPainter::SmoothPixmapTransform);
+ 
+    int radius = qMin(width(), height()) / 2;
+--- a/plugins/account/userinfo/mulverifydialog.cpp
++++ b/plugins/account/userinfo/mulverifydialog.cpp
+@@ -27,7 +27,7 @@
+ class SettingFrame : public QFrame
+ {
+ public:
+-    SettingFrame(QWidget *parent){}
++    SettingFrame(QWidget *parent [[maybe_unused]]){}
+     ~SettingFrame() {}
+ 
+ protected:
+@@ -164,7 +164,7 @@
+         onConfirmBtnPressed();
+     });
+ 
+-    connect(m_pRadioBtnGroup,  QOverload<int>::of(&QButtonGroup::buttonClicked),this, [=](){
++    connect(m_pRadioBtnGroup,  &QButtonGroup::idClicked,this, [=](){
+         m_pConfirmBtn->setEnabled(true);
+     });
+ }
+--- a/plugins/account/userinfo/securitykeysetdlg.cpp
++++ b/plugins/account/userinfo/securitykeysetdlg.cpp
+@@ -174,7 +174,7 @@
+     KDK_EXTEND_ALL_INFO_FORMAT(m_btnUnbind, "Userinfo", "SecurityKeySet", "");
+     m_btnUnbind->setFixedSize(QSize(96, 36));
+     QFontMetrics fontMetrics(m_btnUnbind->font());
+-    int fontSize = fontMetrics.width(tr("Unbind"));
++    int fontSize = fontMetrics.horizontalAdvance(tr("Unbind"));
+     QString str = tr("Unbind");
+     int pSize = m_btnUnbind->width();
+     if (fontSize > pSize) {
+@@ -227,7 +227,7 @@
+     });
+     connect(m_btnSure, &QPushButton::clicked, this, &SecurityKeySetDlg::onBtnSure);
+ 
+-    connect(m_editSecurityKey, &QLineEdit::textEdited, [=](QString txt){
++    connect(m_editSecurityKey, &QLineEdit::textEdited, [=](QString txt [[maybe_unused]]){
+         refreshConfirmBtnStatus();
+     });
+ 
+@@ -332,7 +332,7 @@
+ 
+ void SecurityKeySetDlg::updateLoading()
+ {
+-    QMatrix matrix;
++    QTransform matrix;
+     matrix.rotate(90.0);
+     m_loadingPixmap = m_loadingPixmap.transformed(matrix, Qt::FastTransformation);
+     m_labelLoading->setPixmap(m_loadingPixmap);
+--- a/plugins/account/userinfo/userinfo.cpp
++++ b/plugins/account/userinfo/userinfo.cpp
+@@ -590,7 +590,7 @@
+ 
+     connect(m_pAllowSShButton, &QCheckBox::stateChanged, this, &UserInfo::onAllowSSHChangedSlot);
+ 
+-    connect(m_pFactoyButtonGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), this, &UserInfo::onChangeDualFactor);
++    connect(m_pFactoyButtonGroup, &QButtonGroup::idClicked, this, &UserInfo::onChangeDualFactor);
+ 
+ 
+     QDBusConnection::systemBus().connect("com.kylin.pwdless.daemon",
+@@ -639,7 +639,7 @@
+     }
+ }
+ 
+-void UserInfo::onBindStatusChanged(QString user, QString method, int bind)
++void UserInfo::onBindStatusChanged(QString user, QString method [[maybe_unused]], int bind [[maybe_unused]])
+ {
+     if (user == mUserName) {
+         QStringList authMethodList = m_pMulFactorDbus->GetBoundFactorMethods(mUserName);
+@@ -1123,7 +1123,7 @@
+     });
+ 
+     //用户类型发生变化，重置状态
+-    connect(this, &UserInfo::userTypeChanged, utils, [=](QString n){
++    connect(this, &UserInfo::userTypeChanged, utils, [=](QString n [[maybe_unused]]){
+         QStringList loginedUsers = getLoginedUsers();
+         qDebug() << "update userType"<< user.username << loginedUsers.contains(user.username);
+         utils->setDelVisible(m_currentUserType == STANDARDUSER ? false : true);
+@@ -1172,7 +1172,7 @@
+     CreateUserNew *dialog = new CreateUserNew(usersStringList, m_pPluginWidget);
+ 
+     QList<AnswerInfo> securityQuestion;
+-    connect(dialog, &CreateUserNew::bindSecurityQuestion, this, [&](QString name, QList<AnswerInfo> answerInfo){
++    connect(dialog, &CreateUserNew::bindSecurityQuestion, this, [&](QString name [[maybe_unused]], QList<AnswerInfo> answerInfo){
+         securityQuestion = answerInfo;
+     });
+     QString passwordTips = "";
+@@ -1183,7 +1183,7 @@
+     connect(dialog, &CreateUserNew::confirmCreated, this, [&](QString name, QString fullname, int accounttype, QString pwd){
+         QDBusPendingCall call = userSettingDbus->asyncCall("createUser", name, fullname, accounttype, DEFAULTFACE);
+         QDBusPendingCallWatcher *watcher = new QDBusPendingCallWatcher(call, this);
+-        connect(watcher, &QDBusPendingCallWatcher::finished, this, [&, name, pwd, securityQuestion, passwordTips](QDBusPendingCallWatcher *call){
++        connect(watcher, &QDBusPendingCallWatcher::finished, this, [&, name, pwd, securityQuestion, passwordTips](QDBusPendingCallWatcher *call [[maybe_unused]]){
+             const qint64 uid = getUserUid(name);
+             if (!securityQuestion.isEmpty()) {
+                 int ret = m_pUniauthBackendDbus->BindUserSecurityAnswers(uid, securityQuestion);
+@@ -1292,7 +1292,7 @@
+     _acquireAllUsersInfo();
+ }
+ 
+-void UserInfo::showChangeUserLogoDialog(QString username, UtilsForUserinfo *utilsUser)
++void UserInfo::showChangeUserLogoDialog(QString username, UtilsForUserinfo *utilsUser [[maybe_unused]])
+ {
+     if (allUserInfoMap.keys().contains(username)) {
+         UserInfomation user = allUserInfoMap.value(username);
+@@ -2088,10 +2088,10 @@
+         return false;
+     }
+ 
+-    QStringList tmp = noPwdres.value().split(":", QString::SkipEmptyParts);
++    QStringList tmp = noPwdres.value().split(":", Qt::SkipEmptyParts);
+ 
+     QString noPasswdUsers = tmp.at(tmp.count()-1);
+-    QStringList noPasswdUsersList = noPasswdUsers.split(",", QString::SkipEmptyParts);
++    QStringList noPasswdUsersList = noPasswdUsers.split(",", Qt::SkipEmptyParts);
+     foreach (QString noPasswdUser, noPasswdUsersList) {
+         noPasswdUser.remove(QChar('\n'), Qt::CaseInsensitive);
+         qDebug() << "nopasswduser:" << noPasswdUser;
+--- a/plugins/application/defaultapp/defaultapp.cpp
++++ b/plugins/application/defaultapp/defaultapp.cpp
+@@ -318,7 +318,7 @@
+     }
+ }
+ 
+-void DefaultApp::load(ComboxWidget *widget, AppInfoService* appInfoService, const char *mimeType, const QString &type)
++void DefaultApp::load(ComboxWidget *widget, AppInfoService* appInfoService, const char *mimeType, const QString &type [[maybe_unused]])
+ {
+     if (widget == nullptr || appInfoService == nullptr || mimeType == nullptr)
+         return;
+--- a/plugins/commoninfo/boot/boot.cpp
++++ b/plugins/commoninfo/boot/boot.cpp
+@@ -470,7 +470,7 @@
+     UkccCommon::buriedSettings(name(), m_pRescueModeFrame->title(), QString("settings"), m_pRescueModeFrame->switchButton()->isChecked() ? "true" : "false");
+ }
+ 
+-void Boot::failureTimesChangedSlot(int index)
++void Boot::failureTimesChangedSlot(int index [[maybe_unused]])
+ {
+     if (!authoriyGrub()){
+         m_pFailuersFrame->comboBox()->blockSignals(true);
+@@ -567,7 +567,7 @@
+     dia->exec();
+ }
+ 
+-void Boot::changeBootDelay(int index)
++void Boot::changeBootDelay(int index [[maybe_unused]])
+ {
+     if (!authoriyGrub()){
+         m_pGrubBootDelayFrame->comboBox()->blockSignals(true);
+--- a/plugins/commoninfo/boot/loadingwidget.cpp
++++ b/plugins/commoninfo/boot/loadingwidget.cpp
+@@ -99,7 +99,7 @@
+     return m_pLoadingLabel->size();
+ }
+ 
+-void LoadingWidget::closeEvent(QCloseEvent *event)
++void LoadingWidget::closeEvent(QCloseEvent *event [[maybe_unused]])
+ {
+     if (m_pTimerLoading) {
+         if(m_pTimerLoading->isActive())
+--- a/plugins/devices/keyboard/configitem.cpp
++++ b/plugins/devices/keyboard/configitem.cpp
+@@ -564,9 +564,9 @@
+         m_name(option.name()), m_desc(option.description()),
+         m_launchSubConfig(readBool(option.properties(), "LaunchSubConfig")) {}
+ 
+-  void readValueFrom(const QVariantMap &map) override {}
+-
+-  void writeValueTo(QVariantMap &map) override {}
++  void readValueFrom(const QVariantMap &map [[maybe_unused]]) override {}
++
++  void writeValueTo(QVariantMap &map [[maybe_unused]]) override {}
+ 
+   void restoreToDefault() override {};
+ 
+--- a/plugins/devices/shortcut/addshortcutdialog.cpp
++++ b/plugins/devices/shortcut/addshortcutdialog.cpp
+@@ -255,7 +255,7 @@
+         openProgramFileDialog();
+     });
+ 
+-    connect(m_execLineEdit, &QLineEdit::textChanged, [=](QString text){
++    connect(m_execLineEdit, &QLineEdit::textChanged, [=](QString text [[maybe_unused]]){
+         if (mExec.endsWith("desktop")
+             || (!g_file_test(mExec.toLatin1().data(),
+                              G_FILE_TEST_IS_DIR)
+@@ -309,7 +309,7 @@
+     });
+ }
+ 
+-void AddShortcutDialog::setTitleText(QString text)
++void AddShortcutDialog::setTitleText(QString text [[maybe_unused]])
+ {
+ 
+ }
+--- a/plugins/devices/shortcut/clickfixlabel.cpp
++++ b/plugins/devices/shortcut/clickfixlabel.cpp
+@@ -51,7 +51,7 @@
+ void ClickFixLabel::paintEvent(QPaintEvent *event)
+ {
+     QFontMetrics fontMetrics(this->font());
+-    int fontSize = fontMetrics.width(mStr);
++    int fontSize = fontMetrics.horizontalAdvance(mStr);
+     int m_width = this->width() - 8;
+     if (fontSize > m_width) {
+         this->setText(fontMetrics.elidedText(mStr, Qt::ElideRight, m_width), false);
+--- a/plugins/devices/shortcut/shortcutui.cpp
++++ b/plugins/devices/shortcut/shortcutui.cpp
+@@ -408,7 +408,7 @@
+         addDialog->setTitleText(QObject::tr("Customize Shortcut"));
+ 
+         connect(addDialog, &AddShortcutDialog::shortcutInfoSignal,
+-                [=](QString path, QString name, QString exec, QString key){
++                [=](QString path [[maybe_unused]], QString name, QString exec, QString key){
+             createNewShortcut(path, name, exec, key, true, true);
+             m_shortcutInterface->call("updateShortcut");
+         });
+@@ -1530,7 +1530,7 @@
+         addDialog->setKeyIsAvailable(3);
+         UkccCommon::buriedSettings("Shortcut", QString("edit"), QString("clicked"));
+         connect(addDialog, &AddShortcutDialog::shortcutInfoSignal, this,
+-                [=](QString path, QString name, QString exec, QString key){
++                [=](QString path [[maybe_unused]], QString name, QString exec, QString key){
+             customAddDialogSlot(addDialog, nameLineEdit, bingdingLineEdit,
+                                 nameLabel, bingdingLabel, mKeyEntry,
+                                 name, exec, key);
+--- a/plugins/personalized/fonts/fonts.cpp
++++ b/plugins/personalized/fonts/fonts.cpp
+@@ -488,7 +488,7 @@
+     });
+ 
+     // 重置按钮
+-    connect(m_fontDefaultButton, &QPushButton::clicked, [=](bool checked){
++    connect(m_fontDefaultButton, &QPushButton::clicked, [=](bool checked [[maybe_unused]]){
+         resetDefaultSlot();
+     });
+ }
+--- a/plugins/personalized/fonts/fontunit.cpp
++++ b/plugins/personalized/fonts/fontunit.cpp
+@@ -40,7 +40,7 @@
+ 
+ #define KYLIN_GTK_GSTTINGS "org.mate.interface"
+ 
+-FontUnit::FontUnit(const ViewData* viewData, QString installPath, QWidget *parent)
++FontUnit::FontUnit(const ViewData* viewData, QString installPath, QWidget *parent [[maybe_unused]])
+ {
+     m_applyFont = false;
+     m_installPath = installPath;
+@@ -239,7 +239,7 @@
+     m_fontPreviewLabel->setFont(textFont);
+     QFontMetrics fontMetrics(m_fontPreviewLabel->font());
+     QString previewText = m_fontPreviewLabel->text();
+-    int fontWidth = fontMetrics.width(previewText);
++    int fontWidth = fontMetrics.horizontalAdvance(previewText);
+ 
+     static const int PREVIEW_WIDTH = 170;
+     static const int PREVIEW_HEIGHT = 63;
+@@ -270,7 +270,7 @@
+ 
+ void FontUnit::setupConnect()
+ {
+-    connect(m_styleSettings , &QGSettings::changed, this, [=](const QString &key) {
++    connect(m_styleSettings , &QGSettings::changed, this, [=](const QString &key [[maybe_unused]]) {
+         styleSettingChangeSlot();
+     });
+ 
+@@ -441,13 +441,13 @@
+     this->repaint();
+ }
+ 
+-void FontUnit::enterEvent(QEvent *event)
++void FontUnit::enterEvent(QEvent *event [[maybe_unused]])
+ {
+     m_isMouseOpt = true;
+     this->repaint();
+ }
+ 
+-void FontUnit::leaveEvent(QEvent *event)
++void FontUnit::leaveEvent(QEvent *event [[maybe_unused]])
+ {
+     m_isMouseOpt = false;
+     this->update();
+--- a/plugins/personalized/fonts/fontutil.cpp
++++ b/plugins/personalized/fonts/fontutil.cpp
+@@ -1,3 +1,4 @@
++#include <algorithm>
+ #include "fontutil.h"
+ #include <QCollator>
+ #include <QStandardPaths>
+@@ -101,7 +102,7 @@
+ 
+     QStringList stringList;
+     stringList << leftStr << rightStr;
+-    qSort(stringList.begin(), stringList.end(), collator);
++    std::sort(stringList.begin(), stringList.end(), collator);
+ 
+     if (stringList[0] != leftStr) {
+         return false;
+--- a/plugins/personalized/theme/cursor/xcursortheme.cpp
++++ b/plugins/personalized/theme/cursor/xcursortheme.cpp
+@@ -50,7 +50,7 @@
+         parseIndexFile();
+ 
+     QString cursorFile = path() + "/cursors/watch";
+-//    qDebug()<<"cursorFile is---------->"<<cursorFile<<endl;
++//    qDebug()<<"cursorFile is---------->"<<cursorFile<<Qt::endl;
+ 
+     QList<int> sizeList;
+     XcursorImages *images = XcursorFilenameLoadAllImages(qPrintable(cursorFile));
+@@ -58,7 +58,7 @@
+     {
+         for (int i = 0; i < images->nimage; ++i)
+         {
+-//            qDebug()<<"images->nimage is---------->"<<images->images[i]->size<<endl;
++//            qDebug()<<"images->nimage is---------->"<<images->images[i]->size<<Qt::endl;
+             if (!sizeList.contains(images->images[i]->size))
+                 sizeList.append(images->images[i]->size);
+         };
+--- a/plugins/personalized/theme/globaltheme/globaltheme.cpp
++++ b/plugins/personalized/theme/globaltheme/globaltheme.cpp
+@@ -232,7 +232,7 @@
+     }
+ }
+ 
+-GlobalTheme::GlobalTheme(QObject *parent)
++GlobalTheme::GlobalTheme(QObject *parent [[maybe_unused]])
+ {
+     d_ptr = new GlobalThemePrivate;
+ }
+--- a/plugins/personalized/theme/globaltheme/globalthemehelper.cpp
++++ b/plugins/personalized/theme/globaltheme/globalthemehelper.cpp
+@@ -103,7 +103,7 @@
+     return list;
+ }
+ 
+-QPixmap GlobalThemeHelper::getThemeThumbnail(const QString &theme)
++QPixmap GlobalThemeHelper::getThemeThumbnail(const QString &theme [[maybe_unused]])
+ {
+     return QPixmap();
+ }
+--- a/plugins/personalized/theme/myslider.cpp
++++ b/plugins/personalized/theme/myslider.cpp
+@@ -43,7 +43,7 @@
+         return QSlider::wheelEvent(ev);
+ }
+ 
+-void MySlider::leaveEvent(QEvent *ev)
++void MySlider::leaveEvent(QEvent *ev [[maybe_unused]])
+ {
+     isMouseCliked = false;
+ }
+--- a/plugins/personalized/theme/theme.cpp
++++ b/plugins/personalized/theme/theme.cpp
+@@ -456,7 +456,7 @@
+ 
+     QStringList keys = kwinSettings->childGroups();
+     kwinSettings->beginGroup("Plugins");
+-    bool kwin = kwinSettings->value("blurEnabled", kwin).toBool();
++    bool kwin = kwinSettings->value("blurEnabled", true).toBool();
+ 
+     if (!kwinSettings->childKeys().contains("blurEnabled") || isBlurEffect()) {
+         kwin = true;
+@@ -1334,7 +1334,7 @@
+         file.close();
+         return fileCont;
+     } else {
+-        qWarning() << filepath << " not found"<<endl;
++        qWarning() << filepath << " not found"<<Qt::endl;
+         return QStringList();
+     }
+ }
+--- a/plugins/personalized/theme/themeiconlabel.cpp
++++ b/plugins/personalized/theme/themeiconlabel.cpp
+@@ -209,7 +209,7 @@
+     return QWidget::eventFilter(w, e);
+ }
+ 
+-void ThemeIconLabel::paintEvent(QPaintEvent *event)
++void ThemeIconLabel::paintEvent(QPaintEvent *event [[maybe_unused]])
+ {
+     QPainter painter(this);
+     painter.setRenderHint(QPainter::Antialiasing);
+--- a/plugins/personalized/wallpaper/wallpaperui.cpp
++++ b/plugins/personalized/wallpaper/wallpaperui.cpp
+@@ -268,7 +268,7 @@
+     m_onlineBtn->setAccessibleName(tr("Online Pictures"));
+     m_resetBtn->setAccessibleName(tr("Reset To Default"));
+ 
+-    connect(m_modeComboBox, QOverload<const QString&>::of(&QComboBox::activated), this, [=](const QString &mode) {
++    connect(m_modeComboBox, &QComboBox::textActivated, this, [=](const QString &mode) {
+         modeComboBoxSlot();
+     });
+ }
+@@ -325,7 +325,7 @@
+ 
+ void WallpaperUi::initSignals()
+ {
+-    connect(m_typeComboBox, QOverload<const QString&>::of(&QComboBox::activated), this, [=](const QString &type){
++    connect(m_typeComboBox, &QComboBox::textActivated, this, [=](const QString &type){
+         typeComboBoxSlot();
+     });
+ 
+--- a/plugins/security-updates/update/update.cpp
++++ b/plugins/security-updates/update/update.cpp
+@@ -118,7 +118,7 @@
+         file.close();
+         return fileCont;
+     } else {
+-        qWarning() << filepath << " not found"<<endl;
++        qWarning() << filepath << " not found"<<Qt::endl;
+         return QStringList();
+     }
+ }
+--- a/plugins/system/display/declarative/qmloutput.cpp
++++ b/plugins/system/display/declarative/qmloutput.cpp
+@@ -310,14 +310,14 @@
+ //旋转时计算坐标更改方向
+ void QMLOutput::updateRootProperties()
+ {
+-    //qDebug()<<"updateRootProperties----->"<<endl;
++    //qDebug()<<"updateRootProperties----->"<<Qt::endl;
+     const float transformedWidth = (m_output->isHorizontal() ? currentOutputWidth() : currentOutputHeight()) * m_screen->outputScale();
+     const float transformedHeight = (m_output->isHorizontal() ? currentOutputHeight() : currentOutputWidth()) * m_screen->outputScale();
+ 
+     const float transformedX = x() + (width() / 2.0) - (transformedWidth / 2.0);
+     const float transformedY = y() + (height() / 2.0) - (transformedHeight / 2.0);
+ 
+-    //qDebug()<<"transformedWidth: "<<transformedWidth<<"transformedHeight: "<<transformedHeight<<endl;
++    //qDebug()<<"transformedWidth: "<<transformedWidth<<"transformedHeight: "<<transformedHeight<<Qt::endl;
+ 
+ //    setPosition(QPointF(transformedX, transformedY));  //why ?
+     setSize(QSizeF(transformedWidth, transformedHeight));
+--- a/plugins/system/display/outputconfig.cpp
++++ b/plugins/system/display/outputconfig.cpp
+@@ -646,7 +646,7 @@
+     }
+ }
+ 
+-void OutputConfig::rotationDirectionSlot(QString rotationDirection)
++void OutputConfig::rotationDirectionSlot(QString rotationDirection [[maybe_unused]])
+ {
+     mRotation->blockSignals(true);
+     mRotation->setCurrentIndex(mRotation->findData(mOutput->rotation()));
+@@ -657,7 +657,7 @@
+ {
+     QString modeId;
+     modeId = mRefreshRate->itemData(index).toString();
+-    qDebug() << "(slotRefreshRateChanged)modeId is:" << modeId << endl;
++    qDebug() << "(slotRefreshRateChanged)modeId is:" << modeId << Qt::endl;
+     mOutput->blockSignals(true);
+     mIsRestore = false;
+     mOutput->setCurrentModeId(modeId);
+--- a/plugins/time-language/area/addlanguagedialog.cpp
++++ b/plugins/time-language/area/addlanguagedialog.cpp
+@@ -149,7 +149,7 @@
+     connect(m_languageListView, &QListView::entered, this, [=](const QModelIndex &index) {
+         const QString mStr = index.data().toString();
+         QFontMetrics fontMetrics(font());
+-        const int fontSize = fontMetrics.width(mStr);
++        const int fontSize = fontMetrics.horizontalAdvance(mStr);
+         if (fontSize - 16 > 360) {
+             QToolTip::showText(QCursor::pos(), mStr);
+         }
+--- a/plugins/time-language/datetime/datetimeui.cpp
++++ b/plugins/time-language/datetime/datetimeui.cpp
+@@ -190,7 +190,7 @@
+     connect(timeLabel, &TimeLabel::dateChanged, mDateLabel, [=](){
+         updateDate();
+     });
+-    connect(timeBtnGroup, QOverload<int, bool>::of(&QButtonGroup::buttonToggled), this, [=](int id, bool clicked){
++    connect(timeBtnGroup, &QButtonGroup::idToggled, this, [=](int id, bool clicked){
+         if (clicked && id != toggledBtn) {
+             previousToggledBtn = toggledBtn;
+             toggledBtn = id;
+@@ -279,7 +279,7 @@
+ void DatetimeUi::initSignals()
+ {
+     connect(dategroupWidget, &DategroupWidget::dateChanged, this, &DatetimeUi::dateTimeChanged);
+-    connect(timeBtnGroup, QOverload<int>::of(&QButtonGroup::buttonClicked), this, [=](int id){
++    connect(timeBtnGroup, &QButtonGroup::idClicked, this, [=](int id){
+         if (id == 0) {
+             syncResultLabel->setPixmap(QPixmap(""));
+             syncResultLabel->setText("");
+@@ -289,7 +289,7 @@
+         }
+     });
+     connect(changeTZbutton, &KPushButton::clicked, this, &DatetimeUi::timezoneButtonClicked);
+-    connect(ntpSerWidget->comboBox(), QOverload<const QString&>::of(&QComboBox::activated), this, [=](QString server){
++    connect(ntpSerWidget->comboBox(), &QComboBox::textActivated, this, [=](QString server){
+         if (ntpSerWidget->comboBox()->currentIndex() == 0) {
+             server = "default";
+             Q_EMIT ntpServerChanged(server);
+@@ -427,7 +427,7 @@
+     updateDate();
+ }
+ 
+-void DatetimeUi::addOtherTimezone(const QString &timezone, const QString &timezoneName)
++void DatetimeUi::addOtherTimezone(const QString &timezone, const QString &timezoneName [[maybe_unused]])
+ {
+     TimeBtn *timeBtn = nullptr;
+     if (linkShanghaiTzList.contains(timezone)) {
+--- a/plugins/time-language/datetime/timezonechooserdialog.cpp
++++ b/plugins/time-language/datetime/timezonechooserdialog.cpp
+@@ -269,7 +269,7 @@
+     connect(m_timezoneListView, &QListView::entered, this, [=](const QModelIndex &index) {
+         const QString mStr = index.data().toString();
+         QFontMetrics fontMetrics(font());
+-        const int fontSize = fontMetrics.width(mStr);
++        const int fontSize = fontMetrics.horizontalAdvance(mStr);
+         if (fontSize - 16 > 360) {
+             QToolTip::showText(QCursor::pos(), mStr);
+         }
+@@ -318,7 +318,7 @@
+         file.close();
+         return res;
+     } else {
+-        qWarning() << filepath << " not found" << endl;
++        qWarning() << filepath << " not found" << Qt::endl;
+         return "";
+     }
+ }
+--- a/plugins/time-language/datetime/worldMap/zoneinfo.cpp
++++ b/plugins/time-language/datetime/worldMap/zoneinfo.cpp
+@@ -45,7 +45,7 @@
+         file.close();
+         return res;
+     } else {
+-        qWarning() << filepath << " not found"<<endl;
++        qWarning() << filepath << " not found"<<Qt::endl;
+         return "";
+     }
+ }
+--- a/registeredQDbus/sysdbusregister.cpp
++++ b/registeredQDbus/sysdbusregister.cpp
+@@ -667,7 +667,7 @@
+         pclose(fp);
+         fp = NULL;
+     }else{
+-        qDebug()<<"popen文件打开失败"<<endl;
++        qDebug()<<"popen文件打开失败"<<Qt::endl;
+     }
+     return QString(ba);
+ }
+@@ -706,10 +706,10 @@
+         if (status == false) {
+             QString noPwdLoginUser = getNoPwdLoginStatus();
+             qDebug() << "noPwdLoginUser:" << noPwdLoginUser;
+-            QStringList tmp = noPwdLoginUser.split(":", QString::SkipEmptyParts);
++            QStringList tmp = noPwdLoginUser.split(":", Qt::SkipEmptyParts);
+ 
+             QString noPasswdUsers = tmp.at(tmp.count()-1);
+-            QStringList noPasswdUsersList = noPasswdUsers.split(",", QString::SkipEmptyParts);
++            QStringList noPasswdUsersList = noPasswdUsers.split(",", Qt::SkipEmptyParts);
+             foreach (QString noPasswdUser, noPasswdUsersList) {
+                 noPasswdUser.remove(QChar('\n'), Qt::CaseInsensitive);
+                 qDebug() << "nopasswduser:" << noPasswdUser;
+@@ -781,12 +781,12 @@
+     mHibernateSet->sync();
+ }
+ 
+-int SysdbusRegister::changeOtherUserPasswd(QString username, QString pwd)
++int SysdbusRegister::changeOtherUserPasswd(QString username [[maybe_unused]], QString pwd [[maybe_unused]])
+ {
+     return -1;
+ }
+ 
+-int SysdbusRegister::createUser(QString name, QString fullname, int accounttype, QString faceicon, QString pwd)
++int SysdbusRegister::createUser(QString name [[maybe_unused]], QString fullname [[maybe_unused]], int accounttype [[maybe_unused]], QString faceicon [[maybe_unused]], QString pwd [[maybe_unused]])
+ {
+     return -1;
+ }
+@@ -1402,9 +1402,9 @@
+ 
+ void SysdbusRegister::getDisplayInfo() {}
+ 
+-void SysdbusRegister::setDisplayBrightness(QString brightness, QString edidHash, QString i2cBus) {}
+-
+-int SysdbusRegister::getDisplayBrightness(QString edidHash, QString i2cBus)
++void SysdbusRegister::setDisplayBrightness(QString brightness [[maybe_unused]], QString edidHash [[maybe_unused]], QString i2cBus [[maybe_unused]]) {}
++
++int SysdbusRegister::getDisplayBrightness(QString edidHash [[maybe_unused]], QString i2cBus [[maybe_unused]])
+ {
+     return -2;
+ }
+@@ -1591,7 +1591,7 @@
+         pclose(fp);
+         fp = NULL;
+     }else{
+-        qDebug()<<"popen文件打开失败"<<endl;
++        qDebug()<<"popen文件打开失败"<<Qt::endl;
+     }
+ 
+     if (!ba.contains("password_pbkdf2")) {
+@@ -1691,7 +1691,7 @@
+         pclose(fp);
+         fp = NULL;
+     } else {
+-        qDebug()<<"popen文件打开失败"<<endl;
++        qDebug()<<"popen文件打开失败"<<Qt::endl;
+     }
+ 
+     if (ba.isEmpty()) {
+@@ -1810,7 +1810,7 @@
+         pclose(fp);
+         fp = NULL;
+     } else {
+-        qDebug()<<"popen文件打开失败"<<endl;
++        qDebug()<<"popen文件打开失败"<<Qt::endl;
+     }
+ 
+     if (ba.isEmpty()) {
+@@ -1964,7 +1964,7 @@
+         pclose(fp);
+         fp = NULL;
+     } else {
+-        qDebug()<<"popen文件打开失败"<<endl;
++        qDebug()<<"popen文件打开失败"<<Qt::endl;
+     }
+ 
+     if (ba.isEmpty()) {
+--- a/registeredSession/plugins/about/aboutinterface.cpp
++++ b/registeredSession/plugins/about/aboutinterface.cpp
+@@ -300,7 +300,7 @@
+         file.close();
+         return fileCont;
+     } else {
+-        qWarning() << filepath << " not found"<<endl;
++        qWarning() << filepath << " not found"<<Qt::endl;
+         return QStringList();
+     }
+ }
+--- a/registeredSession/plugins/datetime/datetimeinterface.cpp
++++ b/registeredSession/plugins/datetime/datetimeinterface.cpp
+@@ -164,7 +164,7 @@
+     return ntpServer;
+ }
+ 
+-bool DatetimeInterface::setNtpServer(QString server)
++bool DatetimeInterface::setNtpServer(QString server [[maybe_unused]])
+ {
+     PolkitQt1::Authority::Result result;
+     result = PolkitQt1::Authority::instance()->checkAuthorizationSync(
+--- a/registeredSession/plugins/font/libfun.cpp
++++ b/registeredSession/plugins/font/libfun.cpp
+@@ -1,3 +1,4 @@
++#include <algorithm>
+ /* -*- Mode: C; tab-width: 4; indent-tabs-mode: nil; c-basic-offset: 4 -*-
+  *
+  * Copyright (C) 2024 KylinSoft  Co., Ltd.
+@@ -304,7 +305,7 @@
+         item.path = QString((char *)location);
+ 
+         /* 种类 */
+-        g_autoptr(GFileInfo) fileInfo;
++        g_autoptr(GFileInfo) fileInfo = nullptr;
+         fileInfo = g_file_query_info(fd , G_FILE_ATTRIBUTE_STANDARD_CONTENT_TYPE "," G_FILE_ATTRIBUTE_STANDARD_SIZE , G_FILE_QUERY_INFO_NONE , NULL , NULL);
+         if (fileInfo != NULL) {
+             g_autofree gchar *fileType = g_content_type_get_description(g_file_info_get_content_type(fileInfo));
+@@ -402,7 +403,7 @@
+     if (fs) {
+         FcFontSetDestroy(fs);
+     }
+-    qSort(ret.begin(), ret.end(), caseInsensitiveLessThan);
++    std::sort(ret.begin(), ret.end(), caseInsensitiveLessThan);
+ 
+     return ret;
+ }
+--- a/registeredSession/plugins/keyboard/keyboardinterface.cpp
++++ b/registeredSession/plugins/keyboard/keyboardinterface.cpp
+@@ -70,7 +70,7 @@
+     });
+ }
+ 
+-const bool KeyBoardInterface::getKeyRepeat()
++bool KeyBoardInterface::getKeyRepeat()
+ {
+     if (keyboardGsettings->keys().contains(KEYREPEAT_KEY)) {
+         return keyboardGsettings->get(KEYREPEAT_KEY).toBool();
+@@ -80,7 +80,7 @@
+     return bool();
+ }
+ 
+-const int KeyBoardInterface::getDelay()
++int KeyBoardInterface::getDelay()
+ {
+     if (keyboardGsettings->keys().contains(DELAY_KEY)) {
+         return keyboardGsettings->get(DELAY_KEY).toInt();
+@@ -90,7 +90,7 @@
+     return int();
+ }
+ 
+-const int KeyBoardInterface::getRate()
++int KeyBoardInterface::getRate()
+ {
+     if (keyboardGsettings->keys().contains(SPEED_KEY)) {
+         return keyboardGsettings->get(SPEED_KEY).toInt();
+@@ -100,7 +100,7 @@
+     return int();
+ }
+ 
+-const bool KeyBoardInterface::getShowLockTip()
++bool KeyBoardInterface::getShowLockTip()
+ {
+     if (ukccOsdGsettings->keys().contains(KEYTIPS_KEY)) {
+         return ukccOsdGsettings->get("show-lock-tip").toBool();
+@@ -110,7 +110,7 @@
+     return bool();
+ }
+ 
+-const bool KeyBoardInterface::getShowOnDesktop()
++bool KeyBoardInterface::getShowOnDesktop()
+ {
+     if (ukuiVirKeyBoardGsettings != nullptr && ukuiVirKeyBoardGsettings->keys().contains(FLOAT_KEY)) {
+         return ukuiVirKeyBoardGsettings->get("float-button-enabled").toBool();
+@@ -119,7 +119,7 @@
+     }
+     return bool();
+ }
+-const bool KeyBoardInterface::getShowOnTray()
++bool KeyBoardInterface::getShowOnTray()
+ {
+     if (ukuiVirKeyBoardGsettings != nullptr && ukuiVirKeyBoardGsettings->keys().contains(TRAY_KEY)) {
+         return ukuiVirKeyBoardGsettings->get("").toBool();
+@@ -129,7 +129,7 @@
+     return bool();
+ }
+ 
+-const int KeyBoardInterface::getKeyboardSize()
++int KeyBoardInterface::getKeyboardSize()
+ {
+     if (ukuiVirKeyBoardGsettings != nullptr && ukuiVirKeyBoardGsettings->keys().contains(SCALE_KEY)) {
+         return ukuiVirKeyBoardGsettings->get("virtual-keyboard-scale-factor").toInt();
+@@ -139,7 +139,7 @@
+     return int();
+ }
+ 
+-const int KeyBoardInterface::getTextSize()
++int KeyBoardInterface::getTextSize()
+ {
+     if (ukuiVirKeyBoardGsettings != nullptr && ukuiVirKeyBoardGsettings->keys().contains(TEXT_SIZE_KEY)) {
+         return ukuiVirKeyBoardGsettings->get("").toInt();
+@@ -149,7 +149,7 @@
+     return int();
+ }
+ 
+-const bool KeyBoardInterface::getAnimation()
++bool KeyBoardInterface::getAnimation()
+ {
+     if (ukuiVirKeyBoardGsettings != nullptr && ukuiVirKeyBoardGsettings->keys().contains(ANIMATION_KEY)) {
+         return ukuiVirKeyBoardGsettings->get("animation-enabled").toBool();
+@@ -159,7 +159,7 @@
+     return bool();
+ }
+ 
+-const bool KeyBoardInterface::getSoundEffect()
++bool KeyBoardInterface::getSoundEffect()
+ {
+     if (ukuiVirKeyBoardGsettings != nullptr && ukuiVirKeyBoardGsettings->keys().contains(SOUND_EFFECT_KEY)) {
+         return ukccOsdGsettings->get("").toBool();
+--- a/registeredSession/plugins/keyboard/keyboardinterface.h
++++ b/registeredSession/plugins/keyboard/keyboardinterface.h
+@@ -48,17 +48,17 @@
+ 
+ protected:
+     // 对属性的访问函数
+-    const bool getKeyRepeat();
+-    const int  getDelay();
+-    const int  getRate();
+-    const bool getShowLockTip();
++    bool getKeyRepeat();
++    int getDelay();
++    int getRate();
++    bool getShowLockTip();
+ 
+-    const bool getShowOnDesktop();
+-    const bool getShowOnTray();
+-    const int  getKeyboardSize();
+-    const int  getTextSize();
+-    const bool getAnimation();
+-    const bool getSoundEffect();
++    bool getShowOnDesktop();
++    bool getShowOnTray();
++    int getKeyboardSize();
++    int getTextSize();
++    bool getAnimation();
++    bool getSoundEffect();
+ 
+ public Q_SLOTS:
+     // 对属性的设置函数
+--- a/registeredSession/plugins/mouse/mouseinterface.cpp
++++ b/registeredSession/plugins/mouse/mouseinterface.cpp
+@@ -73,7 +73,7 @@
+ }
+ 
+ // 对属性的访问函数
+-const bool MouseInterface::getDominantHand()
++bool MouseInterface::getDominantHand()
+ {
+     if (ukuiMouseGsettings->keys().contains(DOMINANT_HAND_KEY)) {
+         return ukuiMouseGsettings->get("left-handed").toBool();
+@@ -83,7 +83,7 @@
+     return bool();
+ }
+ 
+-const bool MouseInterface::getScrollDirection()
++bool MouseInterface::getScrollDirection()
+ {
+     if (ukuiMouseGsettings->keys().contains(SCROLL_DIRECTION_KEY)) {
+         return ukuiMouseGsettings->get("natural-scroll").toBool();
+@@ -93,7 +93,7 @@
+     return bool();
+ }
+ 
+-const int MouseInterface::getWheelSpeed()
++int MouseInterface::getWheelSpeed()
+ {
+     if (ukuiMouseGsettings->keys().contains(WHEEL_SPEED_KEY)) {
+         return ukuiMouseGsettings->get("wheel-speed").toInt();
+@@ -103,7 +103,7 @@
+     return int();
+ }
+ 
+-const int MouseInterface::getDoubleClick()
++int MouseInterface::getDoubleClick()
+ {
+     if (ukuiMouseGsettings->keys().contains(DOUBLECLICK_KEY)) {
+         return ukuiMouseGsettings->get("double-click").toInt();
+@@ -113,7 +113,7 @@
+     return int();
+ }
+ 
+-const double MouseInterface::getPointerSpeed()
++double MouseInterface::getPointerSpeed()
+ {
+     if (ukuiMouseGsettings->keys().contains(POINTER_SPEED_KEY)) {
+         return ukuiMouseGsettings->get("motion-acceleration").toDouble();
+@@ -123,7 +123,7 @@
+     return double();
+ }
+ 
+-const bool MouseInterface::getMouseAcceleration()
++bool MouseInterface::getMouseAcceleration()
+ {
+     if (ukuiMouseGsettings->keys().contains(MOUSE_ACCELERATION_KEY)) {
+         return ukuiMouseGsettings->get("mouse-accel").toBool();
+@@ -141,7 +141,7 @@
+     return isEffectSupportedReply.value();
+ }
+ 
+-const bool MouseInterface::getTailLightEffect()
++bool MouseInterface::getTailLightEffect()
+ {
+     QDBusReply<QDBusArgument> reply = m_pKwinInterface->call("ListAllEffects");
+ 
+@@ -169,7 +169,7 @@
+     return bool();
+ }
+ 
+-const bool MouseInterface::getPointerPosition()
++bool MouseInterface::getPointerPosition()
+ {
+     if (ukuiMouseGsettings->keys().contains(POINTER_POSITION_KEY)) {
+         return ukuiMouseGsettings->get("locate-pointer").toBool();
+@@ -179,7 +179,7 @@
+     return bool();
+ }
+ 
+-const bool MouseInterface::getShakeCursor()
++bool MouseInterface::getShakeCursor()
+ {
+     if (ukuiMouseGsettings->keys().contains(SHAKE_CURSOR)) {
+         return ukuiMouseGsettings->get("shake-cursor").toBool();
+@@ -189,7 +189,7 @@
+     return bool();
+ }
+ 
+-const int  MouseInterface::getPointerSize()
++int MouseInterface::getPointerSize()
+ {
+     if (ukuiMouseGsettings->keys().contains(POINTER_SIZE_KEY)) {
+         return ukuiMouseGsettings->get("cursor-size").toInt();
+@@ -199,7 +199,7 @@
+     return int();
+ }
+ 
+-const bool MouseInterface::getCursorBlink()
++bool MouseInterface::getCursorBlink()
+ {
+     if (mateInterfaceGsettings->keys().contains(CURSOR_BLINK_KEY)) {
+         return mateInterfaceGsettings->get("cursor-blink").toBool();
+@@ -209,7 +209,7 @@
+     return bool();
+ }
+ 
+-const int MouseInterface::getCursorSpeed()
++int MouseInterface::getCursorSpeed()
+ {
+     if (mateInterfaceGsettings->keys().contains(CURSOR_SPEED_KEY)) {
+         return mateInterfaceGsettings->get("cursor-blink-time").toInt();
+--- a/registeredSession/plugins/mouse/mouseinterface.h
++++ b/registeredSession/plugins/mouse/mouseinterface.h
+@@ -79,18 +79,18 @@
+ 
+ protected:
+     // 对属性的访问函数
+-    const bool   getDominantHand();
+-    const bool   getScrollDirection();
+-    const int    getWheelSpeed();
+-    const int    getDoubleClick();
+-    const double getPointerSpeed();
+-    const bool   getMouseAcceleration();
+-    const bool   getTailLightEffect();
+-    const bool   getPointerPosition();
+-    const bool   getShakeCursor();
+-    const int    getPointerSize();
+-    const bool   getCursorBlink();
+-    const int    getCursorSpeed();
++    bool getDominantHand();
++    bool getScrollDirection();
++    int getWheelSpeed();
++    int getDoubleClick();
++    double getPointerSpeed();
++    bool getMouseAcceleration();
++    bool getTailLightEffect();
++    bool getPointerPosition();
++    bool getShakeCursor();
++    int getPointerSize();
++    bool getCursorBlink();
++    int getCursorSpeed();
+ 
+ public Q_SLOTS:
+     bool isEffectSupported();
+--- a/shell/customstyle.cpp
++++ b/shell/customstyle.cpp
+@@ -30,7 +30,7 @@
+ #include <QComboBox>
+ #include <QListWidget>
+ 
+-InternalStyle::InternalStyle(const QString &styleName, QObject *parent) : QProxyStyle(styleName)
++InternalStyle::InternalStyle(const QString &styleName, QObject *parent [[maybe_unused]]) : QProxyStyle(styleName)
+ {
+ 
+ }
+--- a/shell/leftsidebarwidget.cpp
++++ b/shell/leftsidebarwidget.cpp
+@@ -52,7 +52,7 @@
+ 
+ }
+ 
+-void LeftsidebarWidget::paintEvent(QPaintEvent *event)
++void LeftsidebarWidget::paintEvent(QPaintEvent *event [[maybe_unused]])
+ {
+     QStyleOption opt;
+     opt.init(this);
+--- a/shell/mainwindow.cpp
++++ b/shell/mainwindow.cpp
+@@ -413,7 +413,7 @@
+     return QObject::eventFilter(watched, event);
+ }
+ 
+-void MainWindow::keyReleaseEvent(QKeyEvent *event)
++void MainWindow::keyReleaseEvent(QKeyEvent *event [[maybe_unused]])
+ {
+     mFirstKey = 0;
+ }
+@@ -1854,7 +1854,7 @@
+     return m_searchWidget->getSearchItems();
+ }
+ 
+-void MainWindow::switchPage(QString moduleName, QString jumpMoudle, QString jumpText) {
++void MainWindow::switchPage(QString moduleName, QString jumpMoudle, QString jumpText [[maybe_unused]]) {
+     //开始跳转
+     QObject* pluginObj = ModulesFactory::getPluginObjectByName(moduleName);
+     if (pluginObj != nullptr) {

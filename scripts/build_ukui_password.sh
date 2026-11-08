@@ -4,13 +4,14 @@ export DEBIAN_FRONTEND=noninteractive
 export DEBFULLNAME='openKylin Lite'
 export DEBEMAIL='openkylin-lite@users.noreply.github.com'
 workspace=$PWD
+bash "$workspace/scripts/prepare_build_environment.sh"
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
 
 apt-get -o Acquire::Retries=3 update
 apt-get install -y --no-install-recommends ca-certificates git build-essential devscripts
 
-git init "$work/source"
+git init --initial-branch=upstream "$work/source"
 cd "$work/source"
 for attempt in 1 2 3 4; do
   if git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=60 fetch --depth=1 \
@@ -29,6 +30,7 @@ git checkout --detach FETCH_HEAD
 dpkg-source --before-build .
 git apply --check "$workspace/patches/ukui-password/$PACKAGE.patch"
 git apply "$workspace/patches/ukui-password/$PACKAGE.patch"
+bash "$workspace/scripts/apply_build_warning_patch.sh" "$SOURCE_PACKAGE" "$workspace"
 if [[ $PACKAGE == ukui-greeter ]]; then
   # OpenCV was used only to decode facial authentication video frames.
   python3 - <<'PYTHON'
@@ -95,6 +97,9 @@ else
   dch --local +lite --distribution huanghe 'Disable biometric authentication in this candidate.'
 fi
 apt-get build-dep -y --no-install-recommends ./
+if [[ $PACKAGE == ukui-greeter ]]; then
+  WARNING_SOURCE_DIR=$PWD WARNING_SOURCE_PACKAGE=$SOURCE_PACKAGE python3 -m unittest discover -s "$workspace/tests" -p test_build_warning_runtime.py -v
+fi
 CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 
 deb=( "$work/${PACKAGE}_"*_amd64.deb )

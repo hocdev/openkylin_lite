@@ -4,6 +4,7 @@ export DEBIAN_FRONTEND=noninteractive LANG=C.UTF-8 LC_ALL=C.UTF-8
 export DEBFULLNAME='openKylin Lite' DEBEMAIL='openkylin-lite@users.noreply.github.com'
 export DEB_BUILD_OPTIONS=parallel=2
 workspace=$PWD
+bash "$workspace/scripts/prepare_build_environment.sh"
 source_package=${SOURCE_PACKAGE:?SOURCE_PACKAGE is required}
 work=$(mktemp -d)
 trap 'rm -rf -- "$work"' EXIT
@@ -18,7 +19,7 @@ print(entry['repository']); print(entry['tag']); print(entry['commit']); print(e
 PY
 )
 [[ ${#lock[@]} == 4 ]]
-git init "$work/source"
+git init --initial-branch=upstream "$work/source"
 cd "$work/source"
 for attempt in 1 2 3 4; do
   if git -c http.lowSpeedLimit=1000 -c http.lowSpeedTime=120 -c http.postBuffer=524288000 fetch --depth=1 \
@@ -37,6 +38,11 @@ git checkout --detach FETCH_HEAD
 dpkg-source --before-build .
 git apply --check "$workspace/patches/ai-free/$source_package.patch"
 git apply "$workspace/patches/ai-free/$source_package.patch"
+bash "$workspace/scripts/apply_build_warning_patch.sh" "$source_package" "$workspace"
+if [[ $source_package == orca ]]; then
+  python3 "$workspace/scripts/patch_orca_translations.py" "$PWD"
+  export GETTEXTDATADIRS="$workspace/patches/gettext${GETTEXTDATADIRS:+:$GETTEXTDATADIRS}"
+fi
 dch --newversion "${lock[3]}+liteai1" --distribution huanghe 'Build desktop without AI inference, OCR or AI service integration.'
 # Keep the quick SDK ABI aligned with the pinned ISO, as for Control Center.
 mkdir "$work/quick"

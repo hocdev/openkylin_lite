@@ -8,3 +8,6 @@ if [[ -f $patch ]]; then
   git apply --check "$patch"
   git apply "$patch"
 fi
+if [[ $source_package == ukui-search ]]; then
+  cp "$workspace/patches/build-warnings/cache-write.h" libchinese-segmentation/cache-write.h
+fi

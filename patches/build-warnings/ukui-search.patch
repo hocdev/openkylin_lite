@@ -1,3 +1,76 @@
+--- a/debian/libukui-search-dev.install
++++ b/debian/libukui-search-dev.install
+@@ -1,4 +1,5 @@
+ usr/include/ukui-search/*
+ usr/lib/*/pkgconfig/ukui-search.pc
+ usr/lib/*/libukui-search.so
+-usr/share/cmake/ukui-search/*.cmake
+\ No newline at end of file
++usr/share/cmake/ukui-search/*.cmake
++usr/lib/*/libukui-search-tcmalloc.so
+--- a/debian/ukui-search-systemdbus.install
++++ b/debian/ukui-search-systemdbus.install
+@@ -1,3 +1,4 @@
+ /usr/share/dbus-1/system-services/com.ukui.search.qt.systemdbus.service
+ /etc/dbus-1/system.d/com.ukui.search.qt.systemdbus.conf
+ /usr/libexec/ukui-service/system
++etc/kylin-config/basic/com.ukui.search.qt.systemdbus.yaml
+--- a/debian/ukui-search.install
++++ b/debian/ukui-search.install
+@@ -8,4 +8,5 @@
+ usr/share/ukui-search/search-ukcc-plugin/image/*
+ 
+ usr/share/dbus-1/services/org.ukui.appwidget.provider.search.service
+-usr/share/appwidget/*
+\ No newline at end of file
++usr/share/appwidget/*
++opt/system/conf/ukui-security-support/ukui-search.json
+--- a/libchinese-segmentation/Traditional-Chinese-Simplified-conversion/Traditional2Simplified_trie.cpp
++++ b/libchinese-segmentation/Traditional-Chinese-Simplified-conversion/Traditional2Simplified_trie.cpp
+@@ -17,6 +17,7 @@
+  * Authors: jixiaoxu <jixiaoxu@kylinos.cn>
+  *
+  */
++#include "../cache-write.h"
+ #include "Traditional2Simplified_trie.h"
+ 
+ Traditional2SimplifiedTrie::Traditional2SimplifiedTrie(string dat_cache_path)
+@@ -48,6 +49,9 @@
+     string tmp_filepath = string(dat_cache_file) + "_XXXXXX";
+     umask(S_IWGRP | S_IWOTH);
+     const int fd =mkstemp((char *)tmp_filepath.data());
++    if (fd < 0) {
++        return;
++    }
+     assert(fd >= 0);
+     fchmod(fd, 0644);
+ 
+@@ -58,10 +62,22 @@
+     write_bytes += write(fd, this->GetDataTrieArray(), this->GetDataTrieTotalSize());
+ 
+     lseek(fd, sizeof(header.md5_hex), SEEK_SET);
+-    write(fd, &elements_num, sizeof(int));
+-    write(fd, &offset, sizeof(int));
++    if (!UkuiLite::writeAll(fd, &elements_num, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
++    if (!UkuiLite::writeAll(fd, &offset, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+     data_trie_size = this->GetDataTrieSize();
+-    write(fd, &data_trie_size, sizeof(int));
++    if (!UkuiLite::writeAll(fd, &data_trie_size, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+ 
+     close(fd);
+     assert((size_t)write_bytes == sizeof(CacheFileHeaderBase) + offset + this->GetDataTrieTotalSize());
 --- a/libchinese-segmentation/cppjieba/DatTrie.hpp
 +++ b/libchinese-segmentation/cppjieba/DatTrie.hpp
 @@ -154,7 +154,7 @@
@@ -9,6 +82,58 @@
  #ifdef USE_DARTS_CLONE
          JiebaDAT::result_pair_type find_result;
          dat_.exactMatchSearch(key.c_str(), find_result, length, node_pos);
+--- a/libchinese-segmentation/cppjieba/idf-trie/idf-trie.cpp
++++ b/libchinese-segmentation/cppjieba/idf-trie/idf-trie.cpp
+@@ -17,6 +17,7 @@
+  * Authors: jixiaoxu <jixiaoxu@kylinos.cn>
+  *
+  */
++#include "../../cache-write.h"
+ #include "idf-trie.h"
+ 
+ IdfTrie::IdfTrie(const vector<string> file_paths, string dat_cache_path)
+@@ -42,6 +43,9 @@
+     string tmp_filepath = string(dat_cache_file) + "_XXXXXX";
+     umask(S_IWGRP | S_IWOTH);
+     const int fd =mkstemp((char *)tmp_filepath.data());
++    if (fd < 0) {
++        return;
++    }
+     assert(fd >= 0);
+     fchmod(fd, 0644);
+ 
+@@ -69,11 +73,27 @@
+     write_bytes += write(fd, this->GetDataTrieArray(), this->GetDataTrieTotalSize());
+ 
+     lseek(fd, sizeof(header.md5_hex), SEEK_SET);
+-    write(fd, &elements_num, sizeof(int));
+-    write(fd, &offset, sizeof(int));
++    if (!UkuiLite::writeAll(fd, &elements_num, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
++    if (!UkuiLite::writeAll(fd, &offset, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+     data_trie_size = this->GetDataTrieSize();
+-    write(fd, &data_trie_size, sizeof(int));
+-    write(fd, &idf_average, sizeof(double));
++    if (!UkuiLite::writeAll(fd, &data_trie_size, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
++    if (!UkuiLite::writeAll(fd, &idf_average, sizeof(double))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+ 
+     close(fd);
+     assert((size_t)write_bytes == sizeof(IdfCacheFileHeader) + offset + this->GetDataTrieTotalSize());
 --- a/libchinese-segmentation/cppjieba/limonp/StringUtil.hpp
 +++ b/libchinese-segmentation/cppjieba/limonp/StringUtil.hpp
 @@ -109,12 +109,12 @@
@@ -41,6 +166,58 @@
    return s;
  }
  
+--- a/libchinese-segmentation/cppjieba/segment-trie/segment-trie.cpp
++++ b/libchinese-segmentation/cppjieba/segment-trie/segment-trie.cpp
+@@ -17,6 +17,7 @@
+  * Authors: jixiaoxu <jixiaoxu@kylinos.cn>
+  *
+  */
++#include "../../cache-write.h"
+ #include <cmath>
+ #include "segment-trie.h"
+ 
+@@ -42,6 +43,9 @@
+     string tmp_filepath = string(dat_cache_file) + "_XXXXXX";
+     umask(S_IWGRP | S_IWOTH);
+     const int fd =mkstemp((char *)tmp_filepath.data());
++    if (fd < 0) {
++        return;
++    }
+     assert(fd >= 0);
+     fchmod(fd, 0644);
+ 
+@@ -54,11 +58,27 @@
+     write_bytes += write(fd, this->GetDataTrieArray(), this->GetDataTrieTotalSize());
+ 
+     lseek(fd, sizeof(header.md5_hex), SEEK_SET);
+-    write(fd, &elements_num, sizeof(int));
+-    write(fd, &offset, sizeof(int));
++    if (!UkuiLite::writeAll(fd, &elements_num, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
++    if (!UkuiLite::writeAll(fd, &offset, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+     data_trie_size = this->GetDataTrieSize();
+-    write(fd, &data_trie_size, sizeof(int));
+-    write(fd, &m_min_weight, sizeof(double));
++    if (!UkuiLite::writeAll(fd, &data_trie_size, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
++    if (!UkuiLite::writeAll(fd, &m_min_weight, sizeof(double))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+ 
+     close(fd);
+     assert((size_t)write_bytes == sizeof(DictCacheFileHeader) + offset + this->GetDataTrieTotalSize());
 --- a/libchinese-segmentation/hanzi-to-pinyin.cpp
 +++ b/libchinese-segmentation/hanzi-to-pinyin.cpp
 @@ -191,7 +191,7 @@
@@ -61,6 +238,69 @@
  #endif
              QStringList tmpValue;
              for (auto &str : tmpList) {
+--- a/libchinese-segmentation/pinyin4cpp/pinyin4cpp-trie.cpp
++++ b/libchinese-segmentation/pinyin4cpp/pinyin4cpp-trie.cpp
+@@ -17,6 +17,7 @@
+  * Authors: jixiaoxu <jixiaoxu@kylinos.cn>
+  *
+  */
++#include "../cache-write.h"
+ #include "pinyin4cpp-trie.h"
+ 
+ Pinyin4cppTrie::Pinyin4cppTrie(string dat_cache_path)
+@@ -56,6 +57,9 @@
+     string tmp_filepath = string(dat_cache_file) + "_XXXXXX";
+     umask(S_IWGRP | S_IWOTH);
+     const int fd =mkstemp((char *)tmp_filepath.data());
++    if (fd < 0) {
++        return;
++    }
+     assert(fd >= 0);
+     fchmod(fd, 0644);
+ 
+@@ -67,10 +71,22 @@
+     write_bytes += write(fd, this->GetDataTrieArray(), this->GetDataTrieTotalSize());
+ 
+     lseek(fd, sizeof(header.md5_hex), SEEK_SET);
+-    write(fd, &elements_num, sizeof(int));
+-    write(fd, &offset, sizeof(int));
++    if (!UkuiLite::writeAll(fd, &elements_num, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
++    if (!UkuiLite::writeAll(fd, &offset, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+     data_trie_size = this->GetDataTrieSize();
+-    write(fd, &data_trie_size, sizeof(int));
++    if (!UkuiLite::writeAll(fd, &data_trie_size, sizeof(int))) {
++        close(fd);
++        unlink(tmp_filepath.c_str());
++        return;
++    }
+ 
+     close(fd);
+     assert((size_t)write_bytes == sizeof(CacheFileHeaderBase) + offset + this->GetDataTrieTotalSize());
+--- a/libsearch/index/index-updater.cpp
++++ b/libsearch/index/index-updater.cpp
+@@ -36,10 +36,10 @@
+                            QAtomicInt& contentIndexOcrStop,
+                            QAtomicInt& aiIndexStop)
+         : m_cache(files),
+-          m_indexStop(&indexstop),
+-          m_contentIndexStop(&contentIndexstop),
+-          m_contentIndexOcrStop(&contentIndexOcrStop),
+-          m_aiIndexStop(&aiIndexStop)
++      m_contentIndexStop(&contentIndexstop),
++      m_indexStop(&indexstop),
++      m_contentIndexOcrStop(&contentIndexOcrStop),
++      m_aiIndexStop(&aiIndexStop)
+ {
+     connect(this, &IndexUpdater::indexUpdated, PendingFileQueue::getInstance(), &PendingFileQueue::signalFileEvent);
+ }
 --- a/search-ukcc-plugin/search.cpp
 +++ b/search-ukcc-plugin/search.cpp
 @@ -183,7 +183,7 @@
@@ -72,3 +312,23 @@
  #endif
              if (id == -3) {//fuzzyBtn's id
                  if (checked) {
+@@ -889,7 +889,8 @@
+ #if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+     blockDirDialog->setFileMode(QFileDialog::Directory); //只允许查看文件夹
+ #else
+-    blockDirDialog->setFileMode(QFileDialog::DirectoryOnly); //只允许查看文件夹
++    blockDirDialog->setFileMode(QFileDialog::Directory);
++    blockDirDialog->setOption(QFileDialog::ShowDirsOnly, true); //只允许查看文件夹
+ #endif
+ //    fileDialog->setViewMode(QFileDialog::Detail);
+     blockDirDialog->setDirectory(m_lastBlockDialogDir);
+@@ -949,7 +950,8 @@
+ #if QT_VERSION >= QT_VERSION_CHECK(6,0,0)
+     searchDirDialog->setFileMode(QFileDialog::Directory); //只允许查看文件夹
+ #else
+-    searchDirDialog->setFileMode(QFileDialog::DirectoryOnly); //只允许查看文件夹
++    searchDirDialog->setFileMode(QFileDialog::Directory);
++    searchDirDialog->setOption(QFileDialog::ShowDirsOnly, true); //只允许查看文件夹
+ #endif
+     searchDirDialog->setDirectory(m_lastSearchDialogDir);
+     searchDirDialog->setNameFilter(tr("Directories"));

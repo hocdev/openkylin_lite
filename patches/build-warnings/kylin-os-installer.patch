@@ -1,149 +1,231 @@
 --- a/src/Installer_main/installermainwidget.cpp
 +++ b/src/Installer_main/installermainwidget.cpp
-@@ -898,7 +898,7 @@
-     updateButtonStatus();
+@@ -48,14 +48,14 @@
+ namespace KInstaller {
+ 
+ InstallerMainWidget::InstallerMainWidget(QWidget *parent)
+-    : QWidget(parent)
+-      ,m_curIndex(0)
+-    ,m_InstallMode("")
+-    ,AllStep(0)
+-    ,w(nullptr)
+-    ,keyboard(nullptr)
+-    ,m_flagofGhost(false)
+-    ,m_ignoreUIsofGhost(0)
++    : QWidget(parent),
++      m_InstallMode(""),
++      AllStep(0),
++      m_curIndex(0),
++      w(nullptr),
++      keyboard(nullptr),
++      m_flagofGhost(false),
++      m_ignoreUIsofGhost(0)
+ {
+     m_stackPageMap = Ksetting::getInstance()->iPlugins;
+     AllStep = m_stackPageMap.count();
+@@ -732,7 +732,7 @@
+ {
+     changeStackPage(-1);
+     setLabelDotVisible(true);
+-    MiddleFrameManager* p=(MiddleFrameManager*)m_stackWidget->currentWidget();
++    (void)((MiddleFrameManager*)m_stackWidget->currentWidget());
  }
  
--void InstallerMainWidget::showInstallingErrorFrame(QString str)
-+void InstallerMainWidget::showInstallingErrorFrame(QString str [[maybe_unused]])
+ void InstallerMainWidget::changeLabelDotPix(int step)
+@@ -900,6 +900,8 @@
+ 
+ void InstallerMainWidget::showInstallingErrorFrame(QString str)
  {
++    Q_UNUSED(str); 
++
      InstallAddFileToEFI();
      emit signalInstallingClose();
+     setLabelDotVisible(false);
 --- a/src/Installer_main/myprobar.cpp
 +++ b/src/Installer_main/myprobar.cpp
-@@ -97,7 +97,7 @@
-     update();
- }
+@@ -99,5 +99,7 @@
  
--void myprobar::resizeEvent(QResizeEvent *event)
-+void myprobar::resizeEvent(QResizeEvent *event [[maybe_unused]])
+ void myprobar::resizeEvent(QResizeEvent *event)
  {
++    Q_UNUSED(event); 
++
      bar->setFixedWidth(this->width());//bug161672
  }
 --- a/src/Installer_main/uilt/slidershow.cpp
 +++ b/src/Installer_main/uilt/slidershow.cpp
-@@ -197,7 +197,7 @@
-         QWidget::keyPressEvent(event);
- }
+@@ -199,6 +199,8 @@
  
--bool SlideShow::eventFilter(QObject *watched, QEvent *event)
-+bool SlideShow::eventFilter(QObject *watched [[maybe_unused]], QEvent *event)
+ bool SlideShow::eventFilter(QObject *watched, QEvent *event)
  {
++    Q_UNUSED(watched); 
++
      if(event->type() == QEvent::KeyPress) {
          QKeyEvent *ev = (QKeyEvent*) event;
+         switch (ev->key()) {
 --- a/src/plugins/KChoiceImg/imgframe.cpp
 +++ b/src/plugins/KChoiceImg/imgframe.cpp
-@@ -306,7 +306,7 @@
-     }
- }
+@@ -308,6 +308,8 @@
  
--void ImgFrame::showEvent(QShowEvent *event)
-+void ImgFrame::showEvent(QShowEvent *event [[maybe_unused]])
+ void ImgFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      this->setFocus();
  }
+ 
 --- a/src/plugins/KChoiceLanguage/languageframe.cpp
 +++ b/src/plugins/KChoiceLanguage/languageframe.cpp
-@@ -318,7 +318,7 @@
-     }
- }
+@@ -320,6 +320,8 @@
  
--void LanguageFrame::showEvent(QShowEvent *event)
-+void LanguageFrame::showEvent(QShowEvent *event [[maybe_unused]])
+ void LanguageFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      m_firstfocusget=true;
      m_LanguageBtnList.first()->setFocus();
+ }
 --- a/src/plugins/KNetConnect/netframe.cpp
 +++ b/src/plugins/KNetConnect/netframe.cpp
-@@ -144,8 +144,8 @@
-     // connect(manager, &KyNetworkManager::deviceStateChange, this, &NetFrame::onDeviceStatusChanged);
- }
- 
--void NetFrame::onDeviceStatusChanged(QString deviceName, KyDeviceState newstate, KyDeviceState oldstate,
--                                        NetworkManager::Device::StateChangeReason reason)
-+void NetFrame::onDeviceStatusChanged(QString deviceName [[maybe_unused]], KyDeviceState newstate [[maybe_unused]], KyDeviceState oldstate [[maybe_unused]],
-+                                        NetworkManager::Device::StateChangeReason reason [[maybe_unused]])
+@@ -147,6 +147,8 @@
+ void NetFrame::onDeviceStatusChanged(QString deviceName, KyDeviceState newstate, KyDeviceState oldstate,
+                                         NetworkManager::Device::StateChangeReason reason)
  {
++    Q_UNUSED(deviceName); Q_UNUSED(newstate); Q_UNUSED(oldstate); Q_UNUSED(reason); 
++
      QProcess process;
      process.start("nmcli -t -f STATE general");
+     process.waitForFinished();
 --- a/src/plugins/KPartition/coexistpartitionframe.cpp
 +++ b/src/plugins/KPartition/coexistpartitionframe.cpp
-@@ -18,7 +18,7 @@
- 
- #include "coexistpartitionframe.h"
+@@ -20,6 +20,8 @@
  namespace KInstaller{
--CoexistPartitionFrame::CoexistPartitionFrame(DeviceList devs, QWidget *parent) : QWidget(parent)
-+CoexistPartitionFrame::CoexistPartitionFrame(DeviceList devs [[maybe_unused]], QWidget *parent) : QWidget(parent)
+ CoexistPartitionFrame::CoexistPartitionFrame(DeviceList devs, QWidget *parent) : QWidget(parent)
  {
++    Q_UNUSED(devs); 
++
  
+ }
  }
 --- a/src/plugins/KPartition/createpartitionframe.cpp
 +++ b/src/plugins/KPartition/createpartitionframe.cpp
-@@ -614,7 +614,7 @@
-         QWidget::keyPressEvent(event);
- }
- 
--void CreatePartitionFrame::showEvent(QShowEvent *event)
-+void CreatePartitionFrame::showEvent(QShowEvent *event [[maybe_unused]])
+@@ -44,10 +44,10 @@
+ CreatePartitionFrame::CreatePartitionFrame(CustomPartitiondelegate* delegate,
+                                             DeviceList *pdevlst,
+                                            QWidget *parent) : QDialog(parent),
+-    m_delegate(delegate),
+-    devlst(pdevlst),
+-    mountFileStr(""),
+-    m_tTip(nullptr)
++      mountFileStr(""),
++      m_delegate(delegate),
++      m_tTip(nullptr),
++      devlst(pdevlst)
  {
+ 
+     this->setObjectName("CreatePartitionFrame");
+@@ -608,7 +608,7 @@
+         QWidget * tempwidget=QApplication::focusWidget();
+         QString ss= tempwidget->objectName();
+         int i=0;
+-        int b=i++;
++        (void)(i++);
+     }
+     else
+         QWidget::keyPressEvent(event);
+@@ -616,6 +616,8 @@
+ 
+ void CreatePartitionFrame::showEvent(QShowEvent *event)
+ {
++    Q_UNUSED(event); 
++
      primaryPart->setFocus();//因为界面属性原因show后会重新设置焦点，加上此句话的焦点设置一共触发三次所以后续如果要在显示时一开始不显示焦点事件过滤器得将前三次视为第一次触发一次处理
  
+ }
 --- a/src/plugins/KPartition/custompartitionframe.cpp
 +++ b/src/plugins/KPartition/custompartitionframe.cpp
-@@ -240,7 +240,7 @@
-     tableViewWidget->adjustSize();
- }
+@@ -214,7 +214,7 @@
+         m_tableViews.append(tableView);
+         tableView->tableWidget->setFixedWidth(tableWidth - 5);
  
--void CustomPartitionFrame::newLvmTableViews(DeviceList devs)
-+void CustomPartitionFrame::newLvmTableViews(DeviceList devs [[maybe_unused]])
+-        int w = tableView->tableWidget->columnWidth(0) * 9;
++        (void)(tableView->tableWidget->columnWidth(0) * 9);
+         int h = tableView->tableWidget->rowHeight(0) * (tableView->tableWidget->rowCount() + 3);
+         widgetH += h;
+ //        tableView->setFixedWidth(w);
+@@ -242,6 +242,8 @@
+ 
+ void CustomPartitionFrame::newLvmTableViews(DeviceList devs)
  {
++    Q_UNUSED(devs); 
++
       qDebug() << "111111115";
  }
-@@ -260,7 +260,7 @@
-     m_colorProgressFrame->setDevice(tablewidget->m_dev);
- }
  
--void CustomPartitionFrame::showEvent(QShowEvent *event)
-+void CustomPartitionFrame::showEvent(QShowEvent *event [[maybe_unused]])
+@@ -262,6 +264,8 @@
+ 
+ void CustomPartitionFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      emit reSetFocusPolicy();
  }
-@@ -303,7 +303,7 @@
-     connect(m_createPartFrame, &CreatePartitionFrame::createLvm, this, &CustomPartitionFrame::lvmPartition);
- }
  
--void CustomPartitionFrame::slotDeletePartition(Device::Ptr dev, Partition::Ptr part)
-+void CustomPartitionFrame::slotDeletePartition(Device::Ptr dev [[maybe_unused]], Partition::Ptr part)
+@@ -305,6 +309,8 @@
+ 
+ void CustomPartitionFrame::slotDeletePartition(Device::Ptr dev, Partition::Ptr part)
  {
++    Q_UNUSED(dev); 
++
      qDebug() << "slotDeletePartition" ;
      MessageBox message;
-@@ -328,7 +328,7 @@
-     }
- }
  
--void CustomPartitionFrame::setLvmPartition(Device::Ptr dev, Partition::Ptr part)
-+void CustomPartitionFrame::setLvmPartition(Device::Ptr dev [[maybe_unused]], Partition::Ptr part)
+@@ -330,6 +336,8 @@
+ 
+ void CustomPartitionFrame::setLvmPartition(Device::Ptr dev, Partition::Ptr part)
  {
++    Q_UNUSED(dev); 
++
          qDebug() << "lvmPartition" ;
          if(part) {
-@@ -345,7 +345,7 @@
- {
-     qDebug() << "slotRestorePartitin" ;
+                 m_delegate->lvmUpdatePartition(part);
+@@ -347,6 +355,8 @@
  }
--void CustomPartitionFrame::slotModifyPartition(Device::Ptr dev, Partition::Ptr part)
-+void CustomPartitionFrame::slotModifyPartition(Device::Ptr dev [[maybe_unused]], Partition::Ptr part)
+ void CustomPartitionFrame::slotModifyPartition(Device::Ptr dev, Partition::Ptr part)
  {
++    Q_UNUSED(dev); 
++
      qDebug() << "slotModifyPartition" ;
      QString dev_path = part->m_devPath;
-@@ -432,7 +432,7 @@
-     m_lvmBtn->setText(tr("Create lvm"));//创建lvm
- }
+     if(!m_delegate->isPartitionTableMatchDe(dev_path) && !part->m_partitionPath.contains("lvm-lv")) {
+@@ -396,7 +406,7 @@
+     }
  
--void CustomPartitionFrame::slotSelectBootCombox(QString bootstr)
-+void CustomPartitionFrame::slotSelectBootCombox(QString bootstr [[maybe_unused]])
+     if(m_bootCombox->count() <= 0) {
+-        int i = 0;
++        (void)(0);
+         for(Device::Ptr dev : devlist) {
+             QString strRealData(QString("%1 %2").arg(dev->m_path).arg(dev->m_model));//硬盘全称
+ //            QString strShow = m_bootCombox->view()->fontMetrics().elidedText(strRealData,Qt::ElideRight,m_bootCombox->width()-20);//当文字过长时，末尾显示省略号
+@@ -434,6 +444,8 @@
+ 
+ void CustomPartitionFrame::slotSelectBootCombox(QString bootstr)
  {
++    Q_UNUSED(bootstr); 
++
      QString currentData = m_bootCombox->currentData().toString();//获取完整值
      m_delegate->setBootLoaderPath(currentData);
+     m_bootstr = currentData;
+--- a/src/plugins/KPartition/delegate/custom_partition_delegate.cpp
++++ b/src/plugins/KPartition/delegate/custom_partition_delegate.cpp
+@@ -307,7 +307,7 @@
+     ValidateStates states = {};
+     bool found_efi = false;
+ 
+-    bool repeated_mount = false;
++    (void)(false);
+     QStringList repeated_mount_listStr;
+ 
+     Partition::Ptr rootPartition;
 --- a/src/plugins/KPartition/delegate/partition_delegate.cpp
 +++ b/src/plugins/KPartition/delegate/partition_delegate.cpp
 @@ -266,7 +266,7 @@
@@ -163,31 +245,24 @@
  }
  
  bool PartitionDelegate::addLvmPartition()
-@@ -935,8 +936,8 @@
- bool PartitionDelegate::reCalculateExtPartBoundry(PartitionList &partitions,
-                                                   PartitionAction action,
-                                                   Partition::Ptr curPartition,
--                                                  qint64 &startSector,
--                                                  qint64 &endSector)
-+                                                  qint64 &startSector [[maybe_unused]],
-+                                                  qint64 &endSector [[maybe_unused]])
+@@ -938,6 +939,8 @@
+                                                   qint64 &startSector,
+                                                   qint64 &endSector)
  {
++    Q_UNUSED(startSector); Q_UNUSED(endSector); 
++
      if(partitions.length() == 0) {
          return false;
-@@ -968,10 +969,10 @@
-     return startFound && endFound;
- }
- 
--bool PartitionDelegate::reCalculateExtPartBoundry(PartitionAction action,
-+bool PartitionDelegate::reCalculateExtPartBoundry(PartitionAction action [[maybe_unused]],
-                                                   Partition::Ptr curPartition,
--                                                  qint64 &startSector,
--                                                  qint64 &endSector)
-+                                                  qint64 &startSector [[maybe_unused]],
-+                                                  qint64 &endSector [[maybe_unused]])
+     }
+@@ -973,6 +976,8 @@
+                                                   qint64 &startSector,
+                                                   qint64 &endSector)
  {
++    Q_UNUSED(action); Q_UNUSED(startSector); Q_UNUSED(endSector); 
++
      const int devIndex = deviceIndex(virtualDevices(), curPartition->m_devPath);
      if(devIndex == -1) {
+         return false;
 --- a/src/plugins/KPartition/frames/diskinfoview.cpp
 +++ b/src/plugins/KPartition/frames/diskinfoview.cpp
 @@ -33,7 +33,7 @@
@@ -250,124 +325,132 @@
      return (fontSize1>fontSize2)?fontSize1:fontSize2;
  }
  
-@@ -457,7 +457,7 @@
-     }
- }
+@@ -459,6 +459,8 @@
  
--void EncryptSetFrame::checkTPMEncrypt(bool checked)
-+void EncryptSetFrame::checkTPMEncrypt(bool checked [[maybe_unused]])
+ void EncryptSetFrame::checkTPMEncrypt(bool checked)
  {
++    Q_UNUSED(checked); 
++
      if(m_pTPMEncrypt->isChecked())
      {
-@@ -472,7 +472,7 @@
-     }
- }
+         m_pTPMEncrypt->setChecked(true);
+@@ -474,6 +476,8 @@
  
--void EncryptSetFrame::checkSoftEncrypt(bool checked)
-+void EncryptSetFrame::checkSoftEncrypt(bool checked [[maybe_unused]])
+ void EncryptSetFrame::checkSoftEncrypt(bool checked)
  {
++    Q_UNUSED(checked); 
++
      if(m_isTPMEncrypt)
      {
-@@ -492,7 +492,7 @@
-     }
- }
+         if(m_pSoftEncrypt->isChecked())
+@@ -494,6 +498,8 @@
  
--void EncryptSetFrame::showEvent(QShowEvent *event)
-+void EncryptSetFrame::showEvent(QShowEvent *event [[maybe_unused]])
+ void EncryptSetFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      m_pTPMEncryptWidget->setFocus();
      update();
-@@ -527,7 +527,7 @@
-     }
  }
+@@ -529,6 +535,8 @@
  
--void EncryptSetFrame::resizeEvent(QResizeEvent *event)
-+void EncryptSetFrame::resizeEvent(QResizeEvent *event [[maybe_unused]])
+ void EncryptSetFrame::resizeEvent(QResizeEvent *event)
  {
++    Q_UNUSED(event); 
++
      QRect screenRect = QApplication::desktop()->screenGeometry();
      this->move(screenRect.width() / 2 - this->width() / 2, screenRect.height() / 2 - this->height() / 2);
+ }
 --- a/src/plugins/KPartition/frames/levelscrolldiskview.cpp
 +++ b/src/plugins/KPartition/frames/levelscrolldiskview.cpp
-@@ -64,7 +64,7 @@
- 
+@@ -65,6 +65,8 @@
      //设置鼠标左键拖动
      QScroller::grabGesture(listWidget,QScroller::LeftMouseButtonGesture);
--    connect(listWidget,&QListWidget::itemPressed,this,[=](QListWidgetItem *item){
-+    connect(listWidget,&QListWidget::itemPressed,this,[=](QListWidgetItem *item [[maybe_unused]]){
+     connect(listWidget,&QListWidget::itemPressed,this,[=](QListWidgetItem *item){
++    Q_UNUSED(item); 
++
          listWidget->setStyleSheet("QListWidget#ScrollList::Item:focus{border:2px solid transparent;background-color:transparent;border-radius:6px;}");
      });
      hlistlayout = new QHBoxLayout(this);
 --- a/src/plugins/KPartition/frames/pushbuttonicon.cpp
 +++ b/src/plugins/KPartition/frames/pushbuttonicon.cpp
-@@ -146,7 +146,7 @@
-     return QWidget::eventFilter(target,event);//返回父类的事件过滤器
- }
+@@ -148,6 +148,8 @@
  
--void PushButtonIcon::paintEvent(QPaintEvent *ev)
-+void PushButtonIcon::paintEvent(QPaintEvent *ev [[maybe_unused]])
+ void PushButtonIcon::paintEvent(QPaintEvent *ev)
  {
++    Q_UNUSED(ev); 
++
      pain.begin(this);
      pain.setPen(QPen(Qt::blue,1,Qt::SolidLine,Qt::FlatCap));
+     pain.fillRect(rect(),Shadow);
 --- a/src/plugins/KPartition/frames/setPartitionsSize.cpp
 +++ b/src/plugins/KPartition/frames/setPartitionsSize.cpp
-@@ -396,7 +396,7 @@
-     m_pDataSizeRangTit->setText( tr("Size should be within ")+QString::number(((double)m_nDataMiniSize)/1024/1024/1024,'f',1)+" - "+QString::number(((double)m_nDataMaxSize)/1024/1024/1024,'f',1)+"GB"+tr("etc"));
- }
+@@ -398,6 +398,8 @@
  
--void SetPartitionsSize::resizeEvent(QResizeEvent *event)
-+void SetPartitionsSize::resizeEvent(QResizeEvent *event [[maybe_unused]])
+ void SetPartitionsSize::resizeEvent(QResizeEvent *event)
  {
++    Q_UNUSED(event); 
++
      QRect screenRect = QApplication::desktop()->screenGeometry();
      this->move(screenRect.width() / 2 - this->width() / 2, screenRect.height() / 2 - this->height() / 2);
-@@ -454,7 +454,7 @@
-     }
  }
+@@ -456,6 +458,8 @@
  
--void SetPartitionsSize::showEvent(QShowEvent *event)
-+void SetPartitionsSize::showEvent(QShowEvent *event [[maybe_unused]])
+ void SetPartitionsSize::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      m_pSizeQSlider->setFocus();
  }
+ 
 --- a/src/plugins/KPartition/frames/tablewidgetview.cpp
 +++ b/src/plugins/KPartition/frames/tablewidgetview.cpp
-@@ -129,7 +129,7 @@
-     addTableWidget();
- }
+@@ -131,6 +131,8 @@
  
--void TableWidgetView::getLvmItems(DeviceList devs)
-+void TableWidgetView::getLvmItems(DeviceList devs [[maybe_unused]])
+ void TableWidgetView::getLvmItems(DeviceList devs)
  {
++    Q_UNUSED(devs); 
++
      qDebug() << "getLvmItems";
  }
-@@ -302,7 +302,7 @@
- //}
  
+@@ -304,6 +306,8 @@
  //show button text
--void TableWidgetView::slotShowTableItem(int curRow, int curCol, int preRow, int preCol)
-+void TableWidgetView::slotShowTableItem(int curRow, int curCol [[maybe_unused]], int preRow, int preCol [[maybe_unused]])
+ void TableWidgetView::slotShowTableItem(int curRow, int curCol, int preRow, int preCol)
  {
++    Q_UNUSED(curCol); Q_UNUSED(preCol); 
++
     qDebug() << "curRow="<<curRow ;
         
+     if(curRow != -1) {
+@@ -422,7 +426,7 @@
+             PushButtonIcon* changebtn = new PushButtonIcon(QString(":/res/pic/change.svg"), "", this);
+             changebtn->setObjectName("changebtn");
+             connect(changebtn, &PushButtonIcon::clicked, this, &TableWidgetView::buttonChangeClicked);
+-            CBaseTableItem* changeItem = new CBaseTableItem(CBaseTableItem::WIDGET,"",NULL, changebtn, NULL );
++            (void)(new CBaseTableItem(CBaseTableItem::WIDGET,"",NULL, changebtn, NULL ));
+             items.append(delItem);//删除
+ 	   // items.append(changeItem);//修改
+ 	    changebtn->setVisible(false);
 --- a/src/plugins/KPartition/mainpartframe.cpp
 +++ b/src/plugins/KPartition/mainpartframe.cpp
-@@ -1057,7 +1057,7 @@
+@@ -1059,6 +1059,8 @@
  
- }
- 
--void MainPartFrame::showEvent(QShowEvent *event)
-+void MainPartFrame::showEvent(QShowEvent *event [[maybe_unused]])
+ void MainPartFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      showQuikPartFrame();//默认每次进去此界面时，显示全盘安装
      initfullPartFrameFocusPolicy();
+     this->setFocus();
 --- a/src/plugins/KPartition/manualpartition_operator.cpp
 +++ b/src/plugins/KPartition/manualpartition_operator.cpp
-@@ -22,31 +22,37 @@
- {
- 
+@@ -24,29 +24,37 @@
  }
--ManualPartition_operator::ManualPartition_operator(Device *dev, Partition *partition, QStringList mountpoints, QWidget *parent)
-+ManualPartition_operator::ManualPartition_operator(Device *dev [[maybe_unused]], Partition *partition [[maybe_unused]], QStringList mountpoints [[maybe_unused]], QWidget *parent [[maybe_unused]])
+ ManualPartition_operator::ManualPartition_operator(Device *dev, Partition *partition, QStringList mountpoints, QWidget *parent)
  {
++    Q_UNUSED(dev); Q_UNUSED(partition); Q_UNUSED(mountpoints); Q_UNUSED(parent); 
++
      
  }
  bool ManualPartition_operator::creatorPartTable()
@@ -402,15 +485,29 @@
  }
 --- a/src/plugins/KPartition/modifypartitionframe.cpp
 +++ b/src/plugins/KPartition/modifypartitionframe.cpp
-@@ -738,7 +738,7 @@
-     emit finished();
- }
+@@ -42,9 +42,10 @@
  
--void ModifyPartitionFrame::showEvent(QShowEvent *event)
-+void ModifyPartitionFrame::showEvent(QShowEvent *event [[maybe_unused]])
+ namespace KInstaller {
+ 
+-ModifyPartitionFrame::ModifyPartitionFrame(CustomPartitiondelegate* delegate, QWidget *parent) : QDialog(parent),m_delegate(delegate),
+-    mountFileStr(""),
+-    closeTip(nullptr)
++ModifyPartitionFrame::ModifyPartitionFrame(CustomPartitiondelegate* delegate, QWidget *parent) : QDialog(parent),
++      mountFileStr(""),
++      m_delegate(delegate),
++      closeTip(nullptr)
  {
+     this->setObjectName("ModifyPartitionFrame");
+     initUI();
+@@ -740,6 +741,8 @@
+ 
+ void ModifyPartitionFrame::showEvent(QShowEvent *event)
+ {
++    Q_UNUSED(event); 
++
      fileFormat->setFocus();//放在showevent中会导致foucsin事件触发多次达不到第一次隐藏焦点边框要求固移到构造函数中
  }
+ 
 --- a/src/plugins/KPartition/partman/datastruct.cpp
 +++ b/src/plugins/KPartition/partman/datastruct.cpp
 @@ -42,6 +42,7 @@
@@ -483,16 +580,16 @@
  }
  
  PedPartitionType getPedPartitionType(Partition::Ptr partition)
-@@ -376,7 +375,7 @@
-     return isOK;
- }
+@@ -378,6 +377,8 @@
  
--bool checkCanCreate(PedDevice* pdev)
-+bool checkCanCreate(PedDevice* pdev [[maybe_unused]])
+ bool checkCanCreate(PedDevice* pdev)
  {
++    Q_UNUSED(pdev); 
++
      qDebug() << "checkCanCreate检测当前磁盘是否能创建分区";
  //    PedDisk* pDisk = nullptr;
-@@ -394,6 +393,7 @@
+ //    pDisk = ped_disk_new(pdev);
+@@ -394,6 +395,7 @@
  //        destroyDisk(pDisk);
  //        return true;
  //    }
@@ -531,27 +628,27 @@
      case FSType::Fat16: return "fat16";
      case FSType::Fat32: return "fat32";
      case FSType::Jfs: return "jfs";
-@@ -470,7 +470,7 @@
- 
- 
+@@ -472,6 +472,8 @@
  }
--bool isMBRPreferred(const DeviceList &devices)
-+bool isMBRPreferred(const DeviceList &devices [[maybe_unused]])
+ bool isMBRPreferred(const DeviceList &devices)
  {
++    Q_UNUSED(devices); 
++
      return !isEFIEnabled();
  }
+ 
 --- a/src/plugins/KPartition/partman/proberos.cpp
 +++ b/src/plugins/KPartition/partman/proberos.cpp
-@@ -46,7 +46,7 @@
+@@ -48,6 +48,8 @@
  
- }
- 
--OSProberItemStr getOsItemInfoBy(QString path)
-+OSProberItemStr getOsItemInfoBy(QString path [[maybe_unused]])
+ OSProberItemStr getOsItemInfoBy(QString path)
  {
++    Q_UNUSED(path); 
++
  //    if(m_osProberList.count() > 0) {
  //        for(OSProberItemStr osStr: m_osProberList) {
-@@ -56,6 +56,7 @@
+ //            if(osStr.path.startsWith(path)) {
+@@ -56,6 +58,7 @@
  //        }
  //    }
  
@@ -561,66 +658,75 @@
  OSType getOSTypeByName(QString typeName)
 --- a/src/plugins/KPartition/prepareinstallframe.cpp
 +++ b/src/plugins/KPartition/prepareinstallframe.cpp
-@@ -178,7 +178,7 @@
-     //connect(this, &PrepareInstallFrame::enterKeyPressed, this, &PrepareInstallFrame::clickNextButton);
- }
+@@ -180,6 +180,8 @@
  
--void PrepareInstallFrame::getProcessThread(int exitcode)
-+void PrepareInstallFrame::getProcessThread(int exitcode [[maybe_unused]])
+ void PrepareInstallFrame::getProcessThread(int exitcode)
  {
++    Q_UNUSED(exitcode); 
++
  //    if(exitcode == 0) {
  //        emit signalInstalScriptlFinished();
-@@ -239,7 +239,7 @@
-         QWidget::keyPressEvent(event);
- }
+ //    } else
+@@ -241,6 +243,8 @@
  
--void PrepareInstallFrame::showEvent(QShowEvent *event)
-+void PrepareInstallFrame::showEvent(QShowEvent *event [[maybe_unused]])
+ void PrepareInstallFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      m_tipCheck->setFocus();
      this->activateWindow();
+     emit reSetFocusPolicy();
 --- a/src/plugins/KPartition/quickpartitionframe.cpp
 +++ b/src/plugins/KPartition/quickpartitionframe.cpp
-@@ -470,7 +470,7 @@
-     }
- 
+@@ -472,6 +472,8 @@
  }
--void FullPartitionFrame::DataDiskCheck(bool value)
-+void FullPartitionFrame::DataDiskCheck(bool value [[maybe_unused]])
+ void FullPartitionFrame::DataDiskCheck(bool value)
  {
++    Q_UNUSED(value); 
++
          //m_encryptBox->setDisabled(value);
  }
-@@ -528,7 +528,7 @@
-     return ;
- }
  
--void FullPartitionFrame::showEvent(QShowEvent *event)
-+void FullPartitionFrame::showEvent(QShowEvent *event [[maybe_unused]])
+@@ -530,6 +532,8 @@
+ 
+ void FullPartitionFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      if(slistDisk->m_disklist.count()==1)
      {
+         if(!slistDisk->m_disklist.at(0)->checkpic->isVisible())
 --- a/src/plugins/KTimeZone/mapwidget.cpp
 +++ b/src/plugins/KTimeZone/mapwidget.cpp
-@@ -76,7 +76,7 @@
-     delete m_pMenu;
- }
+@@ -39,7 +39,7 @@
  
--void MapWidget::paintEvent(QPaintEvent *event)
-+void MapWidget::paintEvent(QPaintEvent *event [[maybe_unused]])
+     //当显示器分辨率太小时，就缩小世界地图
+     QScreen* NowScreen=QGuiApplication::primaryScreen();
+-    int SCreenHeight=NowScreen->size().height();
++    (void)(NowScreen->size().height());
+     int SCreenWidth=NowScreen->size().width();
+     if(1024 > SCreenWidth)
+     {
+@@ -78,6 +78,8 @@
+ 
+ void MapWidget::paintEvent(QPaintEvent *event)
  {
++    Q_UNUSED(event); 
++
      double width = m_backgroundImage.width();
      double height = m_backgroundImage.height();
+     QPainter painter(this);
 --- a/src/plugins/KTimeZone/timezoneframe.cpp
 +++ b/src/plugins/KTimeZone/timezoneframe.cpp
-@@ -134,7 +134,7 @@
-     return QObject::eventFilter(watched,event);
- }
+@@ -136,6 +136,8 @@
  
--void TimeZoneFrame::showEvent(QShowEvent *event)
-+void TimeZoneFrame::showEvent(QShowEvent *event [[maybe_unused]])
+ void TimeZoneFrame::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      m_firstfocusget=true;
      m_comboxZone->setFocus();
+ }
 --- a/src/plugins/KTimeZone/timezonemodel.cpp
 +++ b/src/plugins/KTimeZone/timezonemodel.cpp
 @@ -105,6 +105,7 @@
@@ -633,46 +739,46 @@
  QVariant TimeZoneModel::data(const QModelIndex &index, int role) const
 --- a/src/plugins/KUserRegister/modeselectframe.cpp
 +++ b/src/plugins/KUserRegister/modeselectframe.cpp
-@@ -193,7 +193,7 @@
-     return QObject::eventFilter(watched,event);
- }
+@@ -195,6 +195,8 @@
  
--void modeselect::showEvent(QShowEvent *event)
-+void modeselect::showEvent(QShowEvent *event [[maybe_unused]])
+ void modeselect::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      m_firstfocusget=true;
      bntList.first()->setFocus();
+     emit reSetFocusPolicySignal();
 --- a/src/plugins/KUserRegister/securityquestions.cpp
 +++ b/src/plugins/KUserRegister/securityquestions.cpp
-@@ -380,7 +380,7 @@
- //    setNextButton();
- }
+@@ -382,6 +382,8 @@
  
--void securityquestions::setSetuplater(bool checked)
-+void securityquestions::setSetuplater(bool checked [[maybe_unused]])
+ void securityquestions::setSetuplater(bool checked)
  {
++    Q_UNUSED(checked); 
++
  //    emit lsSetsetUserQestA(checked);
  
-@@ -441,7 +441,7 @@
-     }
- }
+ //    if(checked)
+@@ -443,6 +445,8 @@
  
--void securityquestions::showEvent(QShowEvent *event)
-+void securityquestions::showEvent(QShowEvent *event [[maybe_unused]])
+ void securityquestions::showEvent(QShowEvent *event)
  {
++    Q_UNUSED(event); 
++
      m_firstfocusget=true;
      m_question1->setFocus();
+     emit reSetFocusPolicySignal();
 --- a/src/plugins/KUserRegister/userframe.cpp
 +++ b/src/plugins/KUserRegister/userframe.cpp
-@@ -261,7 +261,7 @@
+@@ -263,6 +263,8 @@
  
- }
- 
--void UserFrame::modeselslots(int index)
-+void UserFrame::modeselslots(int index [[maybe_unused]])
+ void UserFrame::modeselslots(int index)
  {
++    Q_UNUSED(index); 
++
  
  }
+ 
 --- a/src/plugins/KUserRegister/userregisterframe.cpp
 +++ b/src/plugins/KUserRegister/userregisterframe.cpp
 @@ -712,7 +712,7 @@
@@ -738,16 +844,16 @@
          qWarning() << QString("cat /proc/filesystems: Failed:%1").arg(error);
 --- a/src/plugins/PluginService/sysInfo/kpasswordcheck.cpp
 +++ b/src/plugins/PluginService/sysInfo/kpasswordcheck.cpp
-@@ -72,7 +72,7 @@
-     return ret;
- }
+@@ -74,6 +74,8 @@
  
--QString KPasswordCheck::pwqualityError(char* buf, size_t len, int rv, void *quxerror)
-+QString KPasswordCheck::pwqualityError(char* buf, size_t len, int rv, void *quxerror [[maybe_unused]])
+ QString KPasswordCheck::pwqualityError(char* buf, size_t len, int rv, void *quxerror)
  {
++    Q_UNUSED(quxerror); 
++
      static char intbuf[PWQ_MAX_ERROR_MESSAGE_LEN];
  
-@@ -84,7 +84,7 @@
+            if (buf == NULL) {
+@@ -84,7 +86,7 @@
             switch(rv) {
             case PWQ_ERROR_MEM_ALLOC:
                     if (auxerror) {
@@ -795,39 +901,40 @@
  }
 --- a/src/plugins/PluginService/ui_unit/messagebox.cpp
 +++ b/src/plugins/PluginService/ui_unit/messagebox.cpp
-@@ -232,7 +232,7 @@
-     }
- }
+@@ -234,6 +234,8 @@
  
--void MessageBox::resizeEvent(QResizeEvent *event)
-+void MessageBox::resizeEvent(QResizeEvent *event [[maybe_unused]])
+ void MessageBox::resizeEvent(QResizeEvent *event)
  {
++    Q_UNUSED(event); 
++
  //    InstallerMainWidget::resizeEvent(event);
      // Your code here
+     QRect screenRect = QApplication::desktop()->screenGeometry();
 --- a/src/plugins/PluginService/ui_unit/middleframemanager.h
 +++ b/src/plugins/PluginService/ui_unit/middleframemanager.h
-@@ -39,11 +39,11 @@
-         if(p==this)
+@@ -40,10 +40,14 @@
              emit backspacepressed();
      }
--    virtual void getmessage(QWidget *p,QString str){
-+    virtual void getmessage(QWidget *p [[maybe_unused]],QString str [[maybe_unused]]){
+     virtual void getmessage(QWidget *p,QString str){
++    Q_UNUSED(p); Q_UNUSED(str); 
++
          return;
      }
      virtual  void slotStartInstall(){return;}
--    virtual void setSizebyFrame(QWidget *pFrame, int SCreenWidth, int SCreenHeight){
-+    virtual void setSizebyFrame(QWidget *pFrame [[maybe_unused]], int SCreenWidth [[maybe_unused]], int SCreenHeight [[maybe_unused]]){
+     virtual void setSizebyFrame(QWidget *pFrame, int SCreenWidth, int SCreenHeight){
++    Q_UNUSED(pFrame); Q_UNUSED(SCreenWidth); Q_UNUSED(SCreenHeight); 
++
           return;
      }
  
 --- a/src/plugins/VirtualKeyboard/src/virtualkeyboard.cpp
 +++ b/src/plugins/VirtualKeyboard/src/virtualkeyboard.cpp
-@@ -75,7 +75,7 @@
+@@ -77,6 +77,8 @@
  
- }
- 
--void VirtualKeyboard::adjustGeometry(int screen)
-+void VirtualKeyboard::adjustGeometry(int screen [[maybe_unused]])
+ void VirtualKeyboard::adjustGeometry(int screen)
  {
++    Q_UNUSED(screen); 
++
  //    QDesktopWidget *desktop = QApplication::desktop();
  //    QWidget *activateScreen = desktop->screen(screen);
+ //    setGeometry(activateScreen->width() / 3, activateScreen->height() - activateScreen->height() * 3 / 4,

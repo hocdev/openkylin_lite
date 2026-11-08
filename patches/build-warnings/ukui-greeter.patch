@@ -1,119 +1,155 @@
+--- a/ukui-greeter/BiometricAuth/biometricauthwidget.cpp
++++ b/ukui-greeter/BiometricAuth/biometricauthwidget.cpp
+@@ -28,14 +28,14 @@
+ 
+ BiometricAuthWidget::BiometricAuthWidget(BiometricProxy *proxy, QWidget *parent) :
+     QWidget(parent),
+-    proxy(proxy),
+-    isInAuth(false),
+-    movieTimer(nullptr),
+-    retrytimer(nullptr),
+-    failedCount(0),
+-    usebind(false),
+-    beStopped(false),
+-    timeoutCount(0)
++      proxy(proxy),
++      isInAuth(false),
++      movieTimer(nullptr),
++      failedCount(0),
++      beStopped(false),
++      timeoutCount(0),
++      retrytimer(nullptr),
++      usebind(false)
+ {
+     usebind = getAuthDouble();
+     qDebug() << "BiometricAuthWidget::BiometricAuthWidget";
 --- a/ukui-greeter/BiometricAuth/biometricdeviceinfo.cpp
 +++ b/ukui-greeter/BiometricAuth/biometricdeviceinfo.cpp
-@@ -220,7 +220,7 @@
-     }
- }
+@@ -222,6 +222,8 @@
  
--static int getValueFromSettings(const QString &userName, const QString &key, int defaultValue = 3)
-+static int getValueFromSettings(const QString &userName [[maybe_unused]], const QString &key, int defaultValue = 3)
+ static int getValueFromSettings(const QString &userName, const QString &key, int defaultValue = 3)
  {
++    Q_UNUSED(userName); 
++
      //从家目录下的配置文件中获取
  //    QString configPath = QString("/home/%1/" UKUI_BIOMETRIC_CONFIG_PATH).arg(userName);
+     QString configPath = QDir::homePath() + "/" + UKUI_BIOMETRIC_CONFIG_PATH;
 --- a/ukui-greeter/BiometricAuth/biometricproxy.cpp
 +++ b/ukui-greeter/BiometricAuth/biometricproxy.cpp
-@@ -126,7 +126,7 @@
-     return reply.value();
- }
+@@ -128,6 +128,8 @@
  
--int BiometricProxy::GetFrameFd(int drvid)
-+int BiometricProxy::GetFrameFd(int drvid [[maybe_unused]])
+ int BiometricProxy::GetFrameFd(int drvid)
  {
++    Q_UNUSED(drvid); 
++
      QDBusInterface *interface = new QDBusInterface("org.demo.pictureshow",
                                                     "/org/demo/pictureshow",
+                                                    "org.demo.pictureshow",
+--- a/ukui-greeter/BiometricAuth/giodbus.cpp
++++ b/ukui-greeter/BiometricAuth/giodbus.cpp
+@@ -30,7 +30,7 @@
+     GError          **error = NULL;
+ 
+     gint fd,dup_fd;
+-    const gchar * response;
++    
+     fd = -1;
+     dup_fd = -1;
+     method_call_message = NULL;
 --- a/ukui-greeter/VirtualKeyboard/src/charsmorewidget.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/charsmorewidget.cpp
-@@ -40,7 +40,7 @@
+@@ -42,6 +42,8 @@
  
- }
- 
--void CharsMoreWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
-+void CharsMoreWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical [[maybe_unused]]/* = false*/, bool floatStatus)
+ void CharsMoreWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
++    Q_UNUSED(isVertical); 
++
      QMap<QWidget*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
+         QWidget *widget = itGeometry.key();
 --- a/ukui-greeter/VirtualKeyboard/src/charswidget.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/charswidget.cpp
-@@ -208,7 +208,7 @@
-     m_mapBtnGeometrys[rightBtn] = rightBtn->geometry();
- }
+@@ -210,6 +210,8 @@
  
--void CharsWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
-+void CharsWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical [[maybe_unused]]/* = false*/, bool floatStatus)
+ void CharsWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
++    Q_UNUSED(isVertical); 
++
      QMap<KBButton*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
+         KBButton *button = itGeometry.key();
 --- a/ukui-greeter/VirtualKeyboard/src/dragwidget.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/dragwidget.cpp
-@@ -45,7 +45,7 @@
-     m_mapSubGeometrys[m_labelDrag] = m_labelDrag->geometry();
- }
+@@ -47,6 +47,8 @@
  
--void DragWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
-+void DragWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical [[maybe_unused]]/* = false*/, bool floatStatus)
+ void DragWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
++    Q_UNUSED(isVertical); 
++
      setFixedHeight(KEYBOARD_DRAG_DEFAULT_HEIGHT*lfHeightScale);
      QMap<QLabel*, QRect>::iterator itGeometry = m_mapSubGeometrys.begin();
+     for (; itGeometry != m_mapSubGeometrys.end(); itGeometry ++) {
 --- a/ukui-greeter/VirtualKeyboard/src/kbbutton.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/kbbutton.cpp
-@@ -171,12 +171,12 @@
-     setShiftState(m_isCaps);
+@@ -173,10 +173,14 @@
+ 
+ void KBButton::setCtrlState(bool isCtrl)
+ {
++    Q_UNUSED(isCtrl); 
++
+ 
  }
  
--void KBButton::setCtrlState(bool isCtrl)
-+void KBButton::setCtrlState(bool isCtrl [[maybe_unused]])
+ void KBButton::setAltState(bool isAlt)
  {
- 
- }
- 
--void KBButton::setAltState(bool isAlt)
-+void KBButton::setAltState(bool isAlt [[maybe_unused]])
- {
++    Q_UNUSED(isAlt); 
++
  
  }
 --- a/ukui-greeter/VirtualKeyboard/src/kbtitle.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/kbtitle.cpp
-@@ -90,7 +90,7 @@
-     Q_EMIT btnClicked(keyName);
- }
+@@ -92,6 +92,8 @@
  
--void KBTitle::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
-+void KBTitle::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical [[maybe_unused]]/* = false*/, bool floatStatus)
+ void KBTitle::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
++    Q_UNUSED(isVertical); 
++
      setFixedHeight(KEYBOARD_TITLE_DEFAULT_HEIGHT*lfHeightScale);
      QMap<QPushButton*, QRect>::iterator itGeometry = m_mapSubGeometrys.begin();
+     for (; itGeometry != m_mapSubGeometrys.end(); itGeometry ++) {
 --- a/ukui-greeter/VirtualKeyboard/src/letterswidget.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/letterswidget.cpp
-@@ -247,7 +247,7 @@
-     m_mapBtnGeometrys[rightBtn] = rightBtn->geometry();
- }
+@@ -249,6 +249,8 @@
  
--void LettersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
-+void LettersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical [[maybe_unused]]/* = false*/, bool floatStatus)
+ void LettersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
++    Q_UNUSED(isVertical); 
++
      QMap<KBButton*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
+         KBButton *button = itGeometry.key();
 --- a/ukui-greeter/VirtualKeyboard/src/numberswidget.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/numberswidget.cpp
-@@ -233,7 +233,7 @@
-     m_mapBtnGeometrys[enterBtn] = enterBtn->geometry();
- }
+@@ -235,6 +235,8 @@
  
--void NumbersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
-+void NumbersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical [[maybe_unused]]/* = false*/, bool floatStatus)
+ void NumbersWidget::adjustGeometry(double lfWidthScale, double lfHeightScale, bool isVertical/* = false*/, bool floatStatus)
  {
++    Q_UNUSED(isVertical); 
++
      QMap<QWidget*, QRect>::iterator itGeometry = m_mapBtnGeometrys.begin();
      for (; itGeometry != m_mapBtnGeometrys.end(); itGeometry ++) {
+         QWidget *widget = itGeometry.key();
 --- a/ukui-greeter/VirtualKeyboard/src/virtualkeyboardwidget.cpp
 +++ b/ukui-greeter/VirtualKeyboard/src/virtualkeyboardwidget.cpp
-@@ -202,7 +202,7 @@
-     return QWidget::eventFilter(watched, event);
- }
+@@ -204,6 +204,8 @@
  
--void VirtualKeyboardWidget::resizeEvent(QResizeEvent *event)
-+void VirtualKeyboardWidget::resizeEvent(QResizeEvent *event [[maybe_unused]])
+ void VirtualKeyboardWidget::resizeEvent(QResizeEvent *event)
  {
++    Q_UNUSED(event); 
++
      adjustGeometry();
  }
+ 
 --- a/ukui-greeter/common/configuration.cpp
 +++ b/ukui-greeter/common/configuration.cpp
 @@ -221,7 +221,7 @@
@@ -149,15 +185,27 @@
  #include <mutex>
 --- a/ukui-greeter/common/monitorwatcher.cpp
 +++ b/ukui-greeter/common/monitorwatcher.cpp
-@@ -101,7 +101,7 @@
- /**
-  * 获取显示器的最大分辨率
-  */
--QSize MonitorWatcher::getMonitorMaxSize(const QString &drm)
-+QSize MonitorWatcher::getMonitorMaxSize(const QString &drm [[maybe_unused]])
+@@ -27,9 +27,9 @@
+ 
+ MonitorWatcher::MonitorWatcher(QObject *parent)
+     : QThread(parent),
++      monitorFisrst(""),
+       virtualSize(0, 0),
+-      monitorCount(0),
+-      monitorFisrst("")
++      monitorCount(0)
  {
+ 
+ }
+@@ -103,6 +103,8 @@
+  */
+ QSize MonitorWatcher::getMonitorMaxSize(const QString &drm)
+ {
++    Q_UNUSED(drm); 
++
  //    int width, height;
  //    QFile drmModeFile(DRM_DIR + drm + "/modes");
+ //    if(drmModeFile.open(QIODevice::ReadOnly | QIODevice::Text)) {
 --- a/ukui-greeter/display-switch/greeterscreen.cpp
 +++ b/ukui-greeter/display-switch/greeterscreen.cpp
 @@ -167,8 +167,10 @@
@@ -184,39 +232,52 @@
                  }
  //                DEBUG_LOG("ready set transform %d,%d,%d",
  //                          transform.matrix[0][0],transform.matrix[1][1],
-@@ -240,7 +242,7 @@
-     return true;
- }
+@@ -242,6 +244,8 @@
  
--void GreeterScreen::debugOutputInfo(OutputsConfig outputConfig)
-+void GreeterScreen::debugOutputInfo(OutputsConfig outputConfig [[maybe_unused]])
+ void GreeterScreen::debugOutputInfo(OutputsConfig outputConfig)
  {
++    Q_UNUSED(outputConfig); 
++
  //    DEBUG_LOG("screensize:%dx%d,%d",outputConfig.m_screenWidth, outputConfig.m_screenHeight,outputConfig.m_outputList.count());
  //    for (int koutput = 0; koutput < outputConfig.m_outputList.count(); koutput++) {
+ //         DEBUG_LOG("screensize:%dx%d",outputConfig.m_screenWidth, outputConfig.m_screenHeight);
 --- a/ukui-greeter/greeter/agreementwindow.cpp
 +++ b/ukui-greeter/greeter/agreementwindow.cpp
-@@ -92,7 +92,7 @@
-     emit switchToGreeter();
- }
+@@ -94,6 +94,8 @@
  
--void AgreementWindow::resizeEvent(QResizeEvent *event)
-+void AgreementWindow::resizeEvent(QResizeEvent *event [[maybe_unused]])
+ void AgreementWindow::resizeEvent(QResizeEvent *event)
  {
++    Q_UNUSED(event); 
++
     // qDebug()<<""
      int m_width = 960,m_height = 722 - 88;
+     if(this->width() < (960+80))
 --- a/ukui-greeter/greeter/batterywidget.cpp
 +++ b/ukui-greeter/greeter/batterywidget.cpp
-@@ -153,7 +153,7 @@
-         QWidget::showEvent(event);
- }
+@@ -155,6 +155,8 @@
  
--void BatteryWidget::paintEvent(QPaintEvent *event)
-+void BatteryWidget::paintEvent(QPaintEvent *event [[maybe_unused]])
+ void BatteryWidget::paintEvent(QPaintEvent *event)
  {
++    Q_UNUSED(event); 
++
      QStyleOption opt;
      opt.init(this);
+     QPainter p(this);
 --- a/ukui-greeter/greeter/greeterwindow.cpp
 +++ b/ukui-greeter/greeter/greeterwindow.cpp
+@@ -81,11 +81,11 @@
+     : QWidget(parent),
+       m_userWnd(nullptr),
+       m_loginWnd(nullptr),
+-      m_scrollAreaSession(nullptr),
+       m_powerWnd(nullptr),
+       m_sessionLB(nullptr),
+       m_virtualKeyboard(nullptr),
+       m_greeterServive(GreeterService::instance()),
++      m_scrollAreaSession(nullptr),
+       m_greeter(GreeterWrapper::instance()),
+       m_usersModel(new UsersModel(m_greeter->hideUsersHint())),
+       m_sessionsModel(new QLightDM::SessionsModel(QLightDM::SessionsModel::LocalSessions)),
 @@ -229,7 +229,7 @@
      }
  
@@ -226,22 +287,19 @@
      //m_kylinNM->setPalette(pal);
      mkylinNM->widget(0)->setPalette(pal);
      mkylinNM->widget(1)->setPalette(pal);
-@@ -244,17 +244,21 @@
+@@ -244,17 +244,23 @@
  int GreeterWindow::getNetStatus()
  {
  
--}
--
--
--
--void GreeterWindow::onGlobalKeyPress(const QString &key)
 +    return 0; // No network status provider is implemented.
-+}
-+
-+
-+
-+void GreeterWindow::onGlobalKeyPress(const QString &key [[maybe_unused]])
+ }
+ 
+ 
+ 
+ void GreeterWindow::onGlobalKeyPress(const QString &key)
  {
++    Q_UNUSED(key); 
++
  }
  
  QString GreeterWindow::getLongFormatDate(int type)
@@ -253,31 +311,31 @@
      if (type == DATE) {
          QString date = dateInfo->date;
          QString week = dateInfo->week;
-@@ -270,9 +274,11 @@
+@@ -270,10 +276,14 @@
          //qDebug() << " time = " << time;
          return time;
      }
--}
--
--void GreeterWindow::onGlobalkeyRelease(const QString &key)
 +    kdk_free_logn_dateinfo(dateInfo);
 +    return QString();
-+}
-+
-+void GreeterWindow::onGlobalkeyRelease(const QString &key [[maybe_unused]])
- {
- //    if (key == "Escape") {
- //        key_exit_release();
-@@ -306,7 +312,7 @@
-     m_batteryiconLB->setIcon(QPixmap::fromImage(img));
  }
  
--void GreeterWindow::dealMessage(QDBusMessage msg)
-+void GreeterWindow::dealMessage(QDBusMessage msg [[maybe_unused]])
+ void GreeterWindow::onGlobalkeyRelease(const QString &key)
  {
++    Q_UNUSED(key); 
++
+ //    if (key == "Escape") {
+ //        key_exit_release();
+ //    } else if (key == "Up" || key == "Down") {
+@@ -308,6 +318,8 @@
+ 
+ void GreeterWindow::dealMessage(QDBusMessage msg)
+ {
++    Q_UNUSED(msg); 
++
      setBatteryIcon(getBatteryIconName());
  }
-@@ -984,6 +990,7 @@
+ 
+@@ -984,6 +996,7 @@
      default:
          break;
      }
@@ -285,33 +343,33 @@
  }
  
  void GreeterWindow::hideSureDialog()
-@@ -1369,7 +1376,7 @@
+@@ -1371,6 +1384,8 @@
  
- }
- 
--void GreeterWindow::updateNetIcon(int status)
-+void GreeterWindow::updateNetIcon(int status [[maybe_unused]])
+ void GreeterWindow::updateNetIcon(int status)
  {
++    Q_UNUSED(status); 
++
  }
  
-@@ -1905,7 +1912,7 @@
-     }
- }
+ void GreeterWindow::setVirkeyboardPos()
+@@ -1907,6 +1922,8 @@
  
--void GreeterWindow::onPrepareForSleep(bool sleep)
-+void GreeterWindow::onPrepareForSleep(bool sleep [[maybe_unused]])
+ void GreeterWindow::onPrepareForSleep(bool sleep)
  {
++    Q_UNUSED(sleep); 
++
      if(isTableMode && !(m_virtualKeyboard && m_virtualKeyboard->isVisible())) {
          showVirtualKeyboard();
-@@ -2256,7 +2263,7 @@
      }
- }
+@@ -2258,6 +2275,8 @@
  
--void GreeterWindow::key_tab_release(int key)
-+void GreeterWindow::key_tab_release(int key [[maybe_unused]])
+ void GreeterWindow::key_tab_release(int key)
  {
++    Q_UNUSED(key); 
++
      if (at_plugins) {
          m_loginWnd->setFocusin(REMOVE);
+         return;
 --- a/ukui-greeter/greeter/greeterwrapper.cpp
 +++ b/ukui-greeter/greeter/greeterwrapper.cpp
 @@ -217,8 +217,8 @@
@@ -338,16 +396,16 @@
      m_iconButton->setIcon(QIcon(m_waitingPixmap));
 --- a/ukui-greeter/greeter/ktiplabel.cpp
 +++ b/ukui-greeter/greeter/ktiplabel.cpp
-@@ -24,7 +24,7 @@
-     m_strText = "";
- }
+@@ -26,6 +26,8 @@
  
--KTipLabel::KTipLabel(QString strText, QWidget *parent)
-+KTipLabel::KTipLabel(QString strText, QWidget *parent [[maybe_unused]])
+ KTipLabel::KTipLabel(QString strText, QWidget *parent)
  {
++    Q_UNUSED(parent); 
++
      m_strText = strText;
  }
-@@ -50,7 +50,7 @@
+ 
+@@ -50,7 +52,7 @@
  {
      QFontMetrics fontMetrics(font);
      //如果当前字体下，字符串长度大于指定宽度
@@ -358,24 +416,24 @@
      }
 --- a/ukui-greeter/greeter/languagewidget.cpp
 +++ b/ukui-greeter/greeter/languagewidget.cpp
-@@ -58,7 +58,7 @@
-     }
- }
+@@ -60,6 +60,8 @@
  
--void LanguageWidget::onLanguageAdded(QString lang)
-+void LanguageWidget::onLanguageAdded(QString lang [[maybe_unused]])
+ void LanguageWidget::onLanguageAdded(QString lang)
  {
++    Q_UNUSED(lang); 
++
  
  
-@@ -85,7 +85,7 @@
-     close();
  }
+@@ -87,6 +89,8 @@
  
--bool LanguageWidget::eventFilter(QObject *obj, QEvent *event)
-+bool LanguageWidget::eventFilter(QObject *obj [[maybe_unused]], QEvent *event)
+ bool LanguageWidget::eventFilter(QObject *obj, QEvent *event)
  {
++    Q_UNUSED(obj); 
++
      //失去焦点时隐藏窗口
      if(event->type() == 23)
+     {
 --- a/ukui-greeter/greeter/lockinfo.cpp
 +++ b/ukui-greeter/greeter/lockinfo.cpp
 @@ -76,6 +76,9 @@
@@ -398,19 +456,58 @@
  }
  
  
+--- a/ukui-greeter/greeter/loginoptionswidget.cpp
++++ b/ukui-greeter/greeter/loginoptionswidget.cpp
+@@ -50,11 +50,11 @@
+                          QPushButton::checked {background-color: rgba(255, 255, 255, 40%);}"
+ 
+ LoginOptionsWidget::LoginOptionsWidget(BiometricProxy* proxy, int uid, UniAuthService* uniauthService, QWidget *parent)
+-    : QWidget(parent)
+-    , m_biomericProxy(proxy)
+-    , m_uid(uid)
+-    , m_uniauthService(uniauthService)
+-    , m_configuration(Configuration::instance())
++    : QWidget(parent),
++      m_biomericProxy(proxy),
++      m_uid(uid),
++      m_configuration(Configuration::instance()),
++      m_uniauthService(uniauthService)
+ {
+     m_listPriority.clear();
+     m_listPriority.push_back(BioT_Face);
 --- a/ukui-greeter/greeter/loginplugininterface.h
 +++ b/ukui-greeter/greeter/loginplugininterface.h
-@@ -101,7 +101,7 @@
+@@ -101,7 +101,9 @@
       * @param 背景图路径
       * @return 无
       */
 -    virtual void setBackground(QString strPicPath) {}
-+    virtual void setBackground(QString strPicPath [[maybe_unused]]) {}
++    virtual void setBackground(QString strPicPath) {
++    Q_UNUSED(strPicPath); 
++}
  
      /**
       * @brief 获取登录插件环境
 --- a/ukui-greeter/greeter/loginwindow.cpp
 +++ b/ukui-greeter/greeter/loginwindow.cpp
+@@ -62,13 +62,13 @@
+ 
+ LoginWindow::LoginWindow(GreeterWrapper *greeter, QWidget *parent)
+     : QWidget(parent),
+-      m_timer(nullptr),
++      m_greeter(greeter),
++      m_configuration(Configuration::instance()),
+       isLockingFlg(false),
+       m_nCurLockMin(0),
++      m_timer(nullptr),
+       w_timer(nullptr),
+-      m_greeter(greeter),
+-      m_uniauthService(new UniAuthService(this)),
+-      m_configuration(Configuration::instance())
++      m_uniauthService(new UniAuthService(this))
+ {
+     QFile qss(":/ukui-greeter.qss");
+     qss.open(QFile::ReadOnly);
 @@ -422,7 +422,7 @@
  
  void LoginWindow::updateLoadingPixmap()
@@ -429,48 +526,66 @@
      matrix.rotate(90.0);
      m_waitingPixmap = m_waitingPixmap.transformed(matrix, Qt::FastTransformation);
      if(m_uCurLoginOptType == LOGINOPT_TYPE_QRCODE)
-@@ -903,7 +903,7 @@
-  *
-  * 设置当前用户是否已已经登录
+@@ -905,6 +905,8 @@
   */
--void LoginWindow::setLoggedIn(bool isLoggedIn)
-+void LoginWindow::setLoggedIn(bool isLoggedIn [[maybe_unused]])
+ void LoginWindow::setLoggedIn(bool isLoggedIn)
  {
++    Q_UNUSED(isLoggedIn); 
++
      //m_isLoginLabel->setText(isLoggedIn ? tr("logged in") : "");
  }
+ 
+@@ -2219,7 +2221,7 @@
+     }
+     else if(time_left > 0 && time_left < 60)//请多少秒后重试
+     {
+-        char ch[100]={0};
++        
+         m_messageLabel->setText(tr("Please try again in %1 seconds.").arg(time_left%60));
+         m_messageLabelTip = (tr("Please try again in %1 seconds.").arg(time_left%60));
+         m_passwordEdit->clearText();
 --- a/ukui-greeter/greeter/main.cpp
 +++ b/ukui-greeter/greeter/main.cpp
-@@ -391,7 +391,7 @@
+@@ -163,7 +163,7 @@
+ /* 配置新装系统、新建用户第一次登陆时，4K缩放功能*/
+ void Set4KScreenScale()
+ {
+-    Display    *dpy;
++    
+     int w,h;
+     x11_get_screen_size (&w, &h);
  
+@@ -392,6 +392,8 @@
      TouchScreenSet::instance()->setTouchMapScreen();
      //屏幕自动旋转
--    QObject::connect(AutoRotateScreen::instance(), &AutoRotateScreen::screenRotate, [=](AutoRotateScreen::RotateDir dir){
-+    QObject::connect(AutoRotateScreen::instance(), &AutoRotateScreen::screenRotate, [=](AutoRotateScreen::RotateDir dir [[maybe_unused]]){
+     QObject::connect(AutoRotateScreen::instance(), &AutoRotateScreen::screenRotate, [=](AutoRotateScreen::RotateDir dir){
++    Q_UNUSED(dir); 
++
          // 屏幕自动旋转后  对触摸屏进行坐标映射
          TouchScreenSet::instance()->setTouchMapScreen();
      });
 --- a/ukui-greeter/greeter/modebutton.cpp
 +++ b/ukui-greeter/greeter/modebutton.cpp
-@@ -25,7 +25,7 @@
+@@ -27,6 +27,8 @@
  
- }
- 
--void ModeButton::paintEvent(QPaintEvent *event)
-+void ModeButton::paintEvent(QPaintEvent *event [[maybe_unused]])
+ void ModeButton::paintEvent(QPaintEvent *event)
  {
++    Q_UNUSED(event); 
++
      QStylePainter p(this);
      QStyleOptionButton option;
+     initStyleOption(&option);
 --- a/ukui-greeter/greeter/mytabwidget.cpp
 +++ b/ukui-greeter/greeter/mytabwidget.cpp
-@@ -38,7 +38,7 @@
+@@ -40,6 +40,8 @@
  
- }
- 
--void MyTabWidget::paintEvent(QPaintEvent *p1)
-+void MyTabWidget::paintEvent(QPaintEvent *p1 [[maybe_unused]])
+ void MyTabWidget::paintEvent(QPaintEvent *p1)
  {
++    Q_UNUSED(p1); 
++
      //绘制样式
      QStyleOption opt;
+     opt.initFrom(this);
 --- a/ukui-greeter/greeter/pam-tally.c
 +++ b/ukui-greeter/greeter/pam-tally.c
 @@ -56,20 +56,20 @@
@@ -519,39 +634,37 @@
  	pam_tally *tally_ptr;
 --- a/ukui-greeter/greeter/powerwindow.cpp
 +++ b/ukui-greeter/greeter/powerwindow.cpp
-@@ -162,13 +162,14 @@
+@@ -162,14 +162,19 @@
  
  QStringList PowerManager::getLoginedUsers()
  {
--}
--
--void PowerManager::onGlobalKeyPress(const QString &key)
--{
--}
--
--void PowerManager::onGlobalkeyRelease(const QString &key)
 +    return QStringList();
-+}
-+
-+void PowerManager::onGlobalKeyPress(const QString &key [[maybe_unused]])
-+{
-+}
-+
-+void PowerManager::onGlobalkeyRelease(const QString &key [[maybe_unused]])
- {
- //    if (key == "Escape") {
- //        this->hide();
---- a/ukui-greeter/greeter/servicemanager.cpp
-+++ b/ukui-greeter/greeter/servicemanager.cpp
-@@ -74,7 +74,7 @@
  }
  
- void ServiceManager::onDBusNameOwnerChanged(const QString &name,
--                                            const QString &oldOwner,
-+                                            const QString &oldOwner [[maybe_unused]],
+ void PowerManager::onGlobalKeyPress(const QString &key)
+ {
++    Q_UNUSED(key); 
++
+ }
+ 
+ void PowerManager::onGlobalkeyRelease(const QString &key)
+ {
++    Q_UNUSED(key); 
++
+ //    if (key == "Escape") {
+ //        this->hide();
+ //    } else if (key == "Left" || key == "Right" || key == "Return" || key == "KP_Enter") {
+--- a/ukui-greeter/greeter/servicemanager.cpp
++++ b/ukui-greeter/greeter/servicemanager.cpp
+@@ -77,6 +77,8 @@
+                                             const QString &oldOwner,
                                              const QString &newOwner)
  {
++    Q_UNUSED(oldOwner); 
++
      if(name == DBUS_SERVICE)
+     {
+         qDebug() << "service status changed:"
 --- a/ukui-greeter/greeter/sessionsview.cpp
 +++ b/ukui-greeter/greeter/sessionsview.cpp
 @@ -63,7 +63,7 @@
@@ -559,28 +672,27 @@
              if(event->type() == 110){
                  QFontMetrics fontMetrics(font());
 -                if(fontMetrics.width(m_nameList.at(i)) > m_textlabel->width()){
-+                if(fontMetrics.horizontalAdvance(m_nameList.at(i)) > m_textlabel->horizontalAdvance()){
++                if(fontMetrics.horizontalAdvance(m_nameList.at(i)) > m_textlabel->width()){
                      Q_EMIT setKToolTip(m_nameList.at(i));
                  }
              } else if (event->type() == 11){
-@@ -84,7 +84,7 @@
+@@ -86,6 +86,8 @@
  
- }
- 
--void SessionsView::setCurrentSession(const QString &sessionName, bool entered)
-+void SessionsView::setCurrentSession(const QString &sessionName, bool entered [[maybe_unused]])
+ void SessionsView::setCurrentSession(const QString &sessionName, bool entered)
  {
++    Q_UNUSED(entered); 
++
      QString selectSessionName = "";
      for(int x = 0; x < m_sessionsModel->rowCount(); x++)
+     {
 --- a/ukui-greeter/greeter/sessionwindow.cpp
 +++ b/ukui-greeter/greeter/sessionwindow.cpp
-@@ -110,7 +110,7 @@
-     return sessionIcon;
- }
+@@ -112,5 +112,7 @@
  
--bool SessionWindow::eventFilter(QObject *obj, QEvent *event)
-+bool SessionWindow::eventFilter(QObject *obj [[maybe_unused]], QEvent *event [[maybe_unused]])
+ bool SessionWindow::eventFilter(QObject *obj, QEvent *event)
  {
++    Q_UNUSED(obj); Q_UNUSED(event); 
++
      return false;
  }
 --- a/ukui-greeter/greeter/surewidget.cpp
@@ -600,45 +712,81 @@
      }
 +    return QString();
  }
+--- a/ukui-greeter/greeter/usersmodel.cpp
++++ b/ukui-greeter/greeter/usersmodel.cpp
+@@ -23,8 +23,8 @@
+ 
+ UsersModel::UsersModel(bool hideUsers, QObject *parent) :
+     ProxyModel(parent),
+-    secUser(SecurityUser::instance()),
+-    m_showGuest(false)
++      m_showGuest(false),
++      secUser(SecurityUser::instance())
+ {
+     if(!hideUsers){
+         setSourceModel(new QLightDM::UsersModel(this));
 --- a/ukui-greeter/greeter/usersview.cpp
 +++ b/ukui-greeter/greeter/usersview.cpp
+@@ -59,14 +59,14 @@
+ 
+ UsersView::UsersView(QWidget *parent) :
+     QWidget(parent),
+-    usersModel(nullptr),
+-    currentUser(-1),
+-    prevArrow(nullptr),
+-    nextArrow(nullptr),
+-    secUser(SecurityUser::instance()),
+-    lasttime(QTime::currentTime()),
+-    m_configuration(Configuration::instance()),
+-    mouseClickLast(QTime::currentTime())
++      usersModel(nullptr),
++      currentUser(-1),
++      secUser(SecurityUser::instance()),
++      m_configuration(Configuration::instance()),
++      lasttime(QTime::currentTime()),
++      mouseClickLast(QTime::currentTime()),
++      prevArrow(nullptr),
++      nextArrow(nullptr)
+ {
+     setFocusPolicy(Qt::NoFocus);
+     connect(XEventMonitor::instance(), SIGNAL(keyPress(const QString &)),
 @@ -95,7 +95,7 @@
          if(obj->objectName() == nameList.at(i)){
              if(event->type() == 110){
                  QFontMetrics fontMetrics(font());
 -                if(fontMetrics.width(nameList.at(i)) > textlabel->width()){
-+                if(fontMetrics.horizontalAdvance(nameList.at(i)) > textlabel->horizontalAdvance()){
++                if(fontMetrics.horizontalAdvance(nameList.at(i)) > textlabel->width()){
                      Q_EMIT setKToolTip(nameList.at(i));
                  }
              } else if (event->type() == 11){
-@@ -121,7 +121,7 @@
+@@ -123,6 +123,8 @@
  
- }
- 
--void UsersView::setCurrentUser(const QString &userName, bool entered)
-+void UsersView::setCurrentUser(const QString &userName, bool entered [[maybe_unused]])
+ void UsersView::setCurrentUser(const QString &userName, bool entered)
  {
++    Q_UNUSED(entered); 
++
      int x = 0;
      for(x = 0; x < usersModel->rowCount(); x++)
-@@ -160,7 +160,7 @@
-     Q_EMIT userNotFound(userName);
- }
+     {
+@@ -162,6 +164,8 @@
  
--void UsersView::onGlobalKeyRelease(const QString &key)
-+void UsersView::onGlobalKeyRelease(const QString &key [[maybe_unused]])
+ void UsersView::onGlobalKeyRelease(const QString &key)
  {
++    Q_UNUSED(key); 
++
  
  }
-@@ -273,7 +273,7 @@
-     Q_EMIT userSelected(index);
- }
  
--void UsersView::removeUserEntry(int row)
-+void UsersView::removeUserEntry(int row [[maybe_unused]])
+@@ -275,6 +279,8 @@
+ 
+ void UsersView::removeUserEntry(int row)
  {
++    Q_UNUSED(row); 
++
  
  }
-@@ -370,6 +370,7 @@
+ 
+@@ -370,6 +376,7 @@
   	    return usersModel->index(i).data(QLightDM::UsersModel::LoggedInRole).toBool();	
  	}
      }

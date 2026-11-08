@@ -68,3 +68,21 @@
          }
  
          if (audioProp->bitrate()) {
+@@ -639,7 +639,7 @@
+     };
+ 
+     if (mimeType == QLatin1String("audio/mpeg") || mimeType == QLatin1String("audio/mpeg3") || mimeType == QLatin1String("audio/x-mpeg")) {
+-        TagLib::MPEG::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true);
++        TagLib::MPEG::File file(&stream, true);
+         if (file.isValid()) {
+             extractAudioProperties(&file, result);
+             readGenericProperties(file.properties(), result);
+@@ -715,7 +715,7 @@
+             extractMp4Thumbnail(file.tag(), result);
+         }
+     } else if (mimeType == QLatin1String("audio/flac")) {
+-        TagLib::FLAC::File file(&stream, TagLib::ID3v2::FrameFactory::instance(), true);
++        TagLib::FLAC::File file(&stream, true);
+         if (file.isValid()) {
+             extractAudioProperties(&file, result);
+             readGenericProperties(file.properties(), result);

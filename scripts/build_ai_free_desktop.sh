@@ -106,6 +106,9 @@ apt-get build-dep -y --no-install-recommends ./
 for pc in /usr/lib/*/pkgconfig/poppler.pc /usr/lib/pkgconfig/poppler.pc; do
   [[ -f "$pc" ]] && sed -Ei 's/libcurl >= [0-9.]+/libcurl/g' "$pc"
 done
+if [[ $source_package == ukui-search ]]; then
+  WARNING_SOURCE_DIR=$PWD WARNING_SOURCE_PACKAGE=$source_package python3 -m unittest discover -s "$workspace/tests" -p test_build_warning_runtime.py -v
+fi
 CMAKE_POLICY_VERSION_MINIMUM=3.5 dpkg-buildpackage -b -uc -us
 output="$workspace/desktop-output/$source_package"
 mkdir -p "$output"

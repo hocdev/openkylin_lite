@@ -9,14 +9,43 @@
          return actions;
      }
  
+--- a/peony-extension-computer-view/computer-view-container.cpp
++++ b/peony-extension-computer-view/computer-view-container.cpp
+@@ -730,9 +730,9 @@
+             }
+ 
+             if(item->canEject()){
+-                auto ejectAction = menu.addAction(QIcon::fromTheme("media-eject-symbolic"),tr("Eject"), [=](){
++                (void)(menu.addAction(QIcon::fromTheme("media-eject-symbolic"),tr("Eject"), [=](){
+                     item->eject(G_MOUNT_UNMOUNT_NONE);
+-                });
++                }));
+                 QString unixDevice = item->m_unixDeviceName;
+                 if(unixDevice.contains("/dev/sr")){/* 光盘在刻录数据、镜像等操作时,即若处于busy状态时，将弹出菜单置灰不可用。link to bug#143293. */
+                     menu.actions().last()->setDisabled(FileUtils::isBusyDevice(unixDevice));
+@@ -812,10 +812,10 @@
+                         allowFormat = MANAGER_CONTROL->checkFormatRemovableDevicePermission();
+                     }
+                     if (allowFormat) {
+-                        auto fdMenu = menu.addAction(QIcon::fromTheme("format-symbolic"),tr("Format"), [=](){
++                        (void)(menu.addAction(QIcon::fromTheme("format-symbolic"),tr("Format"), [=](){
+                             Format_Dialog *fd = FormatDlgCreateDelegate::getInstance()->createUDiskDlg(uri, nullptr);
+                             fd->show();
+-                        });
++                        }));
+                     }
+                 }
+             }
 --- a/peony-extension-computer-view/computer-view-container.h
 +++ b/peony-extension-computer-view/computer-view-container.h
-@@ -72,33 +72,33 @@
+@@ -72,33 +72,51 @@
  
      //location
      //virtual void open(const QStringList &uris, bool newWindow) {}
 -    virtual void setDirectoryUri(const QString &uri) {}
-+    virtual void setDirectoryUri(const QString &uri [[maybe_unused]]) {}
++    virtual void setDirectoryUri(const QString &uri) {
++    Q_UNUSED(uri); 
++}
      virtual void beginLocationChange();
      virtual void stopLocationChange();
  
@@ -24,25 +53,39 @@
  
      //selections
 -    virtual void setSelections(const QStringList &uris) {}
-+    virtual void setSelections(const QStringList &uris [[maybe_unused]]) {}
++    virtual void setSelections(const QStringList &uris) {
++    Q_UNUSED(uris); 
++}
      virtual void invertSelections() {}
 -    virtual void scrollToSelection(const QString &uri) {}
-+    virtual void scrollToSelection(const QString &uri [[maybe_unused]]) {}
++    virtual void scrollToSelection(const QString &uri) {
++    Q_UNUSED(uri); 
++}
  
      //clipboard
      //cut items should be drawn differently.
 -    virtual void setCutFiles(const QStringList &uris) {}
-+    virtual void setCutFiles(const QStringList &uris [[maybe_unused]]) {}
++    virtual void setCutFiles(const QStringList &uris) {
++    Q_UNUSED(uris); 
++}
  
 -    virtual void setSortType(int sortType) {}
 -    virtual void setSortOrder(int sortOrder) {}
-+    virtual void setSortType(int sortType [[maybe_unused]]) {}
-+    virtual void setSortOrder(int sortOrder [[maybe_unused]]) {}
++    virtual void setSortType(int sortType) {
++    Q_UNUSED(sortType); 
++}
++    virtual void setSortOrder(int sortOrder) {
++    Q_UNUSED(sortOrder); 
++}
  
 -    virtual void editUri(const QString &uri) {}
 -    virtual void editUris(const QStringList uris) {}
-+    virtual void editUri(const QString &uri [[maybe_unused]]) {}
-+    virtual void editUris(const QStringList uris [[maybe_unused]]) {}
++    virtual void editUri(const QString &uri) {
++    Q_UNUSED(uri); 
++}
++    virtual void editUris(const QStringList uris) {
++    Q_UNUSED(uris); 
++}
  
      virtual void repaintView() {}
  
@@ -50,107 +93,106 @@
  
      //zoom
 -    virtual void setCurrentZoomLevel(int zoomLevel) {}
-+    virtual void setCurrentZoomLevel(int zoomLevel [[maybe_unused]]) {}
++    virtual void setCurrentZoomLevel(int zoomLevel) {
++    Q_UNUSED(zoomLevel); 
++}
  
  Q_SIGNALS:
      void containerDoubleClicked(const QModelIndex &index);
 --- a/peony-extension-computer-view/computer-view-intel/intel-abstract-computer-item.cpp
 +++ b/peony-extension-computer-view/computer-view-intel/intel-abstract-computer-item.cpp
-@@ -25,7 +25,7 @@
+@@ -27,6 +27,8 @@
  
- using namespace Intel;
- 
--AbstractComputerItem::AbstractComputerItem(ComputerModel *model, AbstractComputerItem *parentNode, QObject *parent)
-+AbstractComputerItem::AbstractComputerItem(ComputerModel *model, AbstractComputerItem *parentNode, QObject *parent [[maybe_unused]])
+ AbstractComputerItem::AbstractComputerItem(ComputerModel *model, AbstractComputerItem *parentNode, QObject *parent)
  {
++    Q_UNUSED(parent); 
++
      m_model = model;
      m_parentNode = parentNode;
+ }
 --- a/peony-extension-computer-view/computer-view-intel/intel-abstract-computer-item.h
 +++ b/peony-extension-computer-view/computer-view-intel/intel-abstract-computer-item.h
-@@ -63,11 +63,11 @@
+@@ -63,11 +63,15 @@
      virtual qint64 usedSpace() {return 0;}
  
      virtual bool canUnmount() {return false;}
 -    virtual void unmount(GMountUnmountFlags unmountFlag) {}
-+    virtual void unmount(GMountUnmountFlags unmountFlag [[maybe_unused]]) {}
++    virtual void unmount(GMountUnmountFlags unmountFlag) {
++    Q_UNUSED(unmountFlag); 
++}
      virtual void mount() {}
  
      virtual bool canEject() {return false;}
 -    virtual void eject(GMountUnmountFlags ejectFlag) {}
-+    virtual void eject(GMountUnmountFlags ejectFlag [[maybe_unused]]) {}
++    virtual void eject(GMountUnmountFlags ejectFlag) {
++    Q_UNUSED(ejectFlag); 
++}
  
      //for remote volume
      virtual bool isHidden() {return false;}
 --- a/peony-extension-computer-view/computer-view-intel/intel-computer-item-delegate.cpp
 +++ b/peony-extension-computer-view/computer-view-intel/intel-computer-item-delegate.cpp
-@@ -211,7 +211,7 @@
-     }
- }
+@@ -213,6 +213,8 @@
  
--void ComputerItemDelegate::drawTab(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item) const
-+void ComputerItemDelegate::drawTab(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index [[maybe_unused]], AbstractComputerItem *item) const
+ void ComputerItemDelegate::drawTab(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item) const
  {
++    Q_UNUSED(index); 
++
      auto opt = option;
      auto titleFont = opt.font;
-@@ -247,7 +247,7 @@
-         painter->drawPixmap(rect, QPixmap(":/img/view_hide"));
- }
  
--void ComputerItemDelegate::drawStyledItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-+void ComputerItemDelegate::drawStyledItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index [[maybe_unused]]) const
+@@ -249,6 +251,8 @@
+ 
+ void ComputerItemDelegate::drawStyledItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
  {
++    Q_UNUSED(index); 
++
      painter->save();
      //draw pix map
+     QIcon icon = option.icon;
 --- a/peony-extension-computer-view/computer-view-intel/intel-computer-model.cpp
 +++ b/peony-extension-computer-view/computer-view-intel/intel-computer-model.cpp
-@@ -108,7 +108,7 @@
-     return item->m_children.count();
- }
+@@ -110,6 +110,8 @@
  
--int ComputerModel::columnCount(const QModelIndex &parent) const
-+int ComputerModel::columnCount(const QModelIndex &parent [[maybe_unused]]) const
+ int ComputerModel::columnCount(const QModelIndex &parent) const
  {
++    Q_UNUSED(parent); 
++
      return 1;
  }
+ 
 --- a/peony-extension-computer-view/computer-view-intel/intel-computer-network-item.cpp
 +++ b/peony-extension-computer-view/computer-view-intel/intel-computer-network-item.cpp
-@@ -75,7 +75,7 @@
-     return m_model->createItemIndex(m_parentNode->m_children.indexOf(this), this);
- }
+@@ -77,6 +77,8 @@
  
--void ComputerNetworkItem::reloadDirectory(const QString &uri)
-+void ComputerNetworkItem::reloadDirectory(const QString &uri [[maybe_unused]])
+ void ComputerNetworkItem::reloadDirectory(const QString &uri)
  {
++    Q_UNUSED(uri); 
++
      if (m_uri != "network:///")
          return;
+ 
 --- a/peony-extension-computer-view/computer-view-intel/intel-computer-view-container.cpp
 +++ b/peony-extension-computer-view/computer-view-intel/intel-computer-view-container.cpp
-@@ -43,7 +43,7 @@
- using namespace Peony;
- using namespace Intel;
+@@ -178,6 +178,8 @@
  
--static void ask_question_cb(GMountOperation *op, char *message, char **choices, ComputerViewContainer *p_this);
-+static void ask_question_cb(GMountOperation *op, char *message [[maybe_unused]], char **choices [[maybe_unused]], ComputerViewContainer *p_this [[maybe_unused]]);
- static void ask_password_cb(GMountOperation *op, const char *message, const char *default_user, const char *default_domain, GAskPasswordFlags flags, ComputerViewContainer *p_this);
- 
- 
-@@ -176,7 +176,7 @@
-     });
- }
- 
--static void ask_question_cb(GMountOperation *op, char *message, char **choices, ComputerViewContainer *p_this)
-+static void ask_question_cb(GMountOperation *op, char *message [[maybe_unused]], char **choices [[maybe_unused]], ComputerViewContainer *p_this [[maybe_unused]])
+ static void ask_question_cb(GMountOperation *op, char *message, char **choices, ComputerViewContainer *p_this)
  {
++    Q_UNUSED(message); Q_UNUSED(choices); Q_UNUSED(p_this); 
++
      g_mount_operation_reply (op, G_MOUNT_OPERATION_HANDLED);
  }
+ 
 --- a/peony-extension-computer-view/computer-view-intel/intel-computer-view-container.h
 +++ b/peony-extension-computer-view/computer-view-intel/intel-computer-view-container.h
-@@ -72,33 +72,33 @@
+@@ -72,33 +72,51 @@
  
      //location
      //virtual void open(const QStringList &uris, bool newWindow) {}
 -    virtual void setDirectoryUri(const QString &uri) {}
-+    virtual void setDirectoryUri(const QString &uri [[maybe_unused]]) {}
++    virtual void setDirectoryUri(const QString &uri) {
++    Q_UNUSED(uri); 
++}
      virtual void beginLocationChange();
      virtual void stopLocationChange();
  
@@ -158,25 +200,39 @@
  
      //selections
 -    virtual void setSelections(const QStringList &uris) {}
-+    virtual void setSelections(const QStringList &uris [[maybe_unused]]) {}
++    virtual void setSelections(const QStringList &uris) {
++    Q_UNUSED(uris); 
++}
      virtual void invertSelections() {}
 -    virtual void scrollToSelection(const QString &uri) {}
-+    virtual void scrollToSelection(const QString &uri [[maybe_unused]]) {}
++    virtual void scrollToSelection(const QString &uri) {
++    Q_UNUSED(uri); 
++}
  
      //clipboard
      //cut items should be drawn differently.
 -    virtual void setCutFiles(const QStringList &uris) {}
-+    virtual void setCutFiles(const QStringList &uris [[maybe_unused]]) {}
++    virtual void setCutFiles(const QStringList &uris) {
++    Q_UNUSED(uris); 
++}
  
 -    virtual void setSortType(int sortType) {}
 -    virtual void setSortOrder(int sortOrder) {}
-+    virtual void setSortType(int sortType [[maybe_unused]]) {}
-+    virtual void setSortOrder(int sortOrder [[maybe_unused]]) {}
++    virtual void setSortType(int sortType) {
++    Q_UNUSED(sortType); 
++}
++    virtual void setSortOrder(int sortOrder) {
++    Q_UNUSED(sortOrder); 
++}
  
 -    virtual void editUri(const QString &uri) {}
 -    virtual void editUris(const QStringList uris) {}
-+    virtual void editUri(const QString &uri [[maybe_unused]]) {}
-+    virtual void editUris(const QStringList uris [[maybe_unused]]) {}
++    virtual void editUri(const QString &uri) {
++    Q_UNUSED(uri); 
++}
++    virtual void editUris(const QStringList uris) {
++    Q_UNUSED(uris); 
++}
  
      virtual void repaintView() {}
  
@@ -184,332 +240,403 @@
  
      //zoom
 -    virtual void setCurrentZoomLevel(int zoomLevel) {}
-+    virtual void setCurrentZoomLevel(int zoomLevel [[maybe_unused]]) {}
++    virtual void setCurrentZoomLevel(int zoomLevel) {
++    Q_UNUSED(zoomLevel); 
++}
  
  public:
      QString m_remote_uri;
 --- a/peony-extension-computer-view/computer-view-intel/intel-computer-view.cpp
 +++ b/peony-extension-computer-view/computer-view-intel/intel-computer-view.cpp
-@@ -62,7 +62,7 @@
- 
+@@ -63,6 +63,8 @@
      //fix #18184
      auto volumeManager = Peony::VolumeManager::getInstance();
--    connect(volumeManager,&Peony::VolumeManager::volumeRemoved,this,[=](const std::shared_ptr<Peony::Volume> volume){
-+    connect(volumeManager,&Peony::VolumeManager::volumeRemoved,this,[=](const std::shared_ptr<Peony::Volume> volume [[maybe_unused]]){
+     connect(volumeManager,&Peony::VolumeManager::volumeRemoved,this,[=](const std::shared_ptr<Peony::Volume> volume){
++    Q_UNUSED(volume); 
++
          this->viewport()->update();
      });
  
-@@ -75,7 +75,7 @@
- //    }
- }
+@@ -77,6 +79,8 @@
  
--bool ComputerView::eventFilter(QObject *object, QEvent *event)
-+bool ComputerView::eventFilter(QObject *object [[maybe_unused]], QEvent *event)
+ bool ComputerView::eventFilter(QObject *object, QEvent *event)
  {
++    Q_UNUSED(object); 
++
      if (event->type() == QEvent::MouseMove) {
          if (!m_isLeftButtonPressed) {
-@@ -97,7 +97,7 @@
-     return m_rect_cache.value(index);
- }
+             auto pos = mapFromGlobal(QCursor::pos());
+@@ -99,6 +103,8 @@
  
--void ComputerView::scrollTo(const QModelIndex &index, QAbstractItemView::ScrollHint hint)
-+void ComputerView::scrollTo(const QModelIndex &index [[maybe_unused]], QAbstractItemView::ScrollHint hint [[maybe_unused]])
+ void ComputerView::scrollTo(const QModelIndex &index, QAbstractItemView::ScrollHint hint)
  {
++    Q_UNUSED(index); Q_UNUSED(hint); 
++
      //return;
      //FIXME: scroll to the index more accurecely.
-@@ -116,7 +116,7 @@
+     //auto y = m_rect_cache.value(index).y();
+@@ -118,6 +124,8 @@
+ 
+ QModelIndex ComputerView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
+ {
++    Q_UNUSED(cursorAction); Q_UNUSED(modifiers); 
++
      return QModelIndex();
  }
  
--QModelIndex ComputerView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
-+QModelIndex ComputerView::moveCursor(QAbstractItemView::CursorAction cursorAction [[maybe_unused]], Qt::KeyboardModifiers modifiers [[maybe_unused]])
- {
-     return QModelIndex();
- }
-@@ -131,12 +131,12 @@
-     return verticalScrollBar()->value()*m_scrollStep;
- }
+@@ -133,11 +141,15 @@
  
--bool ComputerView::isIndexHidden(const QModelIndex &index) const
-+bool ComputerView::isIndexHidden(const QModelIndex &index [[maybe_unused]]) const
+ bool ComputerView::isIndexHidden(const QModelIndex &index) const
  {
++    Q_UNUSED(index); 
++
      return false;
  }
  
--void ComputerView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command)
-+void ComputerView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command [[maybe_unused]])
+ void ComputerView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command)
  {
++    Q_UNUSED(command); 
++
      //caculate logic rubber band rect in mouse move event.
      //qDebug()<<"setSelection"<<rect<<command;
-@@ -165,7 +165,7 @@
-     }
- }
  
--QRegion ComputerView::visualRegionForSelection(const QItemSelection &selection) const
-+QRegion ComputerView::visualRegionForSelection(const QItemSelection &selection [[maybe_unused]]) const
+@@ -167,6 +179,8 @@
+ 
+ QRegion ComputerView::visualRegionForSelection(const QItemSelection &selection) const
  {
++    Q_UNUSED(selection); 
++
      return QRegion();
  }
-@@ -236,7 +236,7 @@
-     updateEditorGeometries();
- }
  
--void ComputerView::paintEvent(QPaintEvent *e)
-+void ComputerView::paintEvent(QPaintEvent *e [[maybe_unused]])
+@@ -238,6 +252,8 @@
+ 
+ void ComputerView::paintEvent(QPaintEvent *e)
  {
++    Q_UNUSED(e); 
++
      QPainter p(this->viewport());
  //    p.fillRect(this->rect(), palette().base());
+     //p.fillRect(QRect(0, 0, m_totalWidth, m_totalHeight), Qt::blue);
 --- a/peony-extension-computer-view/computer-view-intel/intel-computer-volume-item.cpp
 +++ b/peony-extension-computer-view/computer-view-intel/intel-computer-volume-item.cpp
-@@ -405,7 +405,7 @@
-     }
- }
+@@ -407,6 +407,8 @@
  
--void ComputerVolumeItem::volume_changed_callback(GVolume *volume, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::volume_changed_callback(GVolume *volume [[maybe_unused]], ComputerVolumeItem *p_this)
+ void ComputerVolumeItem::volume_changed_callback(GVolume *volume, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(volume); 
++
      //QMessageBox::information(0, 0, tr("Volume Changed"));
      if(!p_this){
-@@ -420,7 +420,7 @@
-     p_this->updateInfo();
- }
+         return;
+@@ -422,6 +424,8 @@
  
--void ComputerVolumeItem::volume_removed_callback(GVolume *volume, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::volume_removed_callback(GVolume *volume [[maybe_unused]], ComputerVolumeItem *p_this)
+ void ComputerVolumeItem::volume_removed_callback(GVolume *volume, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(volume); 
++
      auto parentNode = p_this->m_parentNode;
      if (!parentNode)
-@@ -446,7 +446,7 @@
-     parentNode->m_model->endRemoveItem();
- }
+         return;
+@@ -448,6 +452,8 @@
  
--void ComputerVolumeItem::mount_changed_callback(GVolumeMonitor *volumeMonitor, GMount *gmount, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::mount_changed_callback(GVolumeMonitor *volumeMonitor [[maybe_unused]], GMount *gmount [[maybe_unused]], ComputerVolumeItem *p_this)
+ void ComputerVolumeItem::mount_changed_callback(GVolumeMonitor *volumeMonitor, GMount *gmount, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(volumeMonitor); Q_UNUSED(gmount); 
++
      if (p_this){
          p_this->m_usedSpace = 0;
+         p_this->m_totalSpace = 0;
+@@ -586,7 +592,7 @@
+     if (err) {
+         //QMessageBox::critical(0, 0, err->message);
+         QMessageBox warningBox(QMessageBox::Warning,QObject::tr("Eject failed"),QString(err->message));
+-        QPushButton *cancelBtn = (warningBox.addButton(QObject::tr("Cancel"),QMessageBox::RejectRole));
++        (void)((warningBox.addButton(QObject::tr("Cancel"),QMessageBox::RejectRole)));
+         QPushButton *ensureBtn = (warningBox.addButton(QObject::tr("Eject Anyway"),QMessageBox::YesRole));
+         warningBox.exec();
+         if(warningBox.clickedButton() == ensureBtn)
 --- a/peony-extension-computer-view/computer-view/abstract-computer-item.h
 +++ b/peony-extension-computer-view/computer-view/abstract-computer-item.h
-@@ -61,11 +61,11 @@
+@@ -61,11 +61,15 @@
      virtual qint64 usedSpace() {return 0;}
  
      virtual bool canUnmount() {return false;}
 -    virtual void unmount(GMountUnmountFlags unmountFlag) {}
-+    virtual void unmount(GMountUnmountFlags unmountFlag [[maybe_unused]]) {}
++    virtual void unmount(GMountUnmountFlags unmountFlag) {
++    Q_UNUSED(unmountFlag); 
++}
      virtual void mount() {}
  
      virtual bool canEject() {return false;}
 -    virtual void eject(GMountUnmountFlags ejectFlag) {}
-+    virtual void eject(GMountUnmountFlags ejectFlag [[maybe_unused]]) {}
++    virtual void eject(GMountUnmountFlags ejectFlag) {
++    Q_UNUSED(ejectFlag); 
++}
  
      //for remote volume
      virtual bool isHidden() {return false;}
 --- a/peony-extension-computer-view/computer-view/computer-item-delegate.cpp
 +++ b/peony-extension-computer-view/computer-view/computer-item-delegate.cpp
-@@ -259,7 +259,7 @@
-     }
- }
+@@ -116,7 +116,7 @@
+         //get pixmap
+         QIcon icon = option.icon;
+         bool enable = option.state & QStyle::State_Enabled;
+-        bool selected = option.state &QStyle::State_Selected;
++        (void)(option.state &QStyle::State_Selected);
+         QPixmap pix = icon.pixmap(QSize(64, 64), enable? QIcon::Normal: QIcon::Disabled);
  
--void ComputerItemDelegate::paintRemoteItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item) const
-+void ComputerItemDelegate::paintRemoteItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item [[maybe_unused]]) const
+         //draw emblem icon on pixmap
+@@ -261,6 +261,8 @@
+ 
+ void ComputerItemDelegate::paintRemoteItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item) const
  {
++    Q_UNUSED(item); 
++
      if (index.parent().isValid()) {
          bool isHover = (option.state & QStyle::State_MouseOver) && (option.state & ~QStyle::State_Selected);
-@@ -287,7 +287,7 @@
-     }
- }
+         bool isSelected = option.state & QStyle::State_Selected;
+@@ -289,6 +291,8 @@
  
--void ComputerItemDelegate::paintNetworkItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item) const
-+void ComputerItemDelegate::paintNetworkItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item [[maybe_unused]]) const
+ void ComputerItemDelegate::paintNetworkItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index, AbstractComputerItem *item) const
  {
++    Q_UNUSED(item); 
++
      if (index.parent().isValid()) {
          bool isHover = (option.state & QStyle::State_MouseOver) && (option.state & ~QStyle::State_Selected);
-@@ -315,7 +315,7 @@
-     }
- }
+         bool isSelected = option.state & QStyle::State_Selected;
+@@ -317,6 +321,8 @@
  
--void ComputerItemDelegate::drawTab(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-+void ComputerItemDelegate::drawTab(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index [[maybe_unused]]) const
+ void ComputerItemDelegate::drawTab(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
  {
++    Q_UNUSED(index); 
++
      painter->save();
      auto opt = option;
-@@ -337,7 +337,7 @@
-     //qApp->style()->drawItemText(painter, opt.rect.adjusted(5, 0, 0, 0), Qt::AlignTop|Qt::AlignVCenter, option.palette, enable, option.text, selected? QPalette::HighlightedText: QPalette::Text);
- }
+     auto titleFont = opt.font;
+@@ -339,12 +345,14 @@
  
--void ComputerItemDelegate::drawStyledItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
-+void ComputerItemDelegate::drawStyledItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index [[maybe_unused]]) const
+ void ComputerItemDelegate::drawStyledItem(QPainter *painter, const QStyleOptionViewItem &option, const QModelIndex &index) const
  {
++    Q_UNUSED(index); 
++
      painter->save();
      painter->setRenderHint(QPainter::Antialiasing);
+     //draw pix map
+     QIcon icon = option.icon;
+     bool enable = option.state & QStyle::State_Enabled;
+-    bool selected = option.state &QStyle::State_Selected;
++    (void)(option.state &QStyle::State_Selected);
+     QPixmap pix = icon.pixmap(QSize(64, 64), enable?  QIcon::Normal: QIcon::Disabled);
+     qApp->style()->drawItemPixmap(painter, option.rect.adjusted(0, 5, 0, 0), Qt::AlignTop|Qt::AlignHCenter, pix);
+ 
 --- a/peony-extension-computer-view/computer-view/computer-model.cpp
 +++ b/peony-extension-computer-view/computer-view/computer-model.cpp
-@@ -118,7 +118,7 @@
-     return item->m_children.count();
- }
+@@ -120,6 +120,8 @@
  
--int ComputerModel::columnCount(const QModelIndex &parent) const
-+int ComputerModel::columnCount(const QModelIndex &parent [[maybe_unused]]) const
+ int ComputerModel::columnCount(const QModelIndex &parent) const
  {
++    Q_UNUSED(parent); 
++
      return 1;
  }
+ 
 --- a/peony-extension-computer-view/computer-view/computer-network-item.cpp
 +++ b/peony-extension-computer-view/computer-view/computer-network-item.cpp
-@@ -73,7 +73,7 @@
-     return m_model->createItemIndex(m_parentNode->m_children.indexOf(this), this);
- }
+@@ -75,6 +75,8 @@
  
--void ComputerNetworkItem::reloadDirectory(const QString &uri)
-+void ComputerNetworkItem::reloadDirectory(const QString &uri [[maybe_unused]])
+ void ComputerNetworkItem::reloadDirectory(const QString &uri)
  {
++    Q_UNUSED(uri); 
++
      if (m_uri != "network:///")
          return;
+ 
 --- a/peony-extension-computer-view/computer-view/computer-remote-volume-item.cpp
 +++ b/peony-extension-computer-view/computer-view/computer-remote-volume-item.cpp
-@@ -111,7 +111,7 @@
-     g_object_unref(file);
- }
+@@ -113,6 +113,8 @@
  
--void ComputerRemoteVolumeItem::unmount(GMountUnmountFlags unmountFlag)
-+void ComputerRemoteVolumeItem::unmount(GMountUnmountFlags unmountFlag [[maybe_unused]])
+ void ComputerRemoteVolumeItem::unmount(GMountUnmountFlags unmountFlag)
  {
++    Q_UNUSED(unmountFlag); 
++
      QString targetUri = queryTargetUri(m_uri);
      QString uri = Peony::FileUtils::urlDecode(targetUri);
+     //fix #452643 文管-在计算机视图下，右键卸载扩展目录，无反应.扩展目录按理不应该被触发卸载，优先修复bug， 后续考虑优化
 --- a/peony-extension-computer-view/computer-view/computer-view.cpp
 +++ b/peony-extension-computer-view/computer-view/computer-view.cpp
-@@ -70,7 +70,7 @@
- 
+@@ -71,6 +71,8 @@
      //fix #18184
      auto volumeManager = Peony::VolumeManager::getInstance();
--    connect(volumeManager,&Peony::VolumeManager::volumeRemoved,this,[=](const std::shared_ptr<Peony::Volume> volume){
-+    connect(volumeManager,&Peony::VolumeManager::volumeRemoved,this,[=](const std::shared_ptr<Peony::Volume> volume [[maybe_unused]]){
+     connect(volumeManager,&Peony::VolumeManager::volumeRemoved,this,[=](const std::shared_ptr<Peony::Volume> volume){
++    Q_UNUSED(volume); 
++
          this->viewport()->update();
      });
  
-@@ -177,7 +177,7 @@
-     viewport()->update();
- }
+@@ -179,6 +181,8 @@
  
--bool ComputerView::eventFilter(QObject *object, QEvent *event)
-+bool ComputerView::eventFilter(QObject *object [[maybe_unused]], QEvent *event)
+ bool ComputerView::eventFilter(QObject *object, QEvent *event)
  {
++    Q_UNUSED(object); 
++
      if (event->type() == QEvent::MouseMove) {
          if (!m_isLeftButtonPressed) {
-@@ -199,7 +199,7 @@
-     return m_rect_cache.value(index);
- }
+             auto pos = mapFromGlobal(QCursor::pos());
+@@ -201,6 +205,8 @@
  
--void ComputerView::scrollTo(const QModelIndex &index, QAbstractItemView::ScrollHint hint)
-+void ComputerView::scrollTo(const QModelIndex &index [[maybe_unused]], QAbstractItemView::ScrollHint hint [[maybe_unused]])
+ void ComputerView::scrollTo(const QModelIndex &index, QAbstractItemView::ScrollHint hint)
  {
++    Q_UNUSED(index); Q_UNUSED(hint); 
++
      //return;
      //FIXME: scroll to the index more accurecely.
-@@ -219,7 +219,7 @@
+     //auto y = m_rect_cache.value(index).y();
+@@ -221,6 +227,8 @@
+ 
+ QModelIndex ComputerView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
+ {
++    Q_UNUSED(cursorAction); Q_UNUSED(modifiers); 
++
      return QModelIndex();
  }
  
--QModelIndex ComputerView::moveCursor(QAbstractItemView::CursorAction cursorAction, Qt::KeyboardModifiers modifiers)
-+QModelIndex ComputerView::moveCursor(QAbstractItemView::CursorAction cursorAction [[maybe_unused]], Qt::KeyboardModifiers modifiers [[maybe_unused]])
- {
-     return QModelIndex();
- }
-@@ -234,12 +234,12 @@
-     return verticalScrollBar()->value()*m_scrollStep;
- }
+@@ -236,11 +244,15 @@
  
--bool ComputerView::isIndexHidden(const QModelIndex &index) const
-+bool ComputerView::isIndexHidden(const QModelIndex &index [[maybe_unused]]) const
+ bool ComputerView::isIndexHidden(const QModelIndex &index) const
  {
++    Q_UNUSED(index); 
++
      return false;
  }
  
--void ComputerView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command)
-+void ComputerView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command [[maybe_unused]])
+ void ComputerView::setSelection(const QRect &rect, QItemSelectionModel::SelectionFlags command)
  {
++    Q_UNUSED(command); 
++
      //caculate logic rubber band rect in mouse move event.
      //qDebug()<<"setSelection"<<rect<<command;
-@@ -270,7 +270,7 @@
-     }
- }
  
--QRegion ComputerView::visualRegionForSelection(const QItemSelection &selection) const
-+QRegion ComputerView::visualRegionForSelection(const QItemSelection &selection [[maybe_unused]]) const
+@@ -272,6 +284,8 @@
+ 
+ QRegion ComputerView::visualRegionForSelection(const QItemSelection &selection) const
  {
++    Q_UNUSED(selection); 
++
      return QRegion();
  }
-@@ -343,7 +343,7 @@
-     return QAbstractItemView::viewportEvent(event);
- }
  
--void ComputerView::paintEvent(QPaintEvent *e)
-+void ComputerView::paintEvent(QPaintEvent *e [[maybe_unused]])
+@@ -345,6 +359,8 @@
+ 
+ void ComputerView::paintEvent(QPaintEvent *e)
  {
++    Q_UNUSED(e); 
++
      QPainter p(this->viewport());
      p.fillRect(this->rect(), palette().base());
+     //p.fillRect(QRect(0, 0, m_totalWidth, m_totalHeight), Qt::blue);
 --- a/peony-extension-computer-view/computer-view/computer-volume-item.cpp
 +++ b/peony-extension-computer-view/computer-view/computer-volume-item.cpp
-@@ -577,7 +577,7 @@
-     return uuid;
- }
- 
--void ComputerVolumeItem::volume_changed_callback(GVolume *volume, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::volume_changed_callback(GVolume *volume [[maybe_unused]], ComputerVolumeItem *p_this)
+@@ -254,7 +254,7 @@
+ void ComputerVolumeItem::findChildren()
  {
+     //add root
+-    auto root = new ComputerVolumeItem(nullptr, m_model, this);
++    (void)(new ComputerVolumeItem(nullptr, m_model, this));
+ 
+     //enumerate
+     auto volume_monitor = g_volume_monitor_get();
+@@ -272,7 +272,7 @@
+             }
+         }
+ 
+-        auto item = new ComputerVolumeItem(volume, m_model, this);
++        (void)(new ComputerVolumeItem(volume, m_model, this));
+         l = l->next;
+     }
+ 
+@@ -477,7 +477,7 @@
+ {
+     GMount *g_mount = nullptr;
+     GFile *file = nullptr;
+-    GVolume *g_volume = nullptr;
++    (void)(nullptr);
+ 
+     g_autoptr(GMountOperation) mount_op = g_mount_operation_new();
+ 
+@@ -579,6 +579,8 @@
+ 
+ void ComputerVolumeItem::volume_changed_callback(GVolume *volume, ComputerVolumeItem *p_this)
+ {
++    Q_UNUSED(volume); 
++
      //QMessageBox::information(0, 0, tr("Volume Changed"));
      if(!p_this)
-@@ -591,7 +591,7 @@
-     p_this->updateInfo();
- }
+         return;
+@@ -593,6 +595,8 @@
  
--void ComputerVolumeItem::volume_removed_callback(GVolume *volume, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::volume_removed_callback(GVolume *volume [[maybe_unused]], ComputerVolumeItem *p_this)
+ void ComputerVolumeItem::volume_removed_callback(GVolume *volume, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(volume); 
++
      auto parentNode = p_this->m_parentNode;
      if (!parentNode)
-@@ -618,7 +618,7 @@
-     parentNode->m_model->endRemoveItem();
- }
+         return;
+@@ -620,6 +624,8 @@
  
--void ComputerVolumeItem::mount_changed_callback(GVolumeMonitor *volumeMonitor, GMount *gmount, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::mount_changed_callback(GVolumeMonitor *volumeMonitor [[maybe_unused]], GMount *gmount [[maybe_unused]], ComputerVolumeItem *p_this)
+ void ComputerVolumeItem::mount_changed_callback(GVolumeMonitor *volumeMonitor, GMount *gmount, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(volumeMonitor); Q_UNUSED(gmount); 
++
      if (p_this){
          p_this->m_usedSpace = 0;
-@@ -645,7 +645,7 @@
-     }
- }
+         p_this->m_totalSpace = 0;
+@@ -647,6 +653,8 @@
  
--void ComputerVolumeItem::mount_added_callback(GVolumeMonitor *volumeMonitor, GMount *gmount, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::mount_added_callback(GVolumeMonitor *volumeMonitor [[maybe_unused]], GMount *gmount [[maybe_unused]], ComputerVolumeItem *p_this)
+ void ComputerVolumeItem::mount_added_callback(GVolumeMonitor *volumeMonitor, GMount *gmount, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(volumeMonitor); Q_UNUSED(gmount); 
++
      if (p_this){
          p_this->updateInfo();
-@@ -949,7 +949,7 @@
-     }
- }
+         qDebug()<<"mount added uri: "<<p_this->uri();
+@@ -951,6 +959,8 @@
  
--void ComputerVolumeItem::eject_async_callback(GObject *object, GAsyncResult *res, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::eject_async_callback(GObject *object, GAsyncResult *res, ComputerVolumeItem *p_this [[maybe_unused]])
+ void ComputerVolumeItem::eject_async_callback(GObject *object, GAsyncResult *res, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(p_this); 
++
      GError *err = nullptr;
      bool successed;
-@@ -980,7 +980,7 @@
-     }
- }
  
--void ComputerVolumeItem::stop_async_callback(GDrive *drive, GAsyncResult *res, ComputerVolumeItem *p_this)
-+void ComputerVolumeItem::stop_async_callback(GDrive *drive, GAsyncResult *res, ComputerVolumeItem *p_this [[maybe_unused]])
+@@ -982,6 +992,8 @@
+ 
+ void ComputerVolumeItem::stop_async_callback(GDrive *drive, GAsyncResult *res, ComputerVolumeItem *p_this)
  {
++    Q_UNUSED(p_this); 
++
      GError *err = nullptr;
      bool successed;
+ 
+@@ -1023,7 +1035,7 @@
+     if (Peony::FileUtils::isMountMatchFstab(g_volume, "/backup")) {
+         return;
+     }
+-    auto item = new ComputerVolumeItem(g_volume, m_model, this);
++    (void)(new ComputerVolumeItem(g_volume, m_model, this));
+ }
+ 
+ /*
 --- a/peony-extension-computer-view/peony-computer-view-plugin.h
 +++ b/peony-extension-computer-view/peony-computer-view-plugin.h
-@@ -42,7 +42,7 @@
+@@ -42,7 +42,9 @@
      const QString name() {return QObject::tr("Computer View");}
      const QString description() {return QObject::tr("Show drives, network and personal directories");}
      const QIcon icon() {return QIcon::fromTheme("computer");}
 -    void setEnable(bool enable) {}
-+    void setEnable(bool enable [[maybe_unused]]) {}
++    void setEnable(bool enable) {
++    Q_UNUSED(enable); 
++}
      bool isEnable() {return true;}
  
      //view
@@ -548,15 +675,15 @@
      painter->save();
 --- a/peony-set-wallpaper/set-wallpaper-plugin.cpp
 +++ b/peony-set-wallpaper/set-wallpaper-plugin.cpp
-@@ -51,7 +51,7 @@
-     QApplication::installTranslator(t);
- }
+@@ -53,6 +53,8 @@
  
--QList<QAction*> SetWallPaperPlugin::menuActions(Types types, const QString &uri, const QStringList &selectionUris)
-+QList<QAction*> SetWallPaperPlugin::menuActions(Types types, const QString &uri [[maybe_unused]], const QStringList &selectionUris)
+ QList<QAction*> SetWallPaperPlugin::menuActions(Types types, const QString &uri, const QStringList &selectionUris)
  {
++    Q_UNUSED(uri); 
++
      QList<QAction*> actions;
      if (types == MenuPluginInterface::DirectoryView || types == MenuPluginInterface::DesktopWindow)
+     {
 --- a/peony-share/app/advanced-share-page.cpp
 +++ b/peony-share/app/advanced-share-page.cpp
 @@ -534,7 +534,7 @@

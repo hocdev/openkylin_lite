@@ -1,5 +1,22 @@
 --- a/bioauth/src/biodevices.cpp
 +++ b/bioauth/src/biodevices.cpp
+@@ -27,11 +27,11 @@
+ #include "generic.h"
+ 
+ BioDevices::BioDevices(bool isIgnoreQrCode, QObject *parent)
+-    : QObject(parent)
+-    , m_uniAuthService(new UniAuthService(this))
+-    , isShowHotPlug(false)
+-    , useFirstDevice(false)
+-    , m_isIgnoreQrCode(isIgnoreQrCode)
++    : QObject(parent),
++      isShowHotPlug(false),
++      useFirstDevice(false),
++      m_isIgnoreQrCode(isIgnoreQrCode),
++      m_uniAuthService(new UniAuthService(this))
+ {
+     connectToService();
+ 
 @@ -400,7 +400,7 @@
                  QString filename = "/proc/" + QString::number(ppid) + "/cmdline";
                  QFile file(filename);
@@ -51,6 +68,37 @@
  #include "bioauthwidget.h"
  #include <QHBoxLayout>
  #include <QAction>
+@@ -50,18 +50,18 @@
+ extern void qt_blurImage(QImage &blurImage, qreal radius, bool quality, int transposed);
+ 
+ MainWindow::MainWindow(QWidget *parent)
+-    : kdk::KDialog(parent)
+-    , ui(new Ui::MainWindow)
+-    , users(new Users(this))
+-    , enableBioAuth(false)
+-    , receiveBioPAM(false)
+-    , authMode(UNDEFINED)
+-    , useDoubleAuth(false)
+-    , m_timer(nullptr)
+-    , w_timer(nullptr)
+-    , isLockingFlg(false)
+-    , m_nCurLockMin(0)
+-    , isbioSuccess(false)
++    : kdk::KDialog(parent),
++      ui(new Ui::MainWindow),
++      users(new Users(this)),
++      enableBioAuth(false),
++      receiveBioPAM(false),
++      authMode(UNDEFINED),
++      useDoubleAuth(false),
++      isbioSuccess(false),
++      m_timer(nullptr),
++      isLockingFlg(false),
++      m_nCurLockMin(0),
++      w_timer(nullptr)
+ {
+     ui->setupUi(this);
+ 
 @@ -233,7 +233,7 @@
  
  void MainWindow::updateLoadingPixmap()

@@ -79,6 +79,33 @@
      }
  
      cleanAndAddPostfix(dirs, postfix);
+--- a/src/lock-backend/lightdmhelper.cpp
++++ b/src/lock-backend/lightdmhelper.cpp
+@@ -37,15 +37,15 @@
+ #endif
+ 
+ LightDMHelper::LightDMHelper(QSharedPointer<AccountsHelper> accountHelper, Configuration *config, QObject *parent)
+-    : QLightDM::Greeter(parent)
+-    , m_sessionsModel(nullptr)
+-    , m_secUser(SecurityUser::instance())
+-    , m_strCurUserName("")
+-    , m_accountServiceHelper(accountHelper)
+-    , m_configuration(config)
+-    , m_ldmSessions(new QMap<QString, std::shared_ptr<LightDMSessionInfo>>())
+-    , m_mapUsers(new QMap<QString, UserInfoPtr>())
+-    , m_dbusIfsLDM(nullptr)
++    : QLightDM::Greeter(parent),
++      m_strCurUserName(""),
++      m_secUser(SecurityUser::instance()),
++      m_sessionsModel(nullptr),
++      m_mapUsers(new QMap<QString, UserInfoPtr>()),
++      m_accountServiceHelper(accountHelper),
++      m_ldmSessions(new QMap<QString, std::shared_ptr<LightDMSessionInfo>>()),
++      m_dbusIfsLDM(nullptr),
++      m_configuration(config)
+ {
+     // 连接到lightdm
+     if (!connectToDaemonSync()) {
 --- a/src/screensaver/musicdatabase.cpp
 +++ b/src/screensaver/musicdatabase.cpp
 @@ -623,6 +623,7 @@
@@ -163,6 +190,23 @@
  void Screensaver::onScreensaverDatetimeEnableChanged(bool isEnable, const QString &strUserName)
 --- a/src/screensaver/sleeptime.cpp
 +++ b/src/screensaver/sleeptime.cpp
+@@ -23,11 +23,11 @@
+ #include <QApplication>
+ 
+ SleepTime::SleepTime(QWidget *parent)
+-    : QWidget(parent)
+-    , sleepTime(0)
+-    , m_nLastSleepLeave(0)
+-    , m_nLastSleepTimeSecs(0)
+-    , configuration(SCConfiguration::instance())
++    : QWidget(parent),
++      configuration(SCConfiguration::instance()),
++      sleepTime(0),
++      m_nLastSleepLeave(0),
++      m_nLastSleepTimeSecs(0)
+ {
+     init();
+ }
 @@ -160,7 +160,7 @@
  {
      bool is_over_length = false;
@@ -246,9 +290,36 @@
          if (id == 0) {
              Q_EMIT textCenteredChanged(false);
          } else {
+--- a/src/widgets/agreementwindow.cpp
++++ b/src/widgets/agreementwindow.cpp
+@@ -29,7 +29,10 @@
+ #define ENSURE_BUTTON_HEIGHT 48
+ #define BORDER_WIDTH 40
+ AgreementWindow::AgreementWindow(bool hideTitle, QString title, QString text, QWidget *parent)
+-    : m_hideTitle(hideTitle), m_title(title), m_text(text), QWidget(parent)
++    : QWidget(parent),
++      m_hideTitle(hideTitle),
++      m_title(title),
++      m_text(text)
+ {
+     initUI();
+ }
 --- a/src/widgets/authdialog.cpp
 +++ b/src/widgets/authdialog.cpp
-@@ -581,7 +581,7 @@
+@@ -59,7 +59,11 @@
+ #define WIDGET_HEIGHT_LOGINOPTS (110)
+ 
+ AuthDialog::AuthDialog(LockDialogModel *model, UserInfoPtr userInfo, QWidget *parent)
+-    : QWidget(parent), m_modelLockDialog(model), m_isLockingFlg(false), m_isInputPasswd(false), m_curUserInfo(userInfo)
++    : QWidget(parent),
++      m_modelLockDialog(model),
++      m_curUserInfo(userInfo),
++      m_isInputPasswd(false),
++      m_isLockingFlg(false)
+ {
+     pam_tally_init();
+     initUI();
+@@ -581,7 +585,7 @@
  
  void AuthDialog::updateLoadingPixmap()
  {
@@ -257,7 +328,7 @@
      matrix.rotate(90.0);
      m_ukeyLoadingPixmap = m_ukeyLoadingPixmap.transformed(matrix, Qt::FastTransformation);
      m_ukeyLoadingButton->setIcon(QIcon(m_ukeyLoadingPixmap));
-@@ -909,7 +909,7 @@
+@@ -909,7 +913,7 @@
  
  void AuthDialog::updatePixmap()
  {
@@ -266,7 +337,7 @@
      matrix.rotate(90.0);
      m_waitingPixmap = m_waitingPixmap.transformed(matrix, Qt::FastTransformation);
      if (m_uCurLoginOptType == LOGINOPT_TYPE_QRCODE) {
-@@ -1238,7 +1238,7 @@
+@@ -1238,7 +1242,7 @@
  
  void AuthDialog::updatePamLoadingPixmap()
  {
@@ -275,6 +346,18 @@
      matrix.rotate(90.0);
      m_pamUkeyLoadingPixmap = m_pamUkeyLoadingPixmap.transformed(matrix, Qt::FastTransformation);
      if (m_pamUkeyLoadingButton) {
+--- a/src/widgets/binddialog.cpp
++++ b/src/widgets/binddialog.cpp
+@@ -56,7 +56,8 @@
+     return ret;
+ }
+ 
+-BindDialog::BindDialog(int mod, QWidget *parent) : mode(mod), QWidget(parent)
++BindDialog::BindDialog(int mod, QWidget *parent) : QWidget(parent),
++      mode(mod)
+ {
+     initUI();
+     updateSize();
 --- a/src/widgets/blockwidget.cpp
 +++ b/src/widgets/blockwidget.cpp
 @@ -477,7 +477,7 @@
@@ -337,6 +420,18 @@
              // qDebug() << "edit text width:" << m_edit->width() << nTextWidth << nActualWidth << strPlaceholderText;
              if (nActualWidth > nTextWidth) {
                  setKToolTip(strPlaceholderText);
+--- a/src/widgets/kmessagedialog.cpp
++++ b/src/widgets/kmessagedialog.cpp
+@@ -17,7 +17,8 @@
+  **/
+ #include "kmessagedialog.h"
+ 
+-KMessageDialog::KMessageDialog(int mod, QWidget *parent) : mode(mod), QWidget(parent)
++KMessageDialog::KMessageDialog(int mod, QWidget *parent) : QWidget(parent),
++      mode(mod)
+ {
+     init();
+     initConnections();
 --- a/src/widgets/kyiconbutton.cpp
 +++ b/src/widgets/kyiconbutton.cpp
 @@ -37,7 +37,7 @@
@@ -368,8 +463,37 @@
      //    m_kylinNM->setPalette(pal);
      tabWidget->widget(0)->setPalette(pal);
      tabWidget->widget(1)->setPalette(pal);
+--- a/src/widgets/powerlistwidget.cpp
++++ b/src/widgets/powerlistwidget.cpp
+@@ -26,7 +26,8 @@
+ using namespace kdk;
+ 
+ PowerListWidget::PowerListWidget(LockDialogModel *model, QWidget *parent)
+-    : m_modelLockDialog(model), MyListWidget(parent)
++    : MyListWidget(parent),
++      m_modelLockDialog(model)
+ {
+     //    updateBtnShowFlag();
+     initUI();
 --- a/src/widgets/resetpwdwidget.cpp
 +++ b/src/widgets/resetpwdwidget.cpp
+@@ -51,11 +51,11 @@
+ 
+ ResetPwdWidget::ResetPwdWidget(
+     LockDialogModel *model, QString userName, int uid, SecurityQuestionAnswer *securityQuestionAnswer, QWidget *parent)
+-    : QWidget(parent)
+-    , m_modelLockDialog(model)
+-    , m_pSecurityQuestionAnswer(securityQuestionAnswer)
+-    , m_nameText(userName)
+-    , m_uid(uid)
++    : QWidget(parent),
++      m_modelLockDialog(model),
++      m_nameText(userName),
++      m_uid(uid),
++      m_pSecurityQuestionAnswer(securityQuestionAnswer)
+ {
+     m_pSecurityQuestionAnswer = new SecurityQuestionAnswer();
+     m_listQuestionInfo = m_pSecurityQuestionAnswer->GetUserSecurityQuestions(m_uid, getenv("LANGUAGE"));
 @@ -179,7 +179,7 @@
      m_pSureEdit = new IconEdit(m_modelLockDialog, m_pSureWidget, RESETPWDEDIT);
      m_pSureEdit->setFixedSize(240, 40);

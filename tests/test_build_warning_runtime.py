@@ -33,6 +33,42 @@ def execute(source):
 
 @unittest.skipUnless(ROOT and shutil.which('g++'), 'requires patched source and Linux Qt compiler')
 class BuildWarningRuntimeTests(unittest.TestCase):
+    @unittest.skipUnless(PACKAGE == 'ukui-search', 'search source only')
+    def test_search_cache_header_handles_short_write_interrupt_and_disk_failure(self):
+        header = Path(ROOT) / 'libchinese-segmentation/cache-write.h'
+        execute('''
+#include <unistd.h>
+#include <cerrno>
+#include <cassert>
+#include <string>
+static int mode = 0, calls = 0;
+static std::string output;
+static ssize_t fakeWrite(int, const void *data, size_t size) {
+    ++calls;
+    if (mode == 1 && calls == 1) { errno = EINTR; return -1; }
+    if (mode == 2) { errno = ENOSPC; return -1; }
+    if (mode == 3) { return 0; }
+    const size_t count = size > 2 ? 2 : size;
+    output.append(static_cast<const char *>(data), count);
+    return count;
+}
+#define write fakeWrite
+''' + '#include ' + '"' + str(header) + '"\n' + '''
+#undef write
+int main() {
+    assert(UkuiLite::writeAll(1, "abcdef", 6));
+    assert(output == "abcdef" && calls == 3);
+    output.clear(); calls = 0; mode = 1;
+    assert(UkuiLite::writeAll(1, "abcdef", 6));
+    assert(output == "abcdef" && calls == 4);
+    mode = 2;
+    assert(!UkuiLite::writeAll(1, "x", 1));
+    mode = 3;
+    assert(!UkuiLite::writeAll(1, "x", 1));
+    assert(UkuiLite::writeAll(1, nullptr, 0));
+}
+''')
+
     @unittest.skipUnless(PACKAGE == 'kylin-os-installer', 'installer source only')
     def test_installer_model_children_and_empty_device_path(self):
         device = function('src/plugins/KPartition/partman/device.cpp',
